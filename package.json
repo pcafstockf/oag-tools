@@ -1,0 +1,76 @@
+{
+	"name": "oag-tools",
+	"version": "1.0.0",
+	"description": "Collection of tools for OpenApi code generation",
+	"author": "Frank Stock",
+	"license": "MIT",
+	"keywords": [
+		"OpenApi",
+		"generator",
+		"bundler",
+		"TypeScript"
+	],
+	"homepage": "https://github.com/pcafstockf/oag-tools#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/pcafstockf/oag-tools.git"
+	},
+	"bugs": {
+		"url": "https://github.com/pcafstockf/oag-tools/issues"
+	},
+	"workspaces": [
+		"oag-shared",
+		"tools/assemble",
+		"tools/generate",
+		"tools/plugins"
+	],
+	"type": "commonjs",
+	"scripts": {
+		"build:uplift-schema": "webpack --config=./tools/plugins/uplift-schema-webpack.js",
+		"build:consolidate-query-params": "webpack --config=./tools/plugins/consolidate-query-params-webpack.js",
+		"build:recase-path-params": "webpack --config=./tools/plugins/recase-path-params-webpack.js",
+		"build:plugins": "rimraf ./dist/plugins && npm run build:uplift-schema && npm run build:consolidate-query-params && npm run build:recase-path-params"
+	},
+	"dependencies": {
+		"@apidevtools/swagger-parser": "~10.1.0",
+		"@openapi-contrib/openapi-schema-to-json-schema": "~5.1.0",
+		"async": "~3.2.5",
+		"async-injection": "~2.0.0",
+		"dyflex-config": "~1.1.0",
+		"json5": "~2.2.3",
+		"lodash": "~4.17.21",
+		"openapi-types": "~12.1.3",
+		"prompts": "~2.4.2",
+		"reflect-metadata": "~0.2.2",
+		"semver": "~7.6.3",
+		"swagger2openapi": "~7.0.8",
+		"tslib": "~2.6.3",
+		"unquoted-property-validator": "~1.1.0",
+		"yargs": "~17.7.2"
+	},
+	"devDependencies": {
+		"@types/async": "~3.2.24",
+		"@types/jasmine": "~5.1.4",
+		"@types/lodash": "~4.17.7",
+		"@types/node": "~20.13.0",
+		"@types/prompts": "~2.4.9",
+		"@types/semver": "~7.5.8",
+		"@types/swagger2openapi": "~7.0.4",
+		"@types/yargs": "~17.0.33",
+		"cross-env": "~7.0.3",
+		"jasmine": "~5.2.0",
+		"jasmine-spec-reporter": "~7.0.0",
+		"jasmine-ts-console-reporter": "~3.1.1",
+		"rimraf": "~6.0.1",
+		"source-map-loader": "~5.0.0",
+		"source-map-support": "~0.5.21",
+		"ts-loader": "~9.5.1",
+		"ts-mockito": "~2.6.1",
+		"ts-node-dev": "~2.0.0",
+		"tsconfig-paths": "~4.2.0",
+		"tsconfig-paths-webpack-plugin": "~4.1.0",
+		"typescript": "~5.4.5",
+		"webpack-cli": "~5.1.4",
+		"webpack-merge": "~6.0.1"
+	}
+}

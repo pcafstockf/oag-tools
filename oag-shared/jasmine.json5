@@ -1,0 +1,24 @@
+// This file follows the jasmine.json schema but is processed by the jasmineMerge function found in the root scripts directory.
+// All 'helpers' and 'spec_files' withing this file should be relative to this file.
+// jasmineMerge will adjust all paths to align with whatever the active jasmine.js configuration file lists as its 'spec_dir'.
+{
+	spec_dir: "",
+	spec_files: [
+		"certificates/certificates.spec.ts",
+		"core-node/console-logger.spec.ts",
+		"core-node/di-container.spec.ts"
+	],
+	helpers: [
+		"../scripts/jasmine-console-helpers.js"
+	],
+	reporters: [
+		{
+			"name": "jasmine-spec-reporter#SpecReporter",
+			"options": {
+				"displayStacktrace": "all"
+			}
+		}
+	],
+	stopSpecOnExpectationFailure: false,
+	random: false
+}

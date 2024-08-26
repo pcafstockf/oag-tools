@@ -1,0 +1,11 @@
+{
+	"name": "oag-shared",
+	"version": "1.0.0",
+	"description": "Code that is used by all oag-tools",
+	"author": "Frank Stock",
+	"license": "MIT",
+	"scripts": {
+		"build": "exit 0",
+		"test": "cross-env TS_NODE_PROJECT=tsconfig.spec.json JASMINE_CONFIG_PATH=jasmine.js node --require source-map-support/register --require ts-node/register/transpile-only --require tsconfig-paths/register ../../node_modules/jasmine/bin/jasmine.js --config=\"${JASMINE_CONFIG_PATH}\" || true"
+	}
+}

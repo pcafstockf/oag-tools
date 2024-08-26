@@ -1,0 +1,17 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"noImplicitAny": false,
+		"paths": {
+			"oag-shared": [
+				"oag-shared/src/index.ts"
+			],
+			"oag-shared/*": [
+				"oag-shared/src/*"
+			]
+		}
+	},
+	"include": [
+		"src/**/*"
+	]
+}
