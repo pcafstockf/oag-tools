@@ -1,0 +1,11 @@
+{
+	"spec_dir": "apps/hello-node",
+	"spec_files": [
+		"src/**/*.spec.@(js|mjs|jsx|ts|tsx)"
+	],
+	"helpers": [
+		"../../scripts/jasmine-console-helpers.js"
+	],
+	"stopSpecOnExpectationFailure": false,
+	"random": true
+}

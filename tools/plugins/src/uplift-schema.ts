@@ -5,8 +5,8 @@
  * the -v (verbose) flag is set, log the JSON Path of the untitled schema.
  */
 import SwaggerParser from '@apidevtools/swagger-parser';
-import {OpenAPIV3, OpenAPIV3_1} from 'openapi-types';
 import {OpenAPIVisitor} from 'oag-shared/openapi/document-visitor';
+import {OpenAPIV3, OpenAPIV3_1} from 'openapi-types';
 
 class UpliftSchema extends OpenAPIVisitor {
 	constructor(private refs: SwaggerParser.$Refs, private reportMissing: boolean) {
@@ -44,7 +44,7 @@ class UpliftSchema extends OpenAPIVisitor {
 			}
 		}
 		else if (this.reportMissing && isNested && schema.type === 'object') {
-			console.log(`No schema name for: ${activePath}`)
+			console.log(`No schema name for: ${activePath}`);
 		}
 		try {
 			return super.visitSchema(schema, parent);
@@ -62,8 +62,16 @@ export default async function upliftSchema(doc: OpenAPIV3.Document | OpenAPIV3_1
 	const refs = await docParser.resolve(doc);
 
 	const docVisitor = new UpliftSchema(refs, !!cmdArgs['uplift-report']);
+	const seen = new Set();
 	docVisitor.visit(doc, (ref: OpenAPIV3.ReferenceObject) => {
-		return refs.get(ref.$ref);
+		const obj = refs.get(ref.$ref);
+		if (obj) {
+			if (seen.has(obj))
+				return;
+			seen.add(obj);
+		}
+		return obj;
 	}, false);
+	seen.clear();
 	return Promise.resolve();
 };

@@ -1,0 +1,7 @@
+{
+	i: './test-out/petstore/client/petstore.bundle.json',
+	o: './test-out/client/petstore/src',
+	d: 'all',
+	r: 'client',
+	p: 'tsmorph.client.httplib="node"'
+}

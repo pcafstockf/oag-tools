@@ -6,8 +6,8 @@
  *    --recase-varcharRe    :  This is a string regex that searches for invalid URI var names (defaults to /^(?:%[0-9A-Fa-f]{2}|[-:&@~A-Za-z0-9_])+$/).
  * 	  --recase-casing       :  'camel' | 'snake'
  */
-import {camelCase as lodashCamelCase, snakeCase as lodashSnakeCase} from 'lodash';
 import SwaggerParser from '@apidevtools/swagger-parser';
+import {camelCase as lodashCamelCase, snakeCase as lodashSnakeCase} from 'lodash';
 import {OpenAPIV3, OpenAPIV3_1} from 'openapi-types';
 
 export class UriRepair {
@@ -201,8 +201,8 @@ export default async function recasePathParams(doc: OpenAPIV3.Document | OpenAPI
 	let pathRepairs: Record<string, string> = {};
 	for (let upath in doc.paths) {
 		const ast = uriParser.parse(upath);
-		if (! ast)
-			throw new Error('Unable to parse URI template in : ' + upath)
+		if (!ast)
+			throw new Error('Unable to parse URI template in : ' + upath);
 		const rebuild = uriParser.rebuild(ast);
 		if (rebuild.uri !== upath) {
 			// For pointer replacement purposes, make sure we find potential variants of the path.
@@ -217,12 +217,12 @@ export default async function recasePathParams(doc: OpenAPIV3.Document | OpenAPI
 			doc.paths[rebuild.uri] = doc.paths[upath];
 			delete doc.paths[upath];
 			let pi = doc.paths[rebuild.uri] as OpenAPIV3.PathItemObject;
-			if ("$ref" in pi)
+			if ('$ref' in pi)
 				pi = refs.get((pi as OpenAPIV3.ReferenceObject).$ref);
 			if (pi) {
 				// We can have "uri" scoped params.
 				((pi as OpenAPIV3.PathItemObject).parameters as OpenAPIV3.ParameterObject[])?.forEach((p) => {
-					if ("$ref" in p)
+					if ('$ref' in p)
 						p = refs.get(p.$ref as string);
 					if (rebuild.varMap[p.name])
 						p.name = rebuild.varMap[p.name];
@@ -230,11 +230,11 @@ export default async function recasePathParams(doc: OpenAPIV3.Document | OpenAPI
 				// But more likely we have http method scoped params.
 				Object.keys(pi as OpenAPIV3.PathItemObject).filter(k => httpMethods.indexOf(k.toUpperCase()) >= 0).forEach(method => {
 					let op = pi[method] as OpenAPIV3.OperationObject;
-					if ("$ref" in op)
+					if ('$ref' in op)
 						op = refs.get(op.$ref as string);
 					(op.parameters as OpenAPIV3.ParameterObject[])?.forEach(p => {
 						let param = p;
-						if ("$ref" in param)
+						if ('$ref' in param)
 							param = refs.get(param.$ref as string);
 						if (rebuild.varMap[param.name])
 							param.name = rebuild.varMap[param.name];
@@ -246,6 +246,7 @@ export default async function recasePathParams(doc: OpenAPIV3.Document | OpenAPI
 
 	// We have fixed all the paths, but there could well be pointers in the doc that reference those paths, and they need to be updated too.
 	const oldPaths = Object.keys(pathRepairs);
+
 	function rewriteRefs(obj: any) {
 		if (typeof obj === 'object' && obj !== null) {
 			if (obj.$ref) {
@@ -257,6 +258,7 @@ export default async function recasePathParams(doc: OpenAPIV3.Document | OpenAPI
 				rewriteRefs(obj[key]);
 		}
 	}
+
 	rewriteRefs(doc);
 
 	return Promise.resolve();

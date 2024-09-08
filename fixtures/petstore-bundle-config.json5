@@ -1,0 +1,5 @@
+// This file is parsed as a JSON5 file.
+{
+	"i": "./fixtures/openapi-petstore.json",
+	"o": "./test-out/client/petstore/petstore.bundle.json"
+}

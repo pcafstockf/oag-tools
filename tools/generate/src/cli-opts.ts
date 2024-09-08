@@ -2,10 +2,10 @@ import {parse as json5Parse} from 'json5';
 import lodash from 'lodash';
 import {lstatSync, mkdirSync, readFileSync, Stats} from 'node:fs';
 import path from 'node:path';
-import {safeLStatSync} from 'oag-shared/utils/misc-utils';
 import unquotedValidator from 'unquoted-property-validator';
+import {safeLStatSync} from '../../../oag-shared/src/utils/misc-utils';
 
-export interface CLIOptionsBase<CONFIG, IN, OUT, VERBOSE, MERGE, PROP, FIX, BUNDLE, TRANSFORM, UPGRADE> {
+export interface CLIOptionsBase<CONFIG, IN, OUT, VERBOSE, PROP, ROLE, DELETE, SETTINGS> {
 	/**
 	 * JSON file containing commands and config overrides
 	 */
@@ -24,36 +24,21 @@ export interface CLIOptionsBase<CONFIG, IN, OUT, VERBOSE, MERGE, PROP, FIX, BUND
 	 */
 	v: VERBOSE
 	/**
-	 * Merge additional (syntactically valid) yaml/json files into the input file.
-	 * Each file will attempt to be loaded as a swagger/openapi document and bundled.
-	 * If loaded as a swagger (v2) document, it will be upgraded to v3 *before* merging continues.
-	 * If loading as swagger/openapi fails, it will be attempted as a json5 file.
-	 * The resulting object will then be merged into the input document and then continue to the next merger.
-	 */
-	m: MERGE,
-	/**
 	 * Key/Value of a property to be specified or overridden
 	 */
 	p: PROP,
 	/**
-	 * One or more standalone JavaScript plugins to apply fixes *after* merge.
+	 * Are we generating code for a server or a client.
 	 */
-	f: FIX,
+	r: ROLE,
 	/**
-	 * Bundles all external files/URL refs into a single validated document containing only internal $refs.
+	 * Should the entire output directory be deleted before generation, or just the various gen directories?
 	 */
-	b: BUNDLE,
+	d: DELETE
 	/**
-	 * One or more standalone JavaScript plugins to perform transformations on a validated and bundled 3.x document.
-	 * NOTE: If the bundle flag is not set, these plugins will not be invoked (they assume they are passed a valid bundled document)
+	 * Is the generated code for a client or a server?
 	 */
-	t: TRANSFORM,
-	/**
-	 * Documents are immediately upgraded to 3.x upon input (even before merge).
-	 * This flag upgrades the validated bundle to v3.1 JSON Schema
-	 * NOTE: If the bundle flag is not set, this operation will not be performed.
-	 */
-	u: UPGRADE
+	s: SETTINGS,
 }
 
 // Make them all optional, then CLIOptionsType will add back the two we absolutely require.
@@ -62,12 +47,10 @@ type PartialCLIOptionsType = Partial<CLIOptionsBase<
 	string /*in*/,
 	string /*out*/,
 	boolean /*verbose*/,
-	string[] /*merge*/,
 	string[] /*prop*/,
-	string[] /*fix*/,
-	boolean /*bundle*/,
-	string[] /*transform*/,
-	boolean /*upgrade*/
+	string /*role*/,
+	boolean | string /*delete*/,
+	string[] /*settings*/
 >>;
 
 /**
@@ -113,31 +96,22 @@ function validateInputLocation(loc: string) {
  *  If true, needed modifications to the options should be applied and updated options should be returned.
  */
 export function checkCliArgs(args: CLIOptionsType, update: boolean): boolean | CLIOptionsType {
+	let stat: Stats = undefined as any;
 	let config = resolveConfiguration(args);
 
 	validateInputLocation(config.i);
-	if (typeof config.m === 'string' && config.m)
-		config.m = [config.m];
-	if (Array.isArray(config.m))
-		config.m.forEach(validateInputLocation);
 
 	if (!config.o)
-		throw new Error('Output file must be provided');
-	let stat = safeLStatSync(path.dirname(config.o));
-	if (!stat && update)
-		mkdirSync(path.dirname(config.o), {recursive: true});
-	// pre-upgrade plugins
-	let plugins = config.f;
-	if (plugins && typeof plugins === 'string')
-		plugins = [plugins];
-	if (Array.isArray(plugins))
-		plugins.map(t => path.resolve(process.cwd(), t)).forEach(t => lstatSync(t));
-	// post-upgrade plugins.
-	plugins = config.t;
-	if (plugins && typeof plugins === 'string')
-		plugins = [plugins];
-	if (Array.isArray(plugins))
-		plugins.map(t => path.resolve(process.cwd(), t)).forEach(t => lstatSync(t));
+		throw new Error('Output directory must be provided');
+	stat = safeLStatSync(config.o);
+	if (!stat && update) {
+		mkdirSync(config.o, {recursive: true});
+		stat = lstatSync(config.o);
+		delete config.d;   // Don't delete twice if we just created it.
+	}
+	if (stat && (!stat?.isDirectory())) {
+		throw new Error('Invalid output directory: ' + config.o);
+	}
 
 	let props = config.p;
 	if (props && typeof props === 'string')
@@ -165,6 +139,13 @@ export function checkCliArgs(args: CLIOptionsType, update: boolean): boolean | C
 				throw new Error('Invalid property key: ' + v);
 		});
 	}
+
+	let settings = config.s;
+	if (settings && typeof settings === 'string')
+		settings = [settings];
+	if (Array.isArray(settings))
+		settings.map(t => path.resolve(process.cwd(), t)).forEach(t => lstatSync(t));
+
 	return (update ? config : true);
 }
 

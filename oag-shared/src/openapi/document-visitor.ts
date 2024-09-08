@@ -1,7 +1,5 @@
 import {OpenAPIV3, OpenAPIV3_1} from 'openapi-types';
-
-const HttpVerbs = Object.values(OpenAPIV3.HttpMethods) as string[];
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+import {HttpLowerVerbs} from '../utils/http-utils';
 
 export class DocumentVisitor<
 	DOCUMENT extends (OpenAPIV3.Document | OpenAPIV3_1.Document) = OpenAPIV3_1.Document,
@@ -78,51 +76,46 @@ export class DocumentVisitor<
 	}
 
 	visitPathItem(pathItem: PATHITEM): true | void {
-		try {
-			if (Array.isArray(pathItem.parameters)) {
-				this.docPath.push('parameters');
-				try {
-					for (let idx = 0; idx < pathItem.parameters.length; idx++) {
-						this.docPath.push(String(idx));
-						try {
-							const result = this.inspectParameter(pathItem.parameters[idx] as PARAMETER);
-							if (typeof result === 'boolean') {
-								if (result)
-									return true;
-								break;
-							}
-						}
-						finally {
-							this.docPath.pop();
+		if (Array.isArray(pathItem.parameters)) {
+			this.docPath.push('parameters');
+			try {
+				for (let idx = 0; idx < pathItem.parameters.length; idx++) {
+					this.docPath.push(String(idx));
+					try {
+						const result = this.inspectParameter(pathItem.parameters[idx] as PARAMETER);
+						if (typeof result === 'boolean') {
+							if (result)
+								return true;
+							break;
 						}
 					}
-				}
-				finally {
-					this.docPath.pop();
+					finally {
+						this.docPath.pop();
+					}
 				}
 			}
-			const verbs = Object.keys(pathItem).filter(key => HttpVerbs.includes(key));
-			for (const verb of verbs) {
-				this.docPath.push(verb);
-				try {
-					const result = this.visitOperation(pathItem[verb as OpenAPIV3.HttpMethods] as OPERATION);
-					if (typeof result === 'boolean') {
-						if (result)
-							return true;
-						break;
-					}
-				}
-				finally {
-					this.docPath.pop();
-				}
+			finally {
+				this.docPath.pop();
 			}
 		}
-		finally {
-			this.docPath.pop();
+		const verbs = Object.keys(pathItem).filter(key => HttpLowerVerbs.includes(key.toLowerCase()));
+		for (const verb of verbs) {
+			this.docPath.push(verb);
+			try {
+				const result = this.visitOperation(pathItem[verb as OpenAPIV3.HttpMethods] as OPERATION);
+				if (typeof result === 'boolean') {
+					if (result)
+						return true;
+					break;
+				}
+			}
+			finally {
+				this.docPath.pop();
+			}
 		}
 	}
 
-	visitComponents(components: COMPONENTS, schemasLast?: boolean): boolean | void {
+	visitComponents(components: COMPONENTS, schemasLast?: boolean | null): boolean | void {
 		if (components.securitySchemes) {
 			this.docPath.push('securitySchemes');
 			try {
@@ -146,7 +139,7 @@ export class DocumentVisitor<
 			}
 		}
 		const processSchemasFn = () => {
-			if (components.schemas) {
+			if (components.schemas && schemasLast !== null) {
 				this.docPath.push('schemas');
 				try {
 					for (const key in components.schemas) {
@@ -178,7 +171,7 @@ export class DocumentVisitor<
 				for (const param in components.parameters) {
 					this.docPath.push(param);
 					try {
-						const result = this.inspectParameter(components.parameters[param] as MakeOptional<PARAMETER, 'name' | 'in'>);
+						const result = this.inspectParameter(components.parameters[param] as PARAMETER);
 						if (typeof result === 'boolean') {
 							if (result)
 								return true;
@@ -200,7 +193,7 @@ export class DocumentVisitor<
 				for (const header in components.headers) {
 					this.docPath.push(header);
 					try {
-						const result = this.inspectParameter(components.headers[header] as MakeOptional<PARAMETER, 'name' | 'in'>);
+						const result = this.inspectHeader(components.headers[header] as HEADER);
 						if (typeof result === 'boolean') {
 							if (result)
 								return true;
@@ -272,7 +265,7 @@ export class DocumentVisitor<
 	visitSecurityScheme(secScheme: SECSCHEME): boolean | void {
 	}
 
-	visit(document: DOCUMENT, resolver: (ref: REFERENCE) => any, schemasLast?: boolean): RESULT | boolean {
+	visit(document: DOCUMENT, resolver: (ref: REFERENCE) => any, schemasLast?: boolean | null): RESULT | boolean {
 		this.resolver = resolver;
 		this.docPath = ['#'];
 		if (Array.isArray(document.tags)) {
@@ -322,7 +315,7 @@ export class DocumentVisitor<
 			}
 		};
 
-		if (schemasLast) {
+		if (schemasLast || schemasLast === null) {
 			processPathsFn();
 			processComponentsFn();
 		}
@@ -338,11 +331,19 @@ export class DocumentVisitor<
 	visitTag(tag: TAG): boolean | void {
 	}
 
-	inspectParameter(parameter: MakeOptional<PARAMETER, 'name' | 'in'> | REFERENCE): boolean | void {
+	inspectHeader(header: HEADER | REFERENCE): boolean | void {
+		return this.resolve(header, (hdr) => this.visitHeader(hdr));
+	}
+
+	visitHeader(header: HEADER): boolean | void {
+
+	}
+
+	inspectParameter(parameter: PARAMETER | REFERENCE): boolean | void {
 		return this.resolve(parameter, (param) => this.visitParameter(param));
 	}
 
-	visitParameter(parameter: MakeOptional<PARAMETER, 'name' | 'in'>): boolean | void {
+	visitParameter(parameter: PARAMETER): boolean | void {
 		// A parameter MUST contain either a schema property, or a content property, but not both.
 		if (parameter.schema) {
 			this.docPath.push('schema');
@@ -442,7 +443,7 @@ export class DocumentVisitor<
 				for (const header in rsp.headers) {
 					this.docPath.push(header);
 					try {
-						const result = this.inspectParameter(rsp.headers[header] as MakeOptional<PARAMETER, 'name' | 'in'>);
+						const result = this.inspectHeader(rsp.headers[header] as HEADER);
 						if (typeof result === 'boolean') {
 							if (result)
 								return true;
@@ -487,8 +488,8 @@ export class DocumentVisitor<
 	}
 
 	visitRequestBody(body: REQBODY): boolean | void {
+		this.docPath.push('content');
 		try {
-			this.docPath.push('content');
 			for (const content in body.content) {
 				this.docPath.push(content);
 				try {
@@ -649,8 +650,9 @@ export class DocumentVisitor<
 		return this.resolve(items, (i) => this.visitSchemaItems(i, parent));
 	}
 
-	visitSchemaItems(schema: SCHEMA, parent?: SCHEMA): boolean | void {
-		return this.inspectSchema(schema, parent)?.result;
+	visitSchemaItems(schema: SCHEMA, parent: SCHEMA): boolean | void {
+		// No need to re-inspect as inspection occurred to get here.
+		return this.visitSchema(schema, parent);
 	}
 
 	protected inspectMultiType(schemas: (SCHEMA | REFERENCE)[], propName: string, parent?: SCHEMA): ((SCHEMA | REFERENCE)[]) | boolean | void | undefined {
@@ -685,24 +687,25 @@ export class DocumentVisitor<
 		return retVal;
 	}
 
-	inspectAdditionalProperties(schema: SCHEMA | REFERENCE | boolean, parent?: SCHEMA): boolean | void {
+	inspectAdditionalProperties(schema: SCHEMA | REFERENCE | boolean, parent: SCHEMA): boolean | void {
 		return this.resolve(schema as SCHEMA | REFERENCE, (s: SCHEMA | boolean) => {
 			if (s === false || (s && typeof s === 'object'))
 				return this.visitAdditionalProperties(s, parent);
 		});
 	}
 
-	visitAdditionalProperties(schema: SCHEMA | boolean, parent?: SCHEMA): boolean | void {
+	visitAdditionalProperties(schema: SCHEMA | boolean, parent: SCHEMA): boolean | void {
 		if (typeof schema === 'object')
 			return this.inspectSchema(schema, parent)?.result;
 	}
 
-	inspectSchemaProperty(schema: SCHEMA | REFERENCE, parent?: SCHEMA): boolean | void {
+	inspectSchemaProperty(schema: SCHEMA | REFERENCE, parent: SCHEMA): boolean | void {
 		return this.resolve(schema, (s) => this.visitSchemaProperty(s, parent));
 	}
 
-	visitSchemaProperty(schema: SCHEMA, parent?: SCHEMA): boolean | void {
-		return this.inspectSchema(schema, parent)?.result;
+	visitSchemaProperty(schema: SCHEMA, parent: SCHEMA): boolean | void {
+		// No need to re-inspect as inspection occurred to get here.
+		return this.visitSchema(schema, parent);
 	}
 
 	// noinspection JSUnusedLocalSymbols
@@ -738,9 +741,12 @@ export class DocumentVisitor<
 		return this.resolve(header, (h) => this.visitEncodingHeader(h, schema));
 	}
 
-	// noinspection JSUnusedLocalSymbols
+	/**
+	 * Subclass extension point.
+	 * A header is mostly a header, so this just turns around and calls visitHeader.
+	 */
 	visitEncodingHeader(header: HEADER, schema?: SCHEMA) {
-		return this.visitParameter(header as unknown as MakeOptional<PARAMETER, 'in' | 'name'>);
+		return this.visitHeader(header);
 	}
 
 	/**

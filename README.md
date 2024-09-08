@@ -11,3 +11,4 @@ cd {path-to-local-dir-for-pkg}
 npm install {some-npmjs-pkg}
 ```
 
+TypeScript, Java, CodeGenJson, Python, C++, Go, Rust.
