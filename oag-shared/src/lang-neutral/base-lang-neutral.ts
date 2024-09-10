@@ -1,8 +1,8 @@
-import {IdentifiedLangNeutral, LangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
-import {interpolateBashStyle} from 'oag-shared/utils/misc-utils';
-import * as nameUtils from 'oag-shared/utils/name-utils';
 import {OpenAPIV3_1} from 'openapi-types';
-import {BaseSettingsType} from '../settings/base';
+import {interpolateBashStyle} from '../utils/misc-utils';
+import * as nameUtils from '../utils/name-utils';
+import {BaseSettingsType} from './base-settings';
+import {IdentifiedLangNeutral, LangNeutral} from './lang-neutral';
 
 export abstract class BaseLangNeutral<OAE, LANG_REF = unknown> implements LangNeutral<OAE, LANG_REF> {
 	protected constructor(protected baseSettings: BaseSettingsType) {

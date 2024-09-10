@@ -1,6 +1,6 @@
 import {Inject, Injectable} from 'async-injection';
 import {CodeGenCommonModelsToken} from 'oag-shared/lang-neutral/model';
-import {BaseSettingsToken, BaseSettingsType} from '../../../settings/base';
+import {BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/base-settings';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmorph';
 import {TsMorphClientSettingsToken, TsMorphClientSettingsType} from '../../../settings/tsmorph-client';
 import {TsmorphArrayModel, TsmorphCommonModels, TsmorphPrimitiveModel, TsmorphRecordModel} from '../tsmorph-model';

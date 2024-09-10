@@ -1,7 +1,7 @@
 import {ClassDeclaration, InterfaceDeclaration} from 'ts-morph';
-import {BaseSettingsType} from '../../settings/base';
+import {BaseSettingsType} from 'oag-shared/lang-neutral/base-settings';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {BaseApi} from '../base-api';
+import {BaseApi} from 'oag-shared/lang-neutral/base-api';
 
 export abstract class TsmorphApi extends BaseApi<InterfaceDeclaration | ClassDeclaration> {
 	protected constructor(baseSettings: BaseSettingsType, protected tsMorphSettings: TsMorphSettingsType) {

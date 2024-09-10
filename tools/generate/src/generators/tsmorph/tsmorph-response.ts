@@ -1,7 +1,7 @@
 import {ReturnTypedNode} from 'ts-morph';
-import {BaseSettingsType} from '../../settings/base';
+import {BaseSettingsType} from 'oag-shared/lang-neutral/base-settings';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {BaseResponse} from '../base-response';
+import {BaseResponse} from 'oag-shared/lang-neutral/base-response';
 
 interface ResponseReturnTypedNode extends ReturnTypedNode {
 	readonly $ast: TsmorphResponse;

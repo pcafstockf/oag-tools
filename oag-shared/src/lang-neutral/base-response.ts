@@ -1,8 +1,9 @@
 import {InjectionToken} from 'async-injection';
-import {CodeGenResponseToken, Model, Response} from 'oag-shared/lang-neutral';
 import {OpenAPIV3_1} from 'openapi-types';
-import {BaseSettingsType} from '../settings/base';
 import {BaseLangNeutral} from './base-lang-neutral';
+import {BaseSettingsType} from './base-settings';
+import {Model} from './model';
+import {CodeGenResponseToken, Response} from './response';
 
 export abstract class BaseResponse<LANG_REF = unknown, MODEL_LANG_REF = unknown> extends BaseLangNeutral<OpenAPIV3_1.ResponseObject> implements Response<LANG_REF, MODEL_LANG_REF> {
 	protected constructor(baseSettings: BaseSettingsType) {

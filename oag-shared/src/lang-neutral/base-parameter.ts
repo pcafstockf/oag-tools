@@ -1,8 +1,9 @@
 import {InjectionToken} from 'async-injection';
-import {AbsParameter, BodyParameter, CodeGenBodyParameterToken, CodeGenNamedParameterToken, Model, NamedParameter} from 'oag-shared/lang-neutral';
 import {OpenAPIV3_1} from 'openapi-types';
-import {BaseSettingsType} from '../settings/base';
 import {BaseIdentifiedLangNeutral} from './base-lang-neutral';
+import {BaseSettingsType} from './base-settings';
+import {Model} from './model';
+import {AbsParameter, BodyParameter, CodeGenBodyParameterToken, CodeGenNamedParameterToken, NamedParameter} from './parameter';
 
 export abstract class BaseParameter<OAE, LANG_REF extends any = unknown, MODEL_LANG_REF = unknown> extends BaseIdentifiedLangNeutral<OAE, LANG_REF> implements AbsParameter<OAE, LANG_REF, MODEL_LANG_REF> {
 	abstract readonly kind: 'param' | 'body';

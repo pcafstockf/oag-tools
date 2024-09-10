@@ -2,9 +2,9 @@ import os from 'node:os';
 import {CommonModels, Model} from 'oag-shared/lang-neutral/model';
 import {OpenAPIV3_1} from 'openapi-types';
 import {ClassDeclaration, InterfaceDeclaration, ObjectLiteralElement} from 'ts-morph';
-import {BaseSettingsType} from '../../settings/base';
+import {BaseSettingsType} from 'oag-shared/lang-neutral/base-settings';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {BaseArrayModel, BasePrimitiveModel, BaseRecordModel} from '../base-model';
+import {BaseArrayModel, BasePrimitiveModel, BaseRecordModel} from 'oag-shared/lang-neutral/base-model';
 
 interface ModelInterfaceDeclaration extends InterfaceDeclaration {
 	readonly $ast: Model<InterfaceDeclaration | ClassDeclaration | ObjectLiteralElement>;

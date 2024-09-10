@@ -1,11 +1,11 @@
-import {isEqualWith as lodashIsEqualWith} from 'lodash';
 import os from 'node:os';
 import path from 'node:path';
-import {LangNeutralTypes} from 'oag-shared/lang-neutral/lang-neutral';
-import {ArrayModel, CommonModels, Model, ModelKind, PrimitiveModel, PrimitiveModelTypes, RecordModel, RecordPropertyType} from 'oag-shared/lang-neutral/model';
 import {OpenAPIV3_1} from 'openapi-types';
-import {BaseSettingsType} from '../settings/base';
+import {isEqualWith as lodashIsEqualWith} from 'lodash';
 import {BaseFileBasedLangNeutral} from './base-lang-neutral';
+import {BaseSettingsType} from './base-settings';
+import {LangNeutralTypes} from './lang-neutral';
+import {ArrayModel, CommonModels, Model, ModelKind, PrimitiveModel, PrimitiveModelTypes, RecordModel, RecordPropertyType} from './model';
 
 export abstract class BaseModel<LANG_REF extends any = unknown> extends BaseFileBasedLangNeutral<OpenAPIV3_1.SchemaObject, LANG_REF> implements Model<LANG_REF> {
 	protected constructor(baseSettings: BaseSettingsType) {

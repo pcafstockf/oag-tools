@@ -1,5 +1,3 @@
-// noinspection JSUnusedGlobalSymbols
-
 import {camelCase as lodashCamelCase, snakeCase as lodashSnakeCase, toUpper} from 'lodash';
 
 export type NameCase = 'kebab' | 'pascal' | 'snake' | 'camel' | undefined | null | '';

@@ -1,10 +1,12 @@
-import {InjectionToken} from 'async-injection';
 import os from 'node:os';
-import {AbsParameter, CodeGenMethodToken, Method, Response} from 'oag-shared/lang-neutral';
-import * as nameUtils from 'oag-shared/utils/name-utils';
+import {InjectionToken} from 'async-injection';
 import {OpenAPIV3_1} from 'openapi-types';
-import {BaseSettingsType} from '../settings/base';
+import * as nameUtils from '../utils/name-utils';
 import {BaseIdentifiedLangNeutral} from './base-lang-neutral';
+import {BaseParameter} from './base-parameter';
+import {BaseSettingsType} from './base-settings';
+import {CodeGenMethodToken, Method} from './method';
+import {Response} from './response';
 
 export abstract class BaseMethod<LANG_REF extends any = unknown> extends BaseIdentifiedLangNeutral<OpenAPIV3_1.OperationObject, LANG_REF> implements Method<LANG_REF> {
 	protected constructor(baseSettings: BaseSettingsType) {
@@ -58,15 +60,15 @@ export abstract class BaseMethod<LANG_REF extends any = unknown> extends BaseIde
 		return id;
 	}
 
-	addParameter(param: AbsParameter<unknown>): void {
+	addParameter(param: BaseParameter<unknown>): void {
 		if (!this.#parameters)
 			this.#parameters = [];
 		this.#parameters.push(param);
 	}
 
-	#parameters: AbsParameter<unknown>[];
+	#parameters: BaseParameter<unknown>[];
 
-	get parameters(): AbsParameter<unknown>[] {
+	get parameters(): BaseParameter<unknown>[] {
 		return this.#parameters?.slice(0) ?? [];
 	}
 
@@ -103,7 +105,7 @@ export abstract class BaseMethod<LANG_REF extends any = unknown> extends BaseIde
 			if (rsp.model) {
 				modelTxt = (rsp.model.toString as any)(true);
 				if (modelTxt)
-					modelTxt = modelTxt.replaceAll(/[\r?\n]+/g, `${os.EOL}\t`)
+					modelTxt = modelTxt.replaceAll(/[\r?\n]+/g, `${os.EOL}\t`);
 			}
 			if (i === 0)
 				p += `{${code}:`;

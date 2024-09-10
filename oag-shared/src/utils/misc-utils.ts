@@ -1,7 +1,6 @@
-import {omit as lodashOmit, transform as lodashTransform} from 'lodash';
 import {constants, lstatSync, PathLike, Stats} from 'node:fs';
 import {access} from 'node:fs/promises';
-
+import {omit as lodashOmit, transform as lodashTransform} from 'lodash';
 
 /**
  * Same as JavaScript's template literals, but use #{} instead of ${}.

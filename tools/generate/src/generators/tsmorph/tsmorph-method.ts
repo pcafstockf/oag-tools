@@ -1,7 +1,7 @@
 import {MethodDeclaration, MethodSignature} from 'ts-morph';
-import {BaseSettingsType} from '../../settings/base';
+import {BaseSettingsType} from 'oag-shared/lang-neutral/base-settings';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {BaseMethod} from '../base-method';
+import {BaseMethod} from 'oag-shared/lang-neutral/base-method';
 
 interface MethodMethodSignature extends MethodSignature {
 	readonly $ast: TsmorphMethod;

@@ -6,10 +6,10 @@ import {AbsParameter} from 'oag-shared/lang-neutral/parameter';
 import {OpenAPIV3_1Visitor} from 'oag-shared/openapi/document-visitor';
 import * as nameUtils from 'oag-shared/utils/name-utils';
 import {OpenAPIV3_1} from 'openapi-types';
-import {BaseMethod, BaseMethodToken} from './generators/base-method';
-import {BaseArrayModel, BaseModel, BaseRecordModel} from './generators/base-model';
-import {BaseBodyParameterToken, BaseNamedParameterToken} from './generators/base-parameter';
-import {BaseResponseToken} from './generators/base-response';
+import {BaseMethod, BaseMethodToken} from 'oag-shared/lang-neutral/base-method';
+import {BaseArrayModel, BaseModel, BaseRecordModel} from 'oag-shared/lang-neutral/base-model';
+import {BaseBodyParameterToken, BaseNamedParameterToken} from 'oag-shared/lang-neutral/base-parameter';
+import {BaseResponseToken} from 'oag-shared/lang-neutral/base-response';
 import {ClientSettingsToken, ClientSettingsType} from './settings/client';
 
 const MODEL_LN = Symbol('model');

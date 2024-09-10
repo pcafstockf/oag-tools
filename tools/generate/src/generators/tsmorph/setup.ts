@@ -1,6 +1,6 @@
 import {Container} from 'async-injection';
 import {CodeGenCommonModelsToken, CodeGenPrimitiveModelToken, Model} from 'oag-shared/lang-neutral';
-import {BasePrimitiveModel} from '../base-model';
+import {BasePrimitiveModel} from 'oag-shared/lang-neutral/base-model';
 import {TsmorphCommonModels, TsmorphPrimitiveModel} from './tsmorph-model';
 
 export async function beginTsMorphSetup(dic: Container, path: string[], obj: object): Promise<void> {

@@ -1,9 +1,10 @@
 import os from 'node:os';
 import path from 'node:path';
-import {Api, Method} from 'oag-shared/lang-neutral';
 import {OpenAPIV3_1} from 'openapi-types';
-import {BaseSettingsType} from '../settings/base';
+import {Api} from './api';
 import {BaseFileBasedLangNeutral} from './base-lang-neutral';
+import {BaseSettingsType} from './base-settings';
+import {Method} from './method';
 
 export abstract class BaseApi<LANG_REF extends any = unknown> extends BaseFileBasedLangNeutral<OpenAPIV3_1.TagObject, LANG_REF> implements Api<LANG_REF> {
 	protected constructor(baseSettings: BaseSettingsType) {

@@ -1,6 +1,6 @@
 import {InjectableId} from 'async-injection';
 import {RegisterConfigMarker} from 'dyflex-config';
-import {NameCase} from 'oag-shared/utils/name-utils';
+import {NameCase} from '../utils/name-utils';
 
 export const BaseSettings = {
 	[RegisterConfigMarker]: 'CODE_GEN_BASE',

@@ -1,7 +1,7 @@
 import {ParameterDeclaration} from 'ts-morph';
-import {BaseSettingsType} from '../../settings/base';
+import {BaseSettingsType} from 'oag-shared/lang-neutral/base-settings';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {BaseBodyParameter, BaseNamedParameter} from '../base-parameter';
+import {BaseBodyParameter, BaseNamedParameter} from 'oag-shared/lang-neutral/base-parameter';
 
 
 interface NamedParameterDeclaration extends ParameterDeclaration {
