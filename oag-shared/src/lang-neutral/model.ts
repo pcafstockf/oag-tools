@@ -38,8 +38,6 @@ export interface ArrayModel<LANG_REF = unknown> extends Model<LANG_REF> {
 	 */
 	readonly items: Readonly<Model>;
 
-	setItems(items: Model): void;
-
 	/**
 	 * This is of questionable use in code generation (mostly about validation).
 	 * But it could be useful for a few such as 'uniqueItems' (perhaps you want to use a Set).

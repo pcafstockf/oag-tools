@@ -7,7 +7,7 @@ import {OpenAPIV3_1Visitor} from 'oag-shared/openapi/document-visitor';
 import * as nameUtils from 'oag-shared/utils/name-utils';
 import {OpenAPIV3_1} from 'openapi-types';
 import {BaseMethod, BaseMethodToken} from './generators/base-method';
-import {BaseModel} from './generators/base-model';
+import {BaseArrayModel, BaseModel, BaseRecordModel} from './generators/base-model';
 import {BaseBodyParameterToken, BaseNamedParameterToken} from './generators/base-parameter';
 import {BaseResponseToken} from './generators/base-response';
 import {ClientSettingsToken, ClientSettingsType} from './settings/client';
@@ -145,7 +145,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 				case 'string':
 				case 'integer':
 				case 'null':
-					model = this.container.get<BaseModel>(CodeGenPrimitiveModelToken);
+					model = this.container.get(CodeGenCommonModelsToken)[schema.type] as BaseModel;
 					break;
 				default:
 			}
@@ -215,8 +215,25 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		}
 		finally {
 			const schemaModel = (schema as any)[MODEL_LN] as Model;
-			const parentModel = (parent as any)[MODEL_LN] as ArrayModel;
+			const parentModel = (parent as any)[MODEL_LN] as BaseArrayModel;
 			parentModel.setItems(schemaModel);
+		}
+	}
+
+	visitAdditionalProperties(schema: OpenAPIV3_1.SchemaObject | boolean, parent: OpenAPIV3_1.SchemaObject) {
+		try {
+			return super.visitAdditionalProperties(schema, parent);
+		}
+		finally {
+			let schemaModel: Model;
+			if (typeof schema === 'boolean'  && schema)
+				schemaModel = this.container.get(CodeGenCommonModelsToken)['any'];
+			else if (schema && (schema as any)[MODEL_LN])
+				schemaModel = (schema as any)[MODEL_LN] as Model;
+			if (schemaModel) {
+				const parentModel = (parent as any)[MODEL_LN] as BaseRecordModel;
+				parentModel.setAdditionalProperties(schemaModel);
+			}
 		}
 	}
 

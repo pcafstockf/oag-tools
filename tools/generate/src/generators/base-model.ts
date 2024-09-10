@@ -259,15 +259,14 @@ export class BaseRecordModel<LANG_REF = unknown> extends BaseModel<LANG_REF> imp
 	#properties: Record<string, RecordPropertyType>;
 
 	get additionalProperties(): Model | false {
-		const oae = this.oae as OpenAPIV3_1.BaseSchemaObject;
-		if (oae.additionalProperties) {
-			if (typeof oae.additionalProperties === 'object')
-				return ('$ast' in oae.additionalProperties) ? (oae.additionalProperties as any).$ast : undefined;
-			else if (typeof oae.additionalProperties === 'boolean')
-				return this.commonModels['any'];
-		}
-		return false;
+		return this.#additionalProperties ?? false;
 	}
+
+	setAdditionalProperties(additionalProperties: Model): void {
+		this.#additionalProperties = additionalProperties;
+	}
+
+	#additionalProperties: Model;
 
 	get jsdConstraints(): Record<string, string | number | boolean> {
 		const oae = this.oae as any;
@@ -291,6 +290,11 @@ export class BaseRecordModel<LANG_REF = unknown> extends BaseModel<LANG_REF> imp
 				const txt = (p.toString as any)(true);
 				retVal += `\t${key}: ${txt}${os.EOL}`;
 			});
+		}
+		const ap = this.additionalProperties;
+		if (ap) {
+			const txt = (ap.toString as any)(true);
+			retVal += `\t[key: string]: ${txt}${os.EOL}`;
 		}
 		retVal += `}`;
 		const id = this.getIdentifier('intf');

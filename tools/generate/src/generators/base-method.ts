@@ -1,4 +1,5 @@
 import {InjectionToken} from 'async-injection';
+import os from 'node:os';
 import {AbsParameter, CodeGenMethodToken, Method, Response} from 'oag-shared/lang-neutral';
 import * as nameUtils from 'oag-shared/utils/name-utils';
 import {OpenAPIV3_1} from 'openapi-types';
@@ -99,8 +100,11 @@ export abstract class BaseMethod<LANG_REF extends any = unknown> extends BaseIde
 		let rspTxt = rspCodes.reduce((p, code, i) => {
 			let modelTxt = 'void';
 			const rsp = responses.get(code);
-			if (rsp.model)
+			if (rsp.model) {
 				modelTxt = (rsp.model.toString as any)(true);
+				if (modelTxt)
+					modelTxt = modelTxt.replaceAll(/[\r?\n]+/g, `${os.EOL}\t`)
+			}
 			if (i === 0)
 				p += `{${code}:`;
 			else

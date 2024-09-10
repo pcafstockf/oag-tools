@@ -1,4 +1,6 @@
+import os from 'node:os';
 import {CommonModels, Model} from 'oag-shared/lang-neutral/model';
+import {OpenAPIV3_1} from 'openapi-types';
 import {ClassDeclaration, InterfaceDeclaration, ObjectLiteralElement} from 'ts-morph';
 import {BaseSettingsType} from '../../settings/base';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
@@ -44,6 +46,23 @@ export class TsmorphPrimitiveModel extends MixinTsmorphModel(BasePrimitiveModel)
 	) {
 		super(baseSettings, commonModels);
 		this.tsMorphSettings = tsMorphSettings;
+	}
+	init(doc: OpenAPIV3_1.Document, jsonPath: string, oae: OpenAPIV3_1.SchemaObject): TsmorphPrimitiveModel {
+		super.init(doc, jsonPath, oae);
+		return this;
+	}
+	setTypeScriptType(txt: string): TsmorphPrimitiveModel {
+		this.#tsTypeTxt = txt;
+		return this;
+	}
+	#tsTypeTxt: string;
+
+	toString(owned?: boolean) {
+		if (this.#tsTypeTxt) {
+			if (owned)
+				return this.#tsTypeTxt;
+		}
+		return super.toString(owned);
 	}
 }
 

@@ -695,8 +695,10 @@ export class DocumentVisitor<
 	}
 
 	visitAdditionalProperties(schema: SCHEMA | boolean, parent: SCHEMA): boolean | void {
-		if (typeof schema === 'object')
-			return this.inspectSchema(schema, parent)?.result;
+		if (typeof schema === 'object') {
+			// No need to re-inspect as inspection occurred to get here.
+			return this.visitSchema(schema, parent);
+		}
 	}
 
 	inspectSchemaProperty(schema: SCHEMA | REFERENCE, parent: SCHEMA): boolean | void {
