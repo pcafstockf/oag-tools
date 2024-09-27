@@ -1,31 +1,28 @@
-import os from 'node:os';
-import {InjectionToken} from 'async-injection';
-import {OpenAPIV3_1} from 'openapi-types';
-import * as nameUtils from '../utils/name-utils';
-import {BaseIdentifiedLangNeutral} from './base-lang-neutral';
-import {BaseParameter} from './base-parameter';
-import {BaseSettingsType} from './base-settings';
-import {CodeGenMethodToken, Method} from './method';
-import {Response} from './response';
+// noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
 
-export abstract class BaseMethod<LANG_REF extends any = unknown> extends BaseIdentifiedLangNeutral<OpenAPIV3_1.OperationObject, LANG_REF> implements Method<LANG_REF> {
-	protected constructor(baseSettings: BaseSettingsType) {
+import os from 'node:os';
+import {OpenAPIV3_1} from 'openapi-types';
+import * as nameUtils from '../../utils/name-utils';
+import {LangNeutralApiTypes} from '../api';
+import {Method} from '../method';
+import {Parameter} from '../parameter';
+import {Response} from '../response';
+import {BaseLangNeutral, BaseLangNeutralConstructor, MixOpenApiLangNeutral} from './base-lang-neutral';
+import {BaseSettingsType} from './base-settings';
+
+
+export abstract class BaseMethod<LANG_REF = unknown> extends MixOpenApiLangNeutral<OpenAPIV3_1.OperationObject, Method, BaseLangNeutralConstructor>(BaseLangNeutral as BaseLangNeutralConstructor) implements Method<LANG_REF> {
+	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
 
-	/**
-	 * @inheritDoc
-	 * WARNING:
-	 *  Even though 'pathItem' is declared as optional (to keep TypeScript happy wrt inheritance), it is not optional.
-	 *  Indeed our interface declaration lists it as required.
-	 */
-	init(doc: OpenAPIV3_1.Document, jsonPath: string, operation: OpenAPIV3_1.OperationObject, pathItem?: OpenAPIV3_1.PathItemObject): void {
+	init(_doc: OpenAPIV3_1.Document, jsonPath: string, operation: OpenAPIV3_1.OperationObject, pathItem: OpenAPIV3_1.PathItemObject): void {
+		this.setOae(operation);
 		const lastSep = jsonPath.lastIndexOf('/');
 		this.#httpMethod = jsonPath.substring(lastSep + 1);
 		const secondLastSep = jsonPath.lastIndexOf('/', lastSep - 1);
 		this.#pathPattern = jsonPath.substring(secondLastSep + 1, lastSep);
 		this.#pathItem = pathItem;
-		super.init(doc, jsonPath, operation);
 	}
 
 	#pathPattern: string;
@@ -49,7 +46,7 @@ export abstract class BaseMethod<LANG_REF extends any = unknown> extends BaseIde
 
 	abstract getType(type: string): LANG_REF;
 
-	getIdentifier(type: 'intf' | 'impl' | 'hndl'): string {
+	getIdentifier(_type: LangNeutralApiTypes): string {
 		return this.toOperationName(this.ensureOperationId());
 	}
 
@@ -60,15 +57,15 @@ export abstract class BaseMethod<LANG_REF extends any = unknown> extends BaseIde
 		return id;
 	}
 
-	addParameter(param: BaseParameter<unknown>): void {
+	addParameter(param: Parameter<unknown>): void {
 		if (!this.#parameters)
 			this.#parameters = [];
 		this.#parameters.push(param);
 	}
 
-	#parameters: BaseParameter<unknown>[];
+	#parameters: Parameter<unknown>[];
 
-	get parameters(): BaseParameter<unknown>[] {
+	get parameters(): Parameter<unknown>[] {
 		return this.#parameters?.slice(0) ?? [];
 	}
 
@@ -121,5 +118,3 @@ export abstract class BaseMethod<LANG_REF extends any = unknown> extends BaseIde
 		return retVal + rspTxt;
 	}
 }
-
-export const BaseMethodToken = CodeGenMethodToken as InjectionToken<BaseMethod>;

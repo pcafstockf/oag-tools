@@ -2,7 +2,7 @@ import {mergeConfig} from 'dyflex-config';
 import {cloneDeep, merge, mergeWith} from 'lodash';
 import {interpolateBashStyle} from '../shared';
 import * as nameUtils from './name-utils';
-import {BaseSettings} from 'oag-shared/lang-neutral/base-settings';
+import {BaseSettings} from 'oag-shared/lang-neutral/base/base-settings';
 import {ClientCodeGenConfig} from './settings/client';
 import {TsMorphCodeGenConfig} from './settings/tsmorph';
 

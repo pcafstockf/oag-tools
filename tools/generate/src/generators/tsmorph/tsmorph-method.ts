@@ -1,18 +1,16 @@
+import {BaseSettingsType, BaseMethod} from 'oag-shared/lang-neutral/base';
 import {MethodDeclaration, MethodSignature} from 'ts-morph';
-import {BaseSettingsType} from 'oag-shared/lang-neutral/base-settings';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {BaseMethod} from 'oag-shared/lang-neutral/base-method';
 
 interface MethodMethodSignature extends MethodSignature {
 	readonly $ast: TsmorphMethod;
 }
-
 interface MethodMethodDeclaration extends MethodDeclaration {
 	readonly $ast: TsmorphMethod;
 }
 
 export abstract class TsmorphMethod extends BaseMethod<MethodMethodSignature | MethodMethodDeclaration> {
-	protected constructor(baseSettings: BaseSettingsType, protected tsMorphSettings: TsMorphSettingsType) {
+	protected constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType) {
 		super(baseSettings);
 	}
 
@@ -22,6 +20,5 @@ export abstract class TsmorphMethod extends BaseMethod<MethodMethodSignature | M
 	getType(type: string): MethodMethodSignature | MethodMethodDeclaration {
 		return this.#tsTypes[type];
 	}
-
 	#tsTypes: Record<string, MethodMethodSignature | MethodMethodDeclaration>;
 }

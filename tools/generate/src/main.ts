@@ -9,7 +9,7 @@ import {checkCliArgs} from './cli-opts';
 import {parseCliArgs} from './cli-yargs';
 import {setupTsMorphClient} from './generators/tsmorph/client/setup';
 import {LangNeutralGenerator} from './lang-neutral-generator';
-import {BaseSettings} from 'oag-shared/lang-neutral/base-settings';
+import {BaseSettings} from 'oag-shared/lang-neutral/base/base-settings';
 import {ClientSettings, ClientSettingsType} from './settings/client';
 import {ServerSettings, ServerSettingsType} from './settings/server';
 import {TsMorphSettings, TsMorphSettingsType} from './settings/tsmorph';
@@ -88,9 +88,9 @@ import {TsMorphServerSettings, TsMorphServerSettingsType} from './settings/tsmor
 	const doc = await parser.bundle(cliArgs.i) as OpenAPIV3_1.Document;
 	const lang = await generator.generate(doc, !config.base.allModels);
 
-	// lang.models.forEach(m => {
-	// 	console.log(m.toString());
-	// });
+	lang.models.reverse().forEach(m => {
+		console.log(m.toString());
+	});
 	lang.apis.forEach(m => {
 		console.log(m.toString());
 	});

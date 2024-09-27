@@ -1,18 +1,12 @@
 import SwaggerParser from '@apidevtools/swagger-parser';
 import {Container} from 'async-injection';
-import {Api, CodeGenApiToken} from 'oag-shared/lang-neutral/api';
-import {ArrayModel, CodeGenArrayModelToken, CodeGenCommonModelsToken, CodeGenPrimitiveModelToken, CodeGenRecordModelToken, Model, RecordModel} from 'oag-shared/lang-neutral/model';
-import {AbsParameter} from 'oag-shared/lang-neutral/parameter';
+import {Api, Model, Parameter} from 'oag-shared/lang-neutral';
+import {BaseApi, BaseArrayModel, BaseBodyParameter, BaseMethod, BaseMixedModel, BaseNamedParameter, BaseOpenApiResponse, BaseRecordModel, BaseSchemaModel, CodeGenAst, CodeGenApiToken, CodeGenArrayModelToken, CodeGenBodyParameterToken, CodeGenCommonModelsToken, CodeGenMethodToken, CodeGenMixedModelToken, CodeGenNamedParameterToken, CodeGenOpenApiResponseToken, CodeGenRecordModelToken, CommonModelTypes, OpenApiSchemaWithModelRef, BaseSyntheticModel, CodeGenSyntheticModelToken, BaseSettingsToken} from 'oag-shared/lang-neutral/base';
 import {OpenAPIV3_1Visitor} from 'oag-shared/openapi/document-visitor';
 import * as nameUtils from 'oag-shared/utils/name-utils';
+import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
 import {OpenAPIV3_1} from 'openapi-types';
-import {BaseMethod, BaseMethodToken} from 'oag-shared/lang-neutral/base-method';
-import {BaseArrayModel, BaseModel, BaseRecordModel} from 'oag-shared/lang-neutral/base-model';
-import {BaseBodyParameterToken, BaseNamedParameterToken} from 'oag-shared/lang-neutral/base-parameter';
-import {BaseResponseToken} from 'oag-shared/lang-neutral/base-response';
 import {ClientSettingsToken, ClientSettingsType} from './settings/client';
-
-const MODEL_LN = Symbol('model');
 
 interface SchemaModel {
 	schema?: OpenAPIV3_1.SchemaObject;
@@ -68,12 +62,12 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 	protected activeOpParams: ParamSchemaModel[];
 	/**
 	 * Only 'visitRequestBody' sets this property (it is cleared by 'visitOperation').
-	 * So if this is defined (and 'activeOpResponse' is not), 'visitSchema' must be processing an request body content type.
+	 * So if this is defined (and 'activeOpResponse' is not), 'visitSchema' must be processing a request body content type.
 	 */
 	protected activeOpRequest: RequestSchemaModel;
 	/**
 	 * Only 'visitResponse' sets this property (it is cleared by 'visitOperation').
-	 * So if this is defined, 'visitSchema' must be processing an response body content type.
+	 * So if this is defined, 'visitSchema' must be processing a response body content type.
 	 */
 	protected activeOpResponse: ResponseSchemaModel;
 
@@ -128,34 +122,105 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 	}
 
 	visitSchema(schema: OpenAPIV3_1.SchemaObject, parent?: OpenAPIV3_1.SchemaObject): boolean | void {
-		let model: BaseModel;
+		if (this.seenSchema.has(schema))
+			return;
+		this.seenSchema.add(schema);
+
+		let model: BaseSchemaModel;
 		if (schema.type && Array.isArray(schema.type)) {
-			throw new Error('NOT IMPLEMENTED');
+			// OpenAPI will not allow "ambiguous" mixed types.
+			// Meaning...
+			// ['object', 'string', 'number', 'null'] would be legal.
+			// ['object', 'array', 'boolean'] would also be legal, BUT *only* if no 'items' *or* 'properties' defined in the schema.
+			// [what-ever-single-thing, 'null'] is always legal.
+			const nullCount = schema.type.includes('null') ? 1 : 0;
+			const hasObj = schema.type.includes('object');
+			const hasArray = schema.type.includes('array');
+			if (hasObj && (!hasArray)) {
+				if (schema.type.length === 1 + nullCount) {
+					model = this.container.get<BaseSchemaModel>(CodeGenRecordModelToken);
+					model.init(this.activeDoc, this.activeJsonPath, schema);
+				}
+			}
+			else if (hasArray && (!hasObj)) {
+				if (schema.type.length === 1 + nullCount) {
+					model = this.container.get<BaseSchemaModel>(CodeGenArrayModelToken);
+					model.init(this.activeDoc, this.activeJsonPath, schema);
+				}
+			}
+			else if (schema.type.length === 1 + nullCount) {
+				const nonNullType = schema.type.find(s => s !== 'null');
+				model = this.container.get(CodeGenCommonModelsToken)(nonNullType) as BaseSchemaModel;
+				model.init(this.activeDoc, this.activeJsonPath, schema);
+			}
+			if (!model) {
+				model = this.container.get(CodeGenMixedModelToken)('union') as BaseMixedModel;
+				model.init(this.activeDoc, this.activeJsonPath, schema);
+			}
 		}
 		else {
+			let key: string;
+			let constraints: Record<string, string | number | boolean>;
 			switch (schema.type) {
 				case 'object':
-					model = this.container.get<BaseModel>(CodeGenRecordModelToken);
+					model = this.container.get<BaseSchemaModel>(CodeGenRecordModelToken);
 					break;
 				case 'array':
-					model = this.container.get<BaseModel>(CodeGenArrayModelToken);
+					model = this.container.get<BaseSchemaModel>(CodeGenArrayModelToken);
 					break;
 				case 'boolean':
+					key = schema.type;
+					break;
 				case 'number':
+					key = schema.type;
+					constraints = SchemaJsdConstraints(schema);
+					switch (constraints['format']) {
+						case 'float':
+						case 'double':
+							key = constraints['format'];
+							break;
+					}
+					break;
 				case 'string':
+					key = schema.type;
+					constraints = SchemaJsdConstraints(schema);
+					switch (constraints['format']) {
+						case 'binary':
+						case 'byte':
+						case 'date':
+						case 'date-time':
+						case 'uri':
+						case 'regex':
+							key = constraints['format'];
+							break;
+					}
+					break;
 				case 'integer':
+					key = schema.type;
+					constraints = SchemaJsdConstraints(schema);
+					switch (constraints['format']) {
+						case 'int32':
+						case 'int64':
+							key = constraints['format'];
+							break;
+					}
+					break;
 				case 'null':
-					model = this.container.get(CodeGenCommonModelsToken)[schema.type] as BaseModel;
+					key = schema.type;
 					break;
 				default:
+					key = 'any';    // The absence of a type means it can be anything.
+					break;
 			}
+			if (key)
+				model = this.container.get(CodeGenCommonModelsToken)(key as CommonModelTypes) as BaseSchemaModel;
 			model.init(this.activeDoc, this.activeJsonPath, schema);
-			(schema as any)[MODEL_LN] = model;
-			if (model.getIdentifier('intf'))
-				this.models.push(model);
 		}
 		if (!model)
 			throw new Error('NOT IMPLEMENTED');
+		if (model.getIdentifier('intf'))
+			this.models.push(model);
+		(schema as any)[CodeGenAst] = model;
 
 		if (!parent) {
 			let activeParams: ParamSchemaModel[];
@@ -190,10 +255,6 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 				activeParams.at(-1).model = model;
 			}
 		}
-
-		if (this.seenSchema.has(schema))
-			return;
-		this.seenSchema.add(schema);
 		return super.visitSchema(schema, parent);
 	}
 
@@ -203,8 +264,8 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 			return super.visitSchemaProperty(schema, parent);
 		}
 		finally {
-			const schemaModel = (schema as any)[MODEL_LN] as Model;
-			const parentModel = (parent as any)[MODEL_LN] as RecordModel;
+			const schemaModel = (schema as OpenApiSchemaWithModelRef)[CodeGenAst];
+			const parentModel = (parent as OpenApiSchemaWithModelRef)[CodeGenAst] as BaseRecordModel;
 			parentModel.addProperty(propName, schemaModel, !!parent.required?.includes(propName));
 		}
 	}
@@ -214,31 +275,29 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 			return super.visitSchemaItems(schema, parent);
 		}
 		finally {
-			const schemaModel = (schema as any)[MODEL_LN] as Model;
-			const parentModel = (parent as any)[MODEL_LN] as BaseArrayModel;
+			const schemaModel = (schema as OpenApiSchemaWithModelRef)[CodeGenAst];
+			const parentModel = (parent as OpenApiSchemaWithModelRef)[CodeGenAst] as BaseArrayModel;
 			parentModel.setItems(schemaModel);
 		}
 	}
 
 	visitAdditionalProperties(schema: OpenAPIV3_1.SchemaObject | boolean, parent: OpenAPIV3_1.SchemaObject) {
-		try {
-			return super.visitAdditionalProperties(schema, parent);
-		}
-		finally {
+		const retVal = super.visitAdditionalProperties(schema, parent);
+		if (typeof retVal === 'undefined') {
 			let schemaModel: Model;
-			if (typeof schema === 'boolean'  && schema)
-				schemaModel = this.container.get(CodeGenCommonModelsToken)['any'];
-			else if (schema && (schema as any)[MODEL_LN])
-				schemaModel = (schema as any)[MODEL_LN] as Model;
+			if (typeof schema === 'boolean' && schema)
+				schemaModel = this.container.get(CodeGenCommonModelsToken)('ANY');
+			else if (schema && (schema as OpenApiSchemaWithModelRef)[CodeGenAst])
+				schemaModel = (schema as OpenApiSchemaWithModelRef)[CodeGenAst];
 			if (schemaModel) {
-				const parentModel = (parent as any)[MODEL_LN] as BaseRecordModel;
+				const parentModel = (parent as OpenApiSchemaWithModelRef)[CodeGenAst] as BaseRecordModel;
 				parentModel.setAdditionalProperties(schemaModel);
 			}
 		}
 	}
 
 	visitTag(tag: OpenAPIV3_1.TagObject): boolean | void {
-		const api = this.container.get(CodeGenApiToken);
+		const api = this.container.get<BaseApi>(CodeGenApiToken);
 		api.init(this.activeDoc, this.activeJsonPath, tag);
 		this.apis.push(api);
 		return super.visitTag(tag);
@@ -248,23 +307,28 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		const opJsonPath = this.activeJsonPath;
 		this.activeOpParams = [];
 		try {
-			return super.visitOperation(operation);
-		}
-		finally {
-			if (operation.tags && Array.isArray(operation.tags) && operation.tags.length > 0) {
-				const api = operation.tags.map((t) => {
-					const otName = nameUtils.snakeCase(t);
-					return this.apis.find(api => nameUtils.snakeCase(api.oae.name) === otName);
-				}).find(e => !!e);
-				if (api) {
-					const piJP = opJsonPath.substring(0, opJsonPath.lastIndexOf('/'));
-					const pi = this.resolver({$ref: piJP}) as OpenAPIV3_1.PathItemObject;
-					const method = this.container.get(BaseMethodToken);
-					method.init(this.activeDoc, opJsonPath, operation, pi);
-					this.processMethod(method);
-					api.addMethod(method);
+			const retVal = super.visitOperation(operation);
+			if (typeof retVal === 'undefined') {
+				const settings = this.container.get(BaseSettingsToken);
+				if ((operation as any)['x-ignore'] || (operation as any)[`x-ignore-${settings.role}`])
+					return retVal;
+				if (operation.tags && Array.isArray(operation.tags) && operation.tags.length > 0) {
+					const api = operation.tags.map((t) => {
+						const otName = nameUtils.snakeCase(t);
+						return this.apis.find(api => nameUtils.snakeCase(api.oae.name) === otName);
+					}).find(e => !!e) as BaseApi;
+					if (api) {
+						const piJP = opJsonPath.substring(0, opJsonPath.lastIndexOf('/'));
+						const pi = this.resolver({$ref: piJP}) as OpenAPIV3_1.PathItemObject;
+						const method = this.container.get<BaseMethod>(CodeGenMethodToken);
+						method.init(this.activeDoc, opJsonPath, operation, pi);
+						this.processMethod(method);
+						api.addMethod(method);
+					}
 				}
 			}
+		}
+		finally {
 			delete this.activeOpParams;
 			delete this.activeOpRequest;
 			delete this.activeOpResponse;
@@ -314,16 +378,14 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 
 		// Make a NamedParameter for each "shared" parameter (if any) that we collected for the current PathItem.
 		const opParams = (this.activePathItemParams ?? []).map(p => {
-			const param = this.container.get(BaseNamedParameterToken);
-			param.init(this.activeDoc, p.jsonPath, p.param);
-			param.setModel(p.model);
+			const param = this.container.get<BaseNamedParameter>(CodeGenNamedParameterToken);
+			param.init(this.activeDoc, p.jsonPath, p.param, p.model);
 			return param;
-		}) as AbsParameter<OpenAPIV3_1.ParameterObject | OpenAPIV3_1.RequestBodyObject>[];
+		}) as Parameter<OpenAPIV3_1.ParameterObject | OpenAPIV3_1.RequestBodyObject>[];
 		// Make a NamedParameter for each parameter (if any) that we collected for this operation.
 		(this.activeOpParams ?? []).reduce((r, p) => {
-			const param = this.container.get(BaseNamedParameterToken);
-			param.init(this.activeDoc, p.jsonPath, p.param);
-			param.setModel(p.model);
+			const param = this.container.get<BaseNamedParameter>(CodeGenNamedParameterToken);
+			param.init(this.activeDoc, p.jsonPath, p.param, p.model);
 			r.push(param);
 			return r;
 		}, opParams);
@@ -345,14 +407,13 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 				model = this.aggregateModels(bodySchemaModels.map(e => e.model), `union`);
 			}
 			else {
-				// A request body with no schema defined we interpret to mean 'any'.
+				// A request body with no schema defined we interpret to mean 'ANY'.
 				// It could perhaps mean void, but in that case it should be removed from the specification.
-				model = this.container.get(CodeGenCommonModelsToken)['any'];
+				model = this.container.get(CodeGenCommonModelsToken)('ANY');
 			}
 			const otherNames = opParams.map(p => p.getIdentifier('intf'));
-			const body = this.container.get(BaseBodyParameterToken);
-			body.init(this.activeDoc, this.activeOpRequest.jsonPath, this.activeOpRequest.request, otherNames, preferredMT);
-			body.setModel(model);
+			const body = this.container.get<BaseBodyParameter>(CodeGenBodyParameterToken);
+			body.init(this.activeDoc, this.activeOpRequest.jsonPath, this.activeOpRequest.request, model, otherNames, preferredMT);
 			opParams.push(body);
 		}
 		// Using a stable sort, ensure all required params come before optional params.
@@ -371,7 +432,15 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		}).forEach(p => method.addParameter(p));
 
 		// Order our responses in (what we consider to be) an optimal ordering.
-		const preferredRspCodes = this.preferredResponseCodes(method.httpMethod, this.activeOpResponse.map(e => e.code));
+		const rspCodes = this.activeOpResponse.map(e => e.code);
+		const hasOk = rspCodes.some(c => c.startsWith('2') || c.startsWith('d') || c.startsWith('D'));
+		if (! hasOk) {
+			// Method's always have a "success" return type, but the schema does not define one (e.g. what will be returned is unknown).
+			const rsp = this.container.get<BaseOpenApiResponse>(CodeGenOpenApiResponseToken);
+			rsp.init(this.activeDoc, undefined, undefined, this.container.get(CodeGenCommonModelsToken)('UNKNOWN'));
+			method.addResponse('2XX', rsp);
+		}
+		const preferredRspCodes = this.preferredResponseCodes(method.httpMethod, rspCodes);
 		const opResponses = this.activeOpResponse.slice().sort((a, b) => preferredRspCodes.indexOf(a.code) - preferredRspCodes.indexOf(b.code));
 		opResponses.forEach(r => {
 			let model: Model;
@@ -388,11 +457,10 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 			}
 			else {
 				// A response with no schema defined means the response body is void (e.g. does not exist).
-				model = this.container.get(CodeGenCommonModelsToken)['void'];
+				model = this.container.get(CodeGenCommonModelsToken)('VOID');
 			}
-			const rsp = this.container.get(BaseResponseToken);
-			rsp.init(this.activeDoc, r.jsonPath, r.response);
-			rsp.setModel(model);
+			const rsp = this.container.get<BaseOpenApiResponse>(CodeGenOpenApiResponseToken);
+			rsp.init(this.activeDoc, r.jsonPath, r.response, model);
 			method.addResponse(r.code, rsp);
 		});
 	}
@@ -435,10 +503,12 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 	/**
 	 * Combine a given set of models in the specified way
 	 */
-	protected aggregateModels(map: Model[], way: 'union' | 'intersection' | 'discriminated'): Model {
-		if (map.length === 1)
-			return map[0];
-		throw new Error('NOT IMPLEMENTED');
+	protected aggregateModels(models: Model[], way: 'union' | 'intersection' | 'discriminated'): Model {
+		if (models.length === 1)
+			return models[0];
+		const model = this.container.get(CodeGenSyntheticModelToken)(way) as BaseSyntheticModel;
+		model.init(models);
+		return model;
 	}
 
 	/**

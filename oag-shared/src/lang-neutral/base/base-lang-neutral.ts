@@ -1,24 +1,15 @@
-import {OpenAPIV3_1} from 'openapi-types';
-import {interpolateBashStyle} from '../utils/misc-utils';
-import * as nameUtils from '../utils/name-utils';
+import {interpolateBashStyle} from '../../utils/misc-utils';
+import * as nameUtils from '../../utils/name-utils';
+import {CodeGenAst, LangNeutral, LangNeutralTypes, MixinConstructor, OpenApiLangNeutral, OpenApiLangNeutralBackRef} from '../lang-neutral';
 import {BaseSettingsType} from './base-settings';
-import {IdentifiedLangNeutral, LangNeutral} from './lang-neutral';
 
-export abstract class BaseLangNeutral<OAE, LANG_REF = unknown> implements LangNeutral<OAE, LANG_REF> {
-	protected constructor(protected baseSettings: BaseSettingsType) {
+export type BaseLangNeutralConstructor<T extends BaseLangNeutral = BaseLangNeutral> = new (baseSettings: BaseSettingsType) => T;
+
+export abstract class BaseLangNeutral<LANG_REF = unknown> implements LangNeutral<LANG_REF> {
+	constructor(protected baseSettings: BaseSettingsType) {
 	}
 
-	get oae(): OAE {
-		return this.#oae;
-	}
-
-	#oae: OAE;
-
-	init(doc: OpenAPIV3_1.Document, jsonPath: string, oae: OAE) {
-		this.#oae = oae;
-	}
-
-	abstract getType(type: 'json' | 'hndl' | 'intf' | 'impl'): LANG_REF;
+	abstract getType(type: LangNeutralTypes): LANG_REF;
 
 	protected toIntfName(name: string, type: 'api' | 'model'): string {
 		let templ = this.baseSettings.intfName_Tmpl;
@@ -112,18 +103,22 @@ export abstract class BaseLangNeutral<OAE, LANG_REF = unknown> implements LangNe
 	}
 }
 
-export abstract class BaseIdentifiedLangNeutral<OAE, LANG_REF = unknown> extends BaseLangNeutral<OAE, LANG_REF> implements IdentifiedLangNeutral {
-	protected constructor(baseSettings: BaseSettingsType) {
-		super(baseSettings);
-	}
+export function MixOpenApiLangNeutral<OAE, AST, T extends MixinConstructor = MixinConstructor>(base: T) {
+	return class BaseOpenApiLangNeutral extends base implements OpenApiLangNeutral<OAE, AST> {
+		get oae(): OAE & OpenApiLangNeutralBackRef<AST> {
+			return this.#oae;
+		}
 
-	abstract getIdentifier(type: 'json' | 'hndl' | 'intf' | 'impl'): string ;
-}
+		#oae: OAE & OpenApiLangNeutralBackRef<AST>;
 
-export abstract class BaseFileBasedLangNeutral<OAE, LANG_REF = unknown> extends BaseIdentifiedLangNeutral<OAE, LANG_REF> implements IdentifiedLangNeutral {
-	protected constructor(baseSettings: BaseSettingsType) {
-		super(baseSettings);
-	}
-
-	abstract getFilepath(type: 'json' | 'hndl' | 'intf' | 'impl'): string;
+		setOae(oae: OAE) {
+			if (oae) {
+				this.#oae = Object.assign(oae, {
+					[CodeGenAst]: this
+				}) as OAE & OpenApiLangNeutralBackRef<AST>;
+			}
+			else
+				this.#oae = undefined;
+		}
+	};
 }

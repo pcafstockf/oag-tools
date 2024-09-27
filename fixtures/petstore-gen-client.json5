@@ -1,5 +1,5 @@
 {
-	i: './test-out/petstore/client/petstore.bundle.json',
+	i: './fixtures/petstore.bundle.json',
 	o: './test-out/client/petstore/src',
 	d: 'all',
 	r: 'client',

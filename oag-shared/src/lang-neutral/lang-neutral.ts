@@ -1,12 +1,22 @@
 export type LangNeutralTypes = 'intf' | 'impl' | 'json' | 'hndl';
 
-export interface LangNeutral<OAE, LANG_REF = unknown> {
+/**
+ * Not all generated elements are OpenAPI based.
+ * Some are synthetically constructed by the generator.
+ */
+export interface LangNeutral<LANG_REF = unknown> {
+	getType(type: LangNeutralTypes): LANG_REF;
+}
+
+export const CodeGenAst = Symbol('code-gen-ast');
+export type OpenApiLangNeutralBackRef<AST> = { [CodeGenAst]: AST }
+
+export interface OpenApiLangNeutral<OAE, AST> {
 	/**
 	 * Return the underlying OpenApi Element.
+	 * The OpenAPI element will have a backlink (aka reference) to its CodeGenAst (aka LangNeutral).
 	 */
-	readonly oae: OAE;
-
-	getType(type: LangNeutralTypes): LANG_REF;
+	readonly oae: OAE & OpenApiLangNeutralBackRef<AST>;
 }
 
 export interface IdentifiedLangNeutral {
@@ -20,7 +30,14 @@ export interface IdentifiedLangNeutral {
 	getIdentifier(type: LangNeutralTypes): string | undefined;
 }
 
-export interface FileBasedLangNeutral {
+export function isIdentifiedLangNeutral(obj: unknown): obj is IdentifiedLangNeutral {
+	if (typeof (obj as IdentifiedLangNeutral).getIdentifier === 'function')
+		if ((obj as IdentifiedLangNeutral).getIdentifier(null))
+			return true;
+	return false;
+}
+
+export interface FileBasedLangNeutral extends IdentifiedLangNeutral {
 	/**
 	 * Where is this model located (relative to the output directory).
 	 * NOTE:
@@ -30,3 +47,12 @@ export interface FileBasedLangNeutral {
 	 */
 	getFilepath(type: LangNeutralTypes): string | undefined;
 }
+
+export function isFileBasedLangNeutral(obj: unknown): obj is FileBasedLangNeutral {
+	if (typeof (obj as FileBasedLangNeutral).getFilepath === 'function')
+		if ((obj as FileBasedLangNeutral).getFilepath(null))
+			return true;
+	return false;
+}
+
+export type MixinConstructor<T = {}> = new (...args: any[]) => T;

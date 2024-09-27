@@ -1,0 +1,30 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+enum LangNeutralTypes {
+intf
+impl
+json
+hndl
+}
+
+interface LangNeutral<LANG_REF> {
+  LANG_REF getType(LangNeutralTypes type)
+}
+interface OpenApiLangNeutral<OAE> extends LangNeutral {
+  OAE oae
+}
+interface IdentifiedLangNeutral <<optional>> {
+	(string | undefined) getIdentifier(LangNeutralTypes type)
+}
+interface FileBasedLangNeutral <<optional>> extends IdentifiedLangNeutral {
+	(string | undefined) getFilepath(LangNeutralTypes type);
+}
+
+class BaseLangNeutral implements LangNeutral {
+}
+
+class BaseOpenApiLangNeutral <<mixin>> implements OpenApiLangNeutral {
+}
+
+@enduml

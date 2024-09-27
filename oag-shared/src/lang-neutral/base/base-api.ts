@@ -1,19 +1,25 @@
 import os from 'node:os';
 import path from 'node:path';
 import {OpenAPIV3_1} from 'openapi-types';
-import {Api} from './api';
-import {BaseFileBasedLangNeutral} from './base-lang-neutral';
+import {Api, LangNeutralApiTypes} from '../api';
+import {LangNeutralTypes} from '../lang-neutral';
+import {Method} from '../method';
+import {BaseLangNeutral, BaseLangNeutralConstructor, MixOpenApiLangNeutral} from './base-lang-neutral';
 import {BaseSettingsType} from './base-settings';
-import {Method} from './method';
 
-export abstract class BaseApi<LANG_REF extends any = unknown> extends BaseFileBasedLangNeutral<OpenAPIV3_1.TagObject, LANG_REF> implements Api<LANG_REF> {
+export abstract class BaseApi<LANG_REF = unknown> extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api, BaseLangNeutralConstructor>(BaseLangNeutral as BaseLangNeutralConstructor) implements Api<LANG_REF> {
 	protected constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
 
-	abstract getType(type: string): LANG_REF;
+	init(_doc: OpenAPIV3_1.Document, _jsonPath: string, tag: OpenAPIV3_1.TagObject): this {
+		this.setOae(tag);
+		return this;
+	}
 
-	getIdentifier(type: 'intf' | 'impl' | 'hndl'): string {
+	abstract getType(type: LangNeutralTypes): LANG_REF;
+
+	getIdentifier(type: LangNeutralApiTypes): string {
 		switch (type) {
 			case 'intf':
 				return this.toIntfName(this.oae.name, 'api');
@@ -24,7 +30,7 @@ export abstract class BaseApi<LANG_REF extends any = unknown> extends BaseFileBa
 		}
 	}
 
-	getFilepath(type: 'intf' | 'impl' | 'hndl'): string {
+	getFilepath(type: LangNeutralApiTypes): string {
 		switch (type) {
 			case 'intf':
 				return path.join(this.baseSettings.apiIntfDir, this.toIntfFileBasename(this.oae.name, 'api'));
@@ -35,16 +41,16 @@ export abstract class BaseApi<LANG_REF extends any = unknown> extends BaseFileBa
 		}
 	}
 
-	addMethod(method: Method): void {
-		if (!this.#methods)
-			this.#methods = [];
-		this.#methods.push(method);
+	get methods(): Method[] {
+		return this.#methods?.slice(0) ?? [];
 	}
 
 	#methods: Method[];
 
-	get methods(): Method[] {
-		return this.#methods?.slice(0) ?? [];
+	addMethod(method: Method): void {
+		if (!this.#methods)
+			this.#methods = [];
+		this.#methods.push(method);
 	}
 
 	toString() {

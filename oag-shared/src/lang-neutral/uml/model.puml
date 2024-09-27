@@ -1,0 +1,72 @@
+@startuml
+'https://plantuml.com/class-diagram
+!include lang-neutral.puml
+
+enum ModelKind {
+	primitive
+	array
+	record
+	union
+	intersection
+	discriminated
+}
+enum PrimitiveModelTypes {
+	integer
+	number
+	string
+	boolean
+	null
+	any
+}
+
+interface Model << (I,#DC143C) >> extends LangNeutral {
+	ModelKind kind
+	string? name
+}
+
+interface SchemaModel << (I,#00FFFF) >> extends Model, OpenApiLangNeutral {
+}
+interface CombinedModel extends Model {
+	Model[] models
+}
+interface SyntheticModel extends CombinedModel {
+}
+interface MixedModel extends SchemaModel, CombinedModel {
+}
+interface PrimitiveModel extends SchemaModel {
+	PrimitiveModelTypes jsdType
+}
+interface ArrayModel extends SchemaModel {
+	Model items
+}
+interface RecordModel extends SchemaModel {
+	Dict<string, Model> properties
+	(Model | false) additionalProperties
+}
+class BaseModel extends BaseLangNeutral implements Model {
+}
+BaseModel ..|> FileBasedLangNeutral : may implement if named
+
+class BaseSchemaModel extends BaseModel implements SchemaModel {
+}
+
+class BaseMixedModel << (C,#FFFF00) >> extends BaseSchemaModel,BaseOpenApiLangNeutral implements MixedModel {
+}
+class BaseArrayModel << (C,#FFFF00) >> extends BaseSchemaModel,BaseOpenApiLangNeutral implements ArrayModel {
+}
+class BaseRecordModel << (C,#FFFF00) >> extends BaseSchemaModel,BaseOpenApiLangNeutral implements RecordModel {
+}
+class BasePrimitiveModel << (C,#FFFF00) >> extends BaseSchemaModel,BaseOpenApiLangNeutral implements PrimitiveModel {
+}
+class BaseSyntheticModel << (C,#FFFF00) >> extends BaseModel implements SyntheticModel {
+}
+
+legend top right
+  <b>Legend:</b>
+  <back:DC143C><color:black>CodeGenAst</color></back>
+  <back:FFFF00><color:black>Visible only to external sub-classes.</color></back>
+  <back:00FFFF><color:black>OpenApi Adapter</color></back>
+  Everything else is an internal construct.
+end legend
+
+@enduml

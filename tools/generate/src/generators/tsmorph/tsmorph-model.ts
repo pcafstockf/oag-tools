@@ -1,89 +1,103 @@
-import os from 'node:os';
-import {CommonModels, Model} from 'oag-shared/lang-neutral/model';
-import {OpenAPIV3_1} from 'openapi-types';
+import {Inject, Injectable} from 'async-injection';
+import {LangNeutralTypes, Model} from 'oag-shared/lang-neutral';
+import {BaseArrayModel, BaseMixedModel, BasePrimitiveModel, BaseRecordModel, BaseSettingsToken, BaseSettingsType, BaseSyntheticModel} from 'oag-shared/lang-neutral/base';
+import {BaseModel, BaseModelConstructor, BaseTypedModel} from 'oag-shared/lang-neutral/base/base-model';
+import {CombinedModelKind, ModelKind} from 'oag-shared/lang-neutral/model';
 import {ClassDeclaration, InterfaceDeclaration, ObjectLiteralElement} from 'ts-morph';
-import {BaseSettingsType} from 'oag-shared/lang-neutral/base-settings';
-import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {BaseArrayModel, BasePrimitiveModel, BaseRecordModel} from 'oag-shared/lang-neutral/base-model';
+import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
 
 interface ModelInterfaceDeclaration extends InterfaceDeclaration {
 	readonly $ast: Model<InterfaceDeclaration | ClassDeclaration | ObjectLiteralElement>;
 }
-
 interface ModelClassDeclaration extends ClassDeclaration {
 	readonly $ast: Model<InterfaceDeclaration | ClassDeclaration | ObjectLiteralElement>;
 }
-
 interface ModelObjectLiteralElement extends ObjectLiteralElement {
 	readonly $ast: Model<InterfaceDeclaration | ClassDeclaration | ObjectLiteralElement>;
 }
+type TsmorphModelTypes = ModelInterfaceDeclaration | ModelClassDeclaration | ModelObjectLiteralElement;
 
-export type TsmorphModelTypes = ModelInterfaceDeclaration | ModelClassDeclaration | ModelObjectLiteralElement;
-export type TsmorphCommonModels = CommonModels<TsmorphModelTypes>;
-
-type BaseModelConstructor = new (...args: any[]) => {};
-
-function MixinTsmorphModel<TBase extends BaseModelConstructor>(Base: TBase) {
-	return class TsmorphModel extends Base {
-		protected tsMorphSettings: TsMorphSettingsType;
+function MixTsmorphModel<T>(base: T) {
+	const derived = class TsmorphModel extends (base as BaseModelConstructor) implements Model<TsmorphModelTypes> {
+		constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType, kind?: ModelKind) {
+			super(baseSettings, kind);
+		}
 
 		getType(type: 'intf'): ModelInterfaceDeclaration;
 		getType(type: 'impl'): ModelClassDeclaration;
 		getType(type: 'json'): ModelObjectLiteralElement;
-		getType(type: string): TsmorphModelTypes {
+		override getType(type: LangNeutralTypes): TsmorphModelTypes {
 			return this.#tsTypes[type];
 		}
-
 		#tsTypes: Record<string, TsmorphModelTypes>;
 	};
+	return derived as unknown as new (baseSettings: BaseSettingsType, tsMorphSettings: TsMorphSettingsType, kind?: ModelKind) => T & typeof derived.prototype;
 }
 
-export class TsmorphPrimitiveModel extends MixinTsmorphModel(BasePrimitiveModel) {
+@Injectable()
+export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel<TsmorphModelTypes>>(BasePrimitiveModel as any) {
 	constructor(
+		@Inject(BaseSettingsToken)
 		baseSettings: BaseSettingsType,
-		commonModels: TsmorphCommonModels,
+		@Inject(TsMorphSettingsToken)
 		tsMorphSettings: TsMorphSettingsType,
 	) {
-		super(baseSettings, commonModels);
-		this.tsMorphSettings = tsMorphSettings;
-	}
-	init(doc: OpenAPIV3_1.Document, jsonPath: string, oae: OpenAPIV3_1.SchemaObject): TsmorphPrimitiveModel {
-		super.init(doc, jsonPath, oae);
-		return this;
-	}
-	setTypeScriptType(txt: string): TsmorphPrimitiveModel {
-		this.#tsTypeTxt = txt;
-		return this;
-	}
-	#tsTypeTxt: string;
-
-	toString(owned?: boolean) {
-		if (this.#tsTypeTxt) {
-			if (owned)
-				return this.#tsTypeTxt;
-		}
-		return super.toString(owned);
+		super(baseSettings, tsMorphSettings);
 	}
 }
 
-export class TsmorphArrayModel extends MixinTsmorphModel(BaseArrayModel) {
+@Injectable()
+export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel<TsmorphModelTypes>>(BaseArrayModel as any) {
 	constructor(
+		@Inject(BaseSettingsToken)
 		baseSettings: BaseSettingsType,
-		commonModels: TsmorphCommonModels,
+		@Inject(TsMorphSettingsToken)
 		tsMorphSettings: TsMorphSettingsType,
 	) {
-		super(baseSettings, commonModels);
-		this.tsMorphSettings = tsMorphSettings;
+		super(baseSettings, tsMorphSettings);
 	}
 }
 
-export class TsmorphRecordModel extends MixinTsmorphModel(BaseRecordModel) {
+@Injectable()
+export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel<TsmorphModelTypes>>(BaseRecordModel as any) {
 	constructor(
+		@Inject(BaseSettingsToken)
 		baseSettings: BaseSettingsType,
-		commonModels: TsmorphCommonModels,
+		@Inject(TsMorphSettingsToken)
 		tsMorphSettings: TsMorphSettingsType,
 	) {
-		super(baseSettings, commonModels);
-		this.tsMorphSettings = tsMorphSettings;
+		super(baseSettings, tsMorphSettings);
+	}
+}
+
+export class TsmorphMixedModel extends MixTsmorphModel<BaseMixedModel<TsmorphModelTypes>>(BaseMixedModel as any) {
+	constructor(
+		baseSettings: BaseSettingsType,
+		kind: CombinedModelKind,
+		tsMorphSettings: TsMorphSettingsType
+	) {
+		super(baseSettings, tsMorphSettings, kind);
+	}
+}
+
+export class TsmorphSyntheticModel extends MixTsmorphModel<BaseSyntheticModel<TsmorphModelTypes>>(BaseSyntheticModel as any) {
+	constructor(
+		baseSettings: BaseSettingsType,
+		kind: CombinedModelKind,
+		tsMorphSettings: TsMorphSettingsType
+	) {
+		super(baseSettings, tsMorphSettings, kind);
+	}
+}
+
+@Injectable()
+export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel<TsmorphModelTypes>>(BaseTypedModel as any) {
+	constructor(
+		@Inject(BaseSettingsToken)
+		baseSettings: BaseSettingsType,
+		@Inject(TsMorphSettingsToken)
+		tsMorphSettings: TsMorphSettingsType,
+	) {
+		super(baseSettings, tsMorphSettings, 'typed');
 	}
 }

@@ -1,0 +1,69 @@
+@startuml
+'https://plantuml.com/class-diagram
+!include lang-neutral.puml
+
+interface Model << (I,#DC143C) >> ##[dashed]red
+
+interface Parameter << (I,#DC143C) >> extends LangNeutral,IdentifiedLangNeutral {
+	string: name;
+	Model: model;
+}
+Parameter o--> Model
+
+interface NamedParameter << (I,#00FFFF) >> extends Parameter, OpenApiLangNeutral {
+}
+interface BodyParameter << (I,#00FFFF) >> extends Parameter, OpenApiLangNeutral {
+}
+
+interface Response << (I,#DC143C) >> extends LangNeutral {
+	Model: model;
+}
+Response o--> Model
+
+interface OpenApiResponse << (I,#00FFFF) >> extends Response, OpenApiLangNeutral {
+}
+
+interface Method << (I,#DC143C) >> extends LangNeutral,IdentifiedLangNeutral,OpenApiLangNeutral {
+	string pathPattern
+	Parameter[] parameters
+	Dict<string, Response> responses
+	string[]? preferredAcceptTypes
+}
+Method "1" *--> "many" Parameter
+Method "1" *--> "1" Response
+
+interface Api << (I,#DC143C) >> extends LangNeutral,FileBasedLangNeutral {
+	Method[] methods
+}
+Api "1" *--> "many"	Method
+
+class BaseApi << (C,#FFFF00) >> extends BaseLangNeutral,BaseOpenApiLangNeutral implements Api {
+}
+BaseApi ..|> FileBasedLangNeutral
+
+class BaseMethod << (C,#FFFF00) >> extends BaseLangNeutral,BaseOpenApiLangNeutral implements Method {
+}
+
+class BaseParameter extends BaseLangNeutral implements Parameter {
+}
+
+class BaseNamedParameter << (C,#FFFF00) >> extends BaseParameter,BaseOpenApiLangNeutral implements NamedParameter {
+}
+
+class BaseBodyParameter << (C,#FFFF00) >> extends BaseParameter,BaseOpenApiLangNeutral implements BodyParameter {
+}
+
+class BaseResponse extends BaseLangNeutral implements Response {
+}
+class BaseOpenApiResponse << (C,#FFFF00) >> extends BaseResponse,BaseOpenApiLangNeutral implements OpenApiResponse {
+}
+
+legend top right
+  <b>Legend:</b>
+  <back:DC143C><color:black>CodeGenAst</color></back>
+  <back:FFFF00><color:black>Visible only to external sub-classes.</color></back>
+  <back:00FFFF><color:black>OpenApi Adapter</color></back>
+  Everything else is an internal construct.
+end legend
+
+@enduml
