@@ -1,0 +1,6 @@
+{
+	i: './fixtures/petstore.bundle.json',
+	o: './test-out/server/petstore/src',
+	d: 'all',
+	r: 'server'
+}

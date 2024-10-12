@@ -4,6 +4,7 @@ import {InitializeMarker, RegisterConfigMarker, InitializerFn} from 'dyflex-conf
 // @ts-ignore
 export const TsMorphClientSettings = {
 	[RegisterConfigMarker]: 'CODE_GEN_TSMORPH_CLIENT',
+	httplib: undefined as unknown as string,
 	support: {
 		// Full (parent) path name to the files to be copied into the target support directory
 		srcDirName: `${__dirname}/../typescript/client/support`,

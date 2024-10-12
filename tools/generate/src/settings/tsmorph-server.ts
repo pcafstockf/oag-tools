@@ -1,7 +1,8 @@
-import {InjectableId} from 'async-injection';
+import {Container, InjectableId} from 'async-injection';
+import {InitializeMarker, InitializerFn, RegisterConfigMarker} from 'dyflex-config';
 
 export const TsMorphServerSettings = {
-	__conf_register: 'CODE_GEN_TSMORPH_SERVER',
+	[RegisterConfigMarker]: 'CODE_GEN_TSMORPH_SERVER',
 
 	// The framework should actually be the npm package name.
 	framework: 'openapi-backend' as ('openapi-backend' | 'express-openapi-validator' | 'fastify-openapi-glue'),
@@ -147,9 +148,14 @@ export const TsMorphServerSettings = {
 							}
 						`
 		}
+	},
+	[InitializeMarker]: {
+		fn: (() => {
+			return;
+		}) as InitializerFn<Container>
 	}
 };
 
-export type TsMorphServerSettingsType = Omit<typeof TsMorphServerSettings, '__conf_register'>;
-export const TsMorphServerSettingsToken = Symbol.for(TsMorphServerSettings.__conf_register) as InjectableId<TsMorphServerSettingsType>;
+export type TsMorphServerSettingsType = Omit<typeof TsMorphServerSettings, '__conf_register' | '__conf_init'>;
+export const TsMorphServerSettingsToken = Symbol.for(TsMorphServerSettings[RegisterConfigMarker]) as InjectableId<TsMorphServerSettingsType>;
 

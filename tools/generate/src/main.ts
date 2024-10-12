@@ -8,13 +8,14 @@ import {OpenAPIV3_1} from 'openapi-types';
 import {checkCliArgs} from './cli-opts';
 import {parseCliArgs} from './cli-yargs';
 import {setupTsMorphClient} from './generators/tsmorph/client/setup';
+import {setupTsMorphServer} from './generators/tsmorph/server/setup';
 import {LangNeutralGenerator} from './lang-neutral-generator';
 import {BaseSettings} from 'oag-shared/lang-neutral/base/base-settings';
 import {ClientSettings, ClientSettingsType} from './settings/client';
 import {ServerSettings, ServerSettingsType} from './settings/server';
 import {TsMorphSettings, TsMorphSettingsType} from './settings/tsmorph';
 import {TsMorphClientSettings} from './settings/tsmorph-client';
-import {TsMorphServerSettings, TsMorphServerSettingsType} from './settings/tsmorph-server';
+import {TsMorphServerSettings} from './settings/tsmorph-server';
 
 (async () => {
 	const cliArgs = await parseCliArgs(process.argv.slice(2), checkCliArgs);
@@ -24,12 +25,13 @@ import {TsMorphServerSettings, TsMorphServerSettingsType} from './settings/tsmor
 		server: undefined as ServerSettingsType,
 		client: undefined as ClientSettingsType,
 		// Maybe someday we will be dynamic about this.
-		tsmorph: TsMorphSettings as TsMorphSettingsType & { client?: typeof TsMorphClientSettings } & { server?: TsMorphServerSettingsType }
+		tsmorph: TsMorphSettings as TsMorphSettingsType & { client?: typeof TsMorphClientSettings } & { server?: typeof TsMorphServerSettings }
 	};
 	if (cliArgs.r === 'server') {
 		settings.base.role = 'server';
 		settings.server = ServerSettings;
 		settings.tsmorph.server = TsMorphServerSettings;
+		settings.tsmorph.server[InitializeMarker].fn = setupTsMorphServer;
 	}
 	else {
 		settings.base.role = 'client';
