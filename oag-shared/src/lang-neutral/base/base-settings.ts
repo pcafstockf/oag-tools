@@ -5,7 +5,7 @@ import {NameCase} from '../../utils/name-utils';
 export const BaseSettings = {
 	[RegisterConfigMarker]: 'CODE_GEN_BASE',
 
-	allModels: false, // If true generate all models in the spec, if false only generate those models referenced by operations in the spec.
+	allModels: true, // If true generate all models in the spec, if false only generate those models referenced by operations in the spec.
 	outputDirectory: undefined as string,
 
 	// Fine-grained control over *BOTH* where things are stored *AND* what gets generated!

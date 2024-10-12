@@ -689,7 +689,7 @@ export class DocumentVisitor<
 
 	inspectAdditionalProperties(schema: SCHEMA | REFERENCE | boolean, parent: SCHEMA): boolean | void {
 		return this.resolve(schema as SCHEMA | REFERENCE, (s: SCHEMA | boolean) => {
-			if (s === false || (s && typeof s === 'object'))
+			if (s === true || (s && typeof s === 'object'))
 				return this.visitAdditionalProperties(s, parent);
 		});
 	}

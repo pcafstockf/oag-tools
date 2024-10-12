@@ -4,8 +4,8 @@ import {isEqualWith as lodashIsEqualWith} from 'lodash';
 import os from 'node:os';
 import path from 'node:path';
 import {OpenAPIV3_1} from 'openapi-types';
-import {FileBasedLangNeutral, isFileBasedLangNeutral, isIdentifiedLangNeutral} from '../lang-neutral';
-import {ArrayModel, CombinedModelKind, isSchemaModel, LangNeutralModelTypes, MixedModel, Model, ModelKind, PrimitiveModel, PrimitiveModelTypes, RecordModel, RecordPropertyType, SchemaModel, SyntheticModel, TypedModel} from '../model';
+import {FileBasedLangNeutral, isFileBasedLangNeutral, isIdentifiedLangNeutral, MixinConstructor} from '../lang-neutral';
+import {ArrayModel, isSchemaModel, LangNeutralModelTypes, Model, ModelKind, PrimitiveModel, PrimitiveModelTypes, RecordModel, RecordPropertyType, SchemaModel, TypedModel} from '../model';
 import {BaseLangNeutral, MixOpenApiLangNeutral} from './base-lang-neutral';
 import {BaseSettingsType} from './base-settings';
 
@@ -25,10 +25,7 @@ export abstract class BaseModel<LANG_REF = unknown, KIND extends ModelKind = Mod
 	get name(): string | undefined {
 		return this.#name;
 	}
-
-	// noinspection JSUnusedLocalSymbols
 	#name: string;
-
 	setName(name: string) {
 		this.#name = name;
 	}
@@ -68,23 +65,7 @@ export abstract class BaseModel<LANG_REF = unknown, KIND extends ModelKind = Mod
 	}
 }
 
-export type BaseModelConstructor<LANG_REF = unknown, KIND extends ModelKind = ModelKind> = new (baseSettings: BaseSettingsType, kind?: KIND) => BaseModel<LANG_REF, KIND>;
-
-export abstract class BaseSyntheticModel<LANG_REF = unknown> extends BaseModel<LANG_REF, CombinedModelKind> implements SyntheticModel<LANG_REF> {
-	constructor(baseSettings: BaseSettingsType, kind: CombinedModelKind) {
-		super(baseSettings, kind);
-	}
-
-	init(models: Model<LANG_REF>[]): this {
-		this.#models = models;
-		return this;
-	}
-
-	get models() {
-		return this.#models;
-	}
-	#models: Model<LANG_REF>[]
-}
+export type BaseModelConstructor<LANG_REF = unknown, KIND extends ModelKind = ModelKind> = new (baseSettings: BaseSettingsType, kind: KIND) => BaseModel<LANG_REF, KIND>;
 
 // @ts-ignore
 export abstract class BaseSchemaModel<LANG_REF = unknown, KIND extends ModelKind = ModelKind> extends MixOpenApiLangNeutral<OpenAPIV3_1.SchemaObject, SchemaModel, BaseModelConstructor<LANG_REF, KIND>>(BaseModel as BaseModelConstructor<LANG_REF, KIND>) implements SchemaModel<LANG_REF, KIND> {
@@ -105,11 +86,20 @@ export abstract class BaseSchemaModel<LANG_REF = unknown, KIND extends ModelKind
 		return this;
 	}
 
+	get nullable(): boolean {
+		// Remember, we only generate code off OpenApi >=v3.1
+		const types = this.oae?.type;
+		if (Array.isArray(types))
+			return types.includes('null');
+		return false;
+	}
+
+
 	// noinspection JSUnusedGlobalSymbols
 	/**
 	 * Returns true if this Model is physically or logically the same as another.
 	 */
-	override matches(model: Model<LANG_REF>): boolean {
+	override matches(model: Model): boolean {
 		if (!super.matches(model))
 			return false;
 		if (!isSchemaModel(model))
@@ -137,17 +127,42 @@ export abstract class BaseSchemaModel<LANG_REF = unknown, KIND extends ModelKind
 	}
 }
 
-export abstract class BaseMixedModel<LANG_REF = unknown> extends BaseSchemaModel<LANG_REF, CombinedModelKind> implements MixedModel<LANG_REF> {
-	constructor(
-		baseSettings: BaseSettingsType,
-		kind: CombinedModelKind
-	) {
-		super(baseSettings, kind);
+// @ts-ignore
+export abstract class BaseUnionModel<LANG_REF = unknown> extends BaseSchemaModel<LANG_REF, 'union'> implements UnionModel<LANG_REF> {
+	constructor(baseSettings: BaseSettingsType) {
+		super(baseSettings, 'union');
 	}
-	//TODO: Have to override init and do some processing of the schema to figure this one out.
 
-	get models(): Model<LANG_REF>[] {
-		throw new Error("NOT IMPLEMENTED");
+	get unionOf(): ReadonlyArray<Readonly<Model>> {
+		return this.#unionOf;
+	}
+	#unionOf: Model<LANG_REF>[];
+	addUnion(union: Model<LANG_REF>) {
+		if (! this.#unionOf)
+			this.#unionOf = [union];
+		else
+			this.#unionOf.push(union);
+	}
+
+	toString(owned?: boolean) {
+		let id: string;
+		let retVal = this.unionOf.reduce((p, m, i) => {
+			if (i > 0)
+				p += ' | ';
+			p += (m.toString as any)(true);
+			return p;
+		}, '');
+		if (isIdentifiedLangNeutral(this)) {
+			id = this.getIdentifier('intf');
+			if (owned)
+				return id ?? retVal;
+		}
+		if (isFileBasedLangNeutral(this)) {
+			const sf = this.getFilepath('intf');
+			if (sf)
+				retVal = `type ${id} = ${retVal}${os.EOL}`;
+		}
+		return retVal;
 	}
 }
 
@@ -165,6 +180,8 @@ export abstract class BasePrimitiveModel<LANG_REF = unknown> extends BaseSchemaM
 	toString(owned?: boolean) {
 		let id: string;
 		let retVal = ((this.oae.type as PrimitiveModelTypes) ?? 'any') as string;
+		if (retVal === 'string' && Array.isArray(this.oae.enum))
+			retVal = this.oae.enum.map(e => `'${e}'`).join(' | ');
 		if (isIdentifiedLangNeutral(this)) {
 			id = this.getIdentifier('intf');
 			if (owned)
@@ -215,7 +232,7 @@ export abstract class BaseArrayModel<LANG_REF = unknown> extends BaseSchemaModel
 
 export abstract class BaseRecordModel<LANG_REF = unknown> extends BaseSchemaModel<LANG_REF, 'record'> implements RecordModel<LANG_REF> {
 	constructor(
-		baseSettings: BaseSettingsType
+		baseSettings: BaseSettingsType,
 	) {
 		super(baseSettings, 'record');
 	}
@@ -245,8 +262,46 @@ export abstract class BaseRecordModel<LANG_REF = unknown> extends BaseSchemaMode
 		this.#additionalProperties = additionalProperties;
 	}
 
+	get extendsFrom(): ReadonlyArray<Readonly<Model>> {
+		return this.#extendsFrom;
+	}
+	#extendsFrom: Model<LANG_REF>[];
+	addExtendsFrom(sup: Model<LANG_REF>) {
+		if (! this.#extendsFrom)
+			this.#extendsFrom = [sup];
+		else
+			this.#extendsFrom.push(sup);
+	}
+
+	get unionOf(): ReadonlyArray<Readonly<Model>> {
+		return this.#unionOf;
+	}
+	#unionOf: Model<LANG_REF>[];
+	addUnion(union: Model<LANG_REF>) {
+		if (! this.#unionOf)
+			this.#unionOf = [union];
+		else
+			this.#unionOf.push(union);
+	}
+
 	toString(owned?: boolean) {
 		let retVal = `{${os.EOL}`;
+		if (Array.isArray(this.extendsFrom) && this.extendsFrom.length > 0) {
+			retVal = this.extendsFrom.reduce((p, m, i) => {
+				if (i > 0)
+					p += ' & ';
+				p += (m.toString as any)(true);
+				return p;
+			}, '') + ` & ${retVal}${os.EOL}`;
+		}
+		if (Array.isArray(this.unionOf) && this.unionOf.length > 0) {
+			retVal = this.unionOf.reduce((p, m, i) => {
+				if (i > 0)
+					p += ' | ';
+				p += (m.toString as any)(true);
+				return p;
+			}, '& (') + ') ' + retVal ;
+		}
 		const props = this.properties;
 		if (props) {
 			Object.keys(props).forEach(key => {

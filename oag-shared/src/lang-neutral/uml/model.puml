@@ -3,17 +3,17 @@
 !include lang-neutral.puml
 
 enum ModelKind {
+	''
 	primitive
 	array
 	record
-	union
-	intersection
-	discriminated
+	typed
 }
 enum PrimitiveModelTypes {
 	integer
 	number
 	string
+	enum
 	boolean
 	null
 	any
@@ -23,42 +23,40 @@ interface Model << (I,#DC143C) >> extends LangNeutral {
 	ModelKind kind
 	string? name
 }
+interface UnionModel << (I,#DC143C) >> extends Model {
+	Model[]? unionOf
+}
+interface TypedModel << (I,#DC143C) >> extends Model {
+}
 
 interface SchemaModel << (I,#00FFFF) >> extends Model, OpenApiLangNeutral {
 }
-interface CombinedModel extends Model {
-	Model[] models
-}
-interface SyntheticModel extends CombinedModel {
-}
-interface MixedModel extends SchemaModel, CombinedModel {
-}
-interface PrimitiveModel extends SchemaModel {
+interface PrimitiveModel << (I,#DC143C) >> extends SchemaModel {
 	PrimitiveModelTypes jsdType
 }
-interface ArrayModel extends SchemaModel {
+interface ArrayModel << (I,#DC143C) >> extends SchemaModel {
 	Model items
 }
-interface RecordModel extends SchemaModel {
+interface RecordModel << (I,#DC143C) >> extends SchemaModel,UnionModel {
+	Model[]? extendsFrom
 	Dict<string, Model> properties
 	(Model | false) additionalProperties
 }
-class BaseModel extends BaseLangNeutral implements Model {
+class BaseModel << (C,#FFFF00) >> extends BaseLangNeutral implements Model {
 }
 BaseModel ..|> FileBasedLangNeutral : may implement if named
+BaseModel ..|> UnionModel : may implement
 
 class BaseSchemaModel extends BaseModel implements SchemaModel {
-}
-
-class BaseMixedModel << (C,#FFFF00) >> extends BaseSchemaModel,BaseOpenApiLangNeutral implements MixedModel {
 }
 class BaseArrayModel << (C,#FFFF00) >> extends BaseSchemaModel,BaseOpenApiLangNeutral implements ArrayModel {
 }
 class BaseRecordModel << (C,#FFFF00) >> extends BaseSchemaModel,BaseOpenApiLangNeutral implements RecordModel {
 }
+BaseRecordModel ..|> UnionModel : may implement
 class BasePrimitiveModel << (C,#FFFF00) >> extends BaseSchemaModel,BaseOpenApiLangNeutral implements PrimitiveModel {
 }
-class BaseSyntheticModel << (C,#FFFF00) >> extends BaseModel implements SyntheticModel {
+class BaseTypedModel << (C,#FFFF00) >> extends BaseModel implements TypedModel {
 }
 
 legend top right

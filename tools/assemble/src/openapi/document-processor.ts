@@ -99,9 +99,9 @@ export class OpenApiInputProcessor {
 					//  '~' will be replaced (see above).
 					//  '%' will follow lodash merge semantics where elements at objValue[n] are replaced by elements at srcValue[n].
 					//  '-' will remove any elements in srcValue that are found in object.
-					//  Otherwise, arrays will merged with union semantics.
+					//  Otherwise, arrays will be merged with union semantics.
 					if (key?.startsWith('%')) {
-						object[key.substring(1)] = lodashMerge(object[key.substring(1)], srcValue);
+						object[key.substring(1)] = lodashMergeWith(object[key.substring(1)], srcValue, mergerFn);
 						deletes.push(() => {
 							delete object[key];
 						});

@@ -1,8 +1,7 @@
 import {Inject, Injectable} from 'async-injection';
 import {LangNeutralTypes, Model} from 'oag-shared/lang-neutral';
-import {BaseArrayModel, BaseMixedModel, BasePrimitiveModel, BaseRecordModel, BaseSettingsToken, BaseSettingsType, BaseSyntheticModel} from 'oag-shared/lang-neutral/base';
-import {BaseModel, BaseModelConstructor, BaseTypedModel} from 'oag-shared/lang-neutral/base/base-model';
-import {CombinedModelKind, ModelKind} from 'oag-shared/lang-neutral/model';
+import {BaseModelConstructor, BaseTypedModel, BaseArrayModel, BaseMixedModel, BasePrimitiveModel, BaseRecordModel, BaseSettingsToken, BaseSettingsType, BaseUnionModel} from 'oag-shared/lang-neutral/base';
+import {ModelKind} from 'oag-shared/lang-neutral/model';
 import {ClassDeclaration, InterfaceDeclaration, ObjectLiteralElement} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
 
@@ -19,7 +18,7 @@ type TsmorphModelTypes = ModelInterfaceDeclaration | ModelClassDeclaration | Mod
 
 function MixTsmorphModel<T>(base: T) {
 	const derived = class TsmorphModel extends (base as BaseModelConstructor) implements Model<TsmorphModelTypes> {
-		constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType, kind?: ModelKind) {
+		constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType, kind: ModelKind) {
 			super(baseSettings, kind);
 		}
 
@@ -31,7 +30,16 @@ function MixTsmorphModel<T>(base: T) {
 		}
 		#tsTypes: Record<string, TsmorphModelTypes>;
 	};
-	return derived as unknown as new (baseSettings: BaseSettingsType, tsMorphSettings: TsMorphSettingsType, kind?: ModelKind) => T & typeof derived.prototype;
+	return derived as unknown as new (baseSettings: BaseSettingsType, tsMorphSettings: TsMorphSettingsType, kind: ModelKind) => T & typeof derived.prototype;
+}
+
+export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel<TsmorphModelTypes>>(BaseUnionModel as any) {
+	constructor(
+		baseSettings: BaseSettingsType,
+		tsMorphSettings: TsMorphSettingsType
+	) {
+		super(baseSettings, tsMorphSettings, 'union');
+	}
 }
 
 @Injectable()
@@ -42,7 +50,7 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel<Ts
 		@Inject(TsMorphSettingsToken)
 		tsMorphSettings: TsMorphSettingsType,
 	) {
-		super(baseSettings, tsMorphSettings);
+		super(baseSettings, tsMorphSettings, 'primitive');
 	}
 }
 
@@ -54,7 +62,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel<TsmorphMod
 		@Inject(TsMorphSettingsToken)
 		tsMorphSettings: TsMorphSettingsType,
 	) {
-		super(baseSettings, tsMorphSettings);
+		super(baseSettings, tsMorphSettings, 'array');
 	}
 }
 
@@ -66,27 +74,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel<TsmorphM
 		@Inject(TsMorphSettingsToken)
 		tsMorphSettings: TsMorphSettingsType,
 	) {
-		super(baseSettings, tsMorphSettings);
-	}
-}
-
-export class TsmorphMixedModel extends MixTsmorphModel<BaseMixedModel<TsmorphModelTypes>>(BaseMixedModel as any) {
-	constructor(
-		baseSettings: BaseSettingsType,
-		kind: CombinedModelKind,
-		tsMorphSettings: TsMorphSettingsType
-	) {
-		super(baseSettings, tsMorphSettings, kind);
-	}
-}
-
-export class TsmorphSyntheticModel extends MixTsmorphModel<BaseSyntheticModel<TsmorphModelTypes>>(BaseSyntheticModel as any) {
-	constructor(
-		baseSettings: BaseSettingsType,
-		kind: CombinedModelKind,
-		tsMorphSettings: TsMorphSettingsType
-	) {
-		super(baseSettings, tsMorphSettings, kind);
+		super(baseSettings, tsMorphSettings, 'record');
 	}
 }
 

@@ -1,8 +1,8 @@
 export {CodeGenAst} from '../lang-neutral';
-export {Model, CommonModelTypes, OpenApiSchemaWithModelRef, CodeGenArrayModelToken, CodeGenMixedModelToken, CodeGenPrimitiveModelToken, CodeGenRecordModelToken, CodeGenSyntheticModelToken, CodeGenCommonModelsToken} from '../model';
+export {Model, CommonModelTypes, OpenApiSchemaWithModelRef, CodeGenArrayModelToken, CodeGenUnionModelToken, CodeGenPrimitiveModelToken, CodeGenRecordModelToken, CodeGenCommonModelsToken} from '../model';
 export {BaseSettingsType, BaseSettingsToken} from './base-settings';
 export {BaseLangNeutral, BaseLangNeutralConstructor} from './base-lang-neutral';
-export {BaseArrayModel, BaseMixedModel, BasePrimitiveModel, BaseRecordModel, BaseSchemaModel, BaseSyntheticModel} from './base-model';
+export {BaseArrayModel, BaseMixedModel, BasePrimitiveModel, BaseRecordModel, BaseSchemaModel, BaseUnionModel, BaseModelConstructor, BaseTypedModel} from './base-model';
 export {Parameter, CodeGenBodyParameterToken, CodeGenNamedParameterToken} from '../parameter';
 export {BaseBodyParameter, BaseNamedParameter} from './base-parameter';
 export {Response, CodeGenOpenApiResponseToken} from '../response';

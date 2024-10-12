@@ -277,7 +277,8 @@ class UpliftSchema extends OpenAPIVisitor {
 				l = [];
 				this.upliftPossibilies.set(h.signature, l);
 			}
-			if (! l.includes(h))
+			const existingPaths = l.map(e => e.jpath);
+			if (! existingPaths.includes(h.jpath))
 				l.push(h);
 		}
 		try {

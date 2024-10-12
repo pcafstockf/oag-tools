@@ -3,7 +3,7 @@ import {OpenAPIV3_1} from 'openapi-types';
 import {LangNeutral, LangNeutralTypes, OpenApiLangNeutral, OpenApiLangNeutralBackRef} from './lang-neutral';
 
 export type LangNeutralModelTypes = Extract<LangNeutralTypes, 'intf' | 'impl' | 'json'>;
-export type ModelKind = 'primitive' | 'array' | 'record' | 'union' | 'intersection' | 'discriminated' | 'typed';
+export type ModelKind = 'primitive' | 'array' | 'record' | 'union' | 'typed';
 
 export interface Model<LANG_REF = unknown, KIND extends ModelKind = ModelKind> extends LangNeutral<LANG_REF> {
 	readonly kind: KIND;
@@ -12,31 +12,20 @@ export interface Model<LANG_REF = unknown, KIND extends ModelKind = ModelKind> e
 	/**
 	 * Returns true if this type is physically or logically the same as another.
 	 */
-	matches(model: Model): boolean;
+	matches(model: Readonly<Model>): boolean;
 }
+
+export interface UnionModel<LANG_REF = unknown> extends Model<LANG_REF, 'union'> {
+	readonly unionOf?: ReadonlyArray<Readonly<Model>>;
+}
+export const CodeGenUnionModelToken = new InjectionToken<UnionModel>('codegen-union-model');
 
 export interface SchemaModel<LANG_REF = unknown, KIND extends ModelKind = ModelKind> extends Model<LANG_REF, KIND>, OpenApiLangNeutral<OpenAPIV3_1.SchemaObject, SchemaModel> {
+	readonly nullable: boolean;
 }
 export type OpenApiSchemaWithModelRef = OpenAPIV3_1.SchemaObject & OpenApiLangNeutralBackRef<SchemaModel>;
-export function isSchemaModel(obj: Model): obj is SchemaModel {
-	return typeof (obj as unknown as SchemaModel).oae !== 'undefined';
-}
 
-export type CombinedModelKind = Extract<ModelKind, 'union' | 'intersection' | 'discriminated'>;
-export interface CombinedModel<LANG_REF = unknown> extends Model<LANG_REF, CombinedModelKind> {
-	readonly models: ReadonlyArray<Model<LANG_REF>>;
-}
-export type CombinedModelFactory<LANG_REF = unknown> = (kind: CombinedModelKind) => CombinedModel<LANG_REF>;
-
-export interface SyntheticModel<LANG_REF = unknown> extends CombinedModel<LANG_REF> {
-}
-export const CodeGenSyntheticModelToken = new InjectionToken<CombinedModelFactory>('codegen-synthetic-model');
-
-export interface MixedModel<LANG_REF = unknown> extends CombinedModel<LANG_REF>, SchemaModel<LANG_REF, CombinedModelKind> {
-}
-export const CodeGenMixedModelToken = new InjectionToken<CombinedModelFactory>('codegen-mixed-model');
-
-export type PrimitiveModelTypes = 'integer' | 'number' | 'string' | 'boolean' | 'null' | 'any';
+export type PrimitiveModelTypes = 'integer' | 'number' | 'string' | 'enum' | 'boolean' | 'null' | 'any';
 export interface PrimitiveModel<LANG_REF = unknown> extends SchemaModel<LANG_REF, 'primitive'> {
 	readonly jsdType: PrimitiveModelTypes;
 }
@@ -51,22 +40,36 @@ export interface ArrayModel<LANG_REF = unknown> extends SchemaModel<LANG_REF, 'a
 export const CodeGenArrayModelToken = new InjectionToken<ArrayModel>('codegen-array-model');
 
 export interface RecordPropertyType {
-	readonly model: Model,
+	readonly model: Readonly<Model>,
 	readonly required?: boolean;
 }
-export interface RecordModel<LANG_REF = unknown> extends SchemaModel<LANG_REF, 'record'> {
-	/**
-	 * Models may be synthetically constructed, but are always defined.
-	 */
-	readonly properties: Readonly<Record<string, Readonly<RecordPropertyType>>>;
+export interface RecordModel<LANG_REF = unknown> extends SchemaModel<LANG_REF, 'record'>, Omit<UnionModel<LANG_REF>, 'kind'> {
+	readonly extendsFrom?: ReadonlyArray<Readonly<Model>>;
 
+	readonly properties: Readonly<Record<string, Readonly<RecordPropertyType>>>;
 	/**
-	 * Model may be synthetically constructed.
 	 * false means no additional properties.
 	 */
 	readonly additionalProperties: Readonly<Model> | false;
 }
 export const CodeGenRecordModelToken = new InjectionToken<RecordModel>('codegen-record-model');
+
+export function isSchemaModel(obj: Readonly<Model>): obj is SchemaModel {
+	return typeof (obj as unknown as SchemaModel).oae !== 'undefined';
+}
+export function isPrimitiveModel(obj: Readonly<Model>): obj is PrimitiveModel {
+	return obj.kind === 'primitive';
+}
+export function isUnionModel(obj: Readonly<Model>): obj is UnionModel {
+	if (obj.kind === 'union')
+		return true;
+	if (obj.kind === 'record')
+		return Array.isArray((obj as RecordModel).unionOf)
+	return false;
+}
+export function isRecordModel(obj: Readonly<Model>): obj is RecordModel {
+	return obj.kind === 'record';
+}
 
 export interface TypedModel<LANG_REF = unknown> extends Model<LANG_REF, 'typed'> {
 }
@@ -76,7 +79,7 @@ export const CommonModelKeys = [
 	// 'undefined' is not a "type"
 	'null',  // Property is present but its type is explicitly "no value".
 	'any',   // Property whose type is literally anything (except 'void').
-	'ANY',   // Like 'any', but never has a type name / alias.
+	'ANY',   // Like 'any', but a global with no matching OpenApi element (e.g. only a type, not an alias, etc.).
 	'VOID',  // nothing here, absence of property
 	'UNKNOWN',  // Type cannot be determined
 	'integer',
