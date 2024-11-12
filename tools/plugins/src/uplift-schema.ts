@@ -20,7 +20,7 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
 function generateDistanceMatrix(wordLists: string[][]): number[][] {
 	const n = wordLists.length;
 	const sets = wordLists.map(lst => new Set(lst));
-	const distanceMatrix: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
+	const distanceMatrix: number[][] = Array.from({length: n}, () => Array(n).fill(0));
 	for (let i = 0; i < n; i++) {
 		for (let j = i; j < n; j++) {
 			const similarity = jaccardSimilarity(sets[i], sets[j]);
@@ -35,7 +35,7 @@ function generateDistanceMatrix(wordLists: string[][]): number[][] {
 // Simple agglomerative clustering function
 function agglomerativeClustering(distanceMatrix: number[][]): number[] {
 	const n = distanceMatrix.length;
-	const clusters: number[][] = Array.from({ length: n }, (_, i) => [i]);
+	const clusters: number[][] = Array.from({length: n}, (_, i) => [i]);
 	// Find closest clusters
 	while (clusters.length > 1) {
 		let minDistance = Infinity;
@@ -71,7 +71,7 @@ function calculateClusterDistance(clusterA: number[], clusterB: number[], distan
 
 interface UpliftSchemaDescriptor {
 	name: string;
-	jpaths: string[]
+	jpaths: string[];
 }
 
 interface UpliftSchemaPossibility {
@@ -84,6 +84,7 @@ class UpliftSchema extends OpenAPIVisitor {
 	constructor(private reportMissing: number) {
 		super();
 	}
+
 	private refs: SwaggerParser.$Refs;
 	private seenObj: Set<any>;
 	private upliftPossibilies: Map<string, UpliftSchemaPossibility[]>;
@@ -144,7 +145,7 @@ class UpliftSchema extends OpenAPIVisitor {
 					console.error('Duplicate schema name: ' + v);
 					process.exit(1);
 				}
-				if (! newRecOk) {
+				if (!newRecOk) {
 					console.error('Invalid format near line ' + i);
 					process.exit(1);
 				}
@@ -152,19 +153,19 @@ class UpliftSchema extends OpenAPIVisitor {
 				p.push({name: v} as UpliftSchemaDescriptor);
 			}
 			else if (/^\s+\S/.test(v)) {
-				const cur = p[p.length-1];
-				if (! cur.jpaths)
+				const cur = p[p.length - 1];
+				if (!cur.jpaths)
 					cur.jpaths = [];
 				v = v.trim();
 				if (v.startsWith('*'))
-					cur.jpaths.unshift(v.substring(1))
+					cur.jpaths.unshift(v.substring(1));
 				else
 					cur.jpaths.push(v);
 			}
 			return p;
 		}, [] as UpliftSchemaDescriptor[]);
 		// We want to replace the most deeply nested schema first so that we don't create invalid refs.
-		const jpaths: {jpath: string, name: string, uplift: boolean}[] = [];
+		const jpaths: { jpath: string, name: string, uplift: boolean }[] = [];
 		config.forEach(c => {
 			c.jpaths.forEach((p, i) => {
 				let jp = p;
@@ -172,8 +173,8 @@ class UpliftSchema extends OpenAPIVisitor {
 					i = -1;
 					jp = jp.slice(1);
 				}
-				jpaths.push({jpath: jp, name: c.name, uplift: i === 0})
-			})
+				jpaths.push({jpath: jp, name: c.name, uplift: i === 0});
+			});
 		});
 		const jpu = new Set<string>();
 		jpaths.forEach(e => {
@@ -227,7 +228,7 @@ class UpliftSchema extends OpenAPIVisitor {
 	}
 
 	private upliftSchema(from: string, as: string, hoist: boolean, schema?: OpenAPIV3.SchemaObject) {
-		if (! schema)
+		if (!schema)
 			schema = this.refs.get(from) as OpenAPIV3.SchemaObject;
 		const doc = this.refs.get(`#`) as OpenAPIV3.Document;
 		if (!doc.components)
@@ -243,7 +244,7 @@ class UpliftSchema extends OpenAPIVisitor {
 		(schema as OpenAPIV3.ReferenceObject).$ref = hoistedPath;
 		if (hoist) {
 			if (doc.components.schemas![as]) {
-				console.log(`Collision @ ${from} with existing ${hoistedPath}`)
+				console.log(`Collision @ ${from} with existing ${hoistedPath}`);
 				return;
 			}
 			delete clonedSchema['x-schema-name'];
@@ -273,12 +274,12 @@ class UpliftSchema extends OpenAPIVisitor {
 		else if (this.reportMissing && isNested && schema.type === 'object' && schema.properties && Object.keys(schema.properties).length >= this.reportMissing) {
 			const h = this.computeUpliftReportEntry(schema, activePath);
 			let l = this.upliftPossibilies.get(h.signature);
-			if (! l) {
+			if (!l) {
 				l = [];
 				this.upliftPossibilies.set(h.signature, l);
 			}
 			const existingPaths = l.map(e => e.jpath);
-			if (! existingPaths.includes(h.jpath))
+			if (!existingPaths.includes(h.jpath))
 				l.push(h);
 		}
 		try {

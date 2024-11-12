@@ -1,5 +1,3 @@
-const path = require('path');
-const fs = require("fs");
 const webpack = require('webpack');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 
@@ -25,7 +23,7 @@ const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 module.exports = (tsconfigFilePath, preDefines, tsnodeExclude) => {
 	if (typeof tsnodeExclude === 'undefined')
 		tsnodeExclude = /node_modules/;
-	return {
+	let retVal = {
 		optimization: {
 			splitChunks: false,
 			runtimeChunk: false,
@@ -62,5 +60,6 @@ module.exports = (tsconfigFilePath, preDefines, tsnodeExclude) => {
 	}
 
 	if (preDefines && Object.keys(preDefines).length > 0)
-		module.exports.plugins.unshift(new webpack.DefinePlugin(preDefines));
+		retVal.plugins.unshift(new webpack.DefinePlugin(preDefines));
+	return retVal;
 }

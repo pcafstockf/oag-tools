@@ -4,28 +4,29 @@ import {isEqualWith as lodashIsEqualWith} from 'lodash';
 import os from 'node:os';
 import path from 'node:path';
 import {OpenAPIV3_1} from 'openapi-types';
-import {FileBasedLangNeutral, isFileBasedLangNeutral, isIdentifiedLangNeutral, MixinConstructor} from '../lang-neutral';
-import {ArrayModel, isSchemaModel, LangNeutralModelTypes, Model, ModelKind, PrimitiveModel, PrimitiveModelTypes, RecordModel, RecordPropertyType, SchemaModel, TypedModel} from '../model';
+import {SchemaJsdConstraints} from '../../utils/openapi-utils';
+import {FileBasedLangNeutral, isFileBasedLangNeutral, isIdentifiedLangNeutral, isOpenApiLangNeutral} from '../lang-neutral';
+import {ArrayModel, isSchemaModel, LangNeutralModelTypes, Model, PrimitiveModel, PrimitiveModelType, RecordModel, RecordPropertyType, SchemaModel, TypedModel, UnionModel} from '../model';
+import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, MixOpenApiLangNeutral} from './base-lang-neutral';
-import {BaseSettingsType} from './base-settings';
 
-export abstract class BaseModel<LANG_REF = unknown, KIND extends ModelKind = ModelKind> extends BaseLangNeutral<LANG_REF> implements Model<LANG_REF, KIND>, FileBasedLangNeutral {
-	constructor(baseSettings: BaseSettingsType, readonly kind: KIND) {
+export abstract class BaseModel extends BaseLangNeutral implements Model, FileBasedLangNeutral {
+	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
 
 	matches(model: Model): boolean {
 		if (Object.is(this, model))
 			return true;
-		if (this.kind !== model.kind)
-			return false;
 		return this.name === model.name;
 	}
 
 	get name(): string | undefined {
 		return this.#name;
 	}
+
 	#name: string;
+
 	setName(name: string) {
 		this.#name = name;
 	}
@@ -54,29 +55,40 @@ export abstract class BaseModel<LANG_REF = unknown, KIND extends ModelKind = Mod
 		// A special hack that signifies this instance *implements* FileBasedLangNeutral
 		if (type === null)
 			return true as any;
+		let base: string;
 		switch (type) {
 			case 'intf':
-				return path.join(this.baseSettings.modelIntfDir, this.toIntfFileBasename(name, 'model'));
+				base = this.toIntfFileBasename(name, 'model');
+				if (this.baseSettings.modelIntfDir && base)
+					return path.join(this.baseSettings.modelIntfDir, base);
+				break;
 			case 'impl':
-				return path.join(this.baseSettings.modelImplDir, this.toImplFileBasename(name, 'model'));
+				base = this.toImplFileBasename(name, 'model');
+				if (this.baseSettings.modelImplDir && base)
+					return path.join(this.baseSettings.modelImplDir, base);
+				break;
 			case 'json':
-				return path.join(this.baseSettings.modelJsonDir, this.toJsonFileBasename(name));
+				base = this.toJsonFileBasename(name);
+				if (this.baseSettings.modelJsonDir && base)
+					return path.join(this.baseSettings.modelJsonDir, base);
+				break;
+			default:
+				break;
 		}
 	}
 }
 
-export type BaseModelConstructor<LANG_REF = unknown, KIND extends ModelKind = ModelKind> = new (baseSettings: BaseSettingsType, kind: KIND) => BaseModel<LANG_REF, KIND>;
+export type BaseModelConstructor<T extends BaseModel = BaseModel> = new (baseSettings: BaseSettingsType) => T;
 
-// @ts-ignore
-export abstract class BaseSchemaModel<LANG_REF = unknown, KIND extends ModelKind = ModelKind> extends MixOpenApiLangNeutral<OpenAPIV3_1.SchemaObject, SchemaModel, BaseModelConstructor<LANG_REF, KIND>>(BaseModel as BaseModelConstructor<LANG_REF, KIND>) implements SchemaModel<LANG_REF, KIND> {
-	constructor(baseSettings: BaseSettingsType, kind: KIND) {
-		super(baseSettings, kind);
+export abstract class BaseSchemaModel extends MixOpenApiLangNeutral<OpenAPIV3_1.SchemaObject, SchemaModel, BaseModelConstructor>(BaseModel as BaseModelConstructor) implements SchemaModel {
+	constructor(baseSettings: BaseSettingsType) {
+		super(baseSettings);
 	}
 
 	init(_doc: OpenAPIV3_1.Document, jsonPath: string, oae: OpenAPIV3_1.SchemaObject): this {
 		this.setOae(oae);
 		let name: string = oae.title || (oae as any)['x-schema-name'];
-		if (! name) {
+		if (!name) {
 			const basePath = '#/components/schemas/';
 			if (jsonPath && jsonPath.startsWith(basePath) && jsonPath.indexOf('/', basePath.length) < 0)
 				name = jsonPath.slice(basePath.length);
@@ -127,18 +139,20 @@ export abstract class BaseSchemaModel<LANG_REF = unknown, KIND extends ModelKind
 	}
 }
 
-// @ts-ignore
-export abstract class BaseUnionModel<LANG_REF = unknown> extends BaseSchemaModel<LANG_REF, 'union'> implements UnionModel<LANG_REF> {
+export abstract class BaseUnionModel extends BaseSchemaModel implements UnionModel {
 	constructor(baseSettings: BaseSettingsType) {
-		super(baseSettings, 'union');
+		super(baseSettings);
+		this.#unionOf = [];
 	}
 
 	get unionOf(): ReadonlyArray<Readonly<Model>> {
-		return this.#unionOf;
+		return this.#unionOf.slice();
 	}
-	#unionOf: Model<LANG_REF>[];
-	addUnion(union: Model<LANG_REF>) {
-		if (! this.#unionOf)
+
+	#unionOf: Model[];
+
+	addUnion(union: Model) {
+		if (!this.#unionOf)
 			this.#unionOf = [union];
 		else
 			this.#unionOf.push(union);
@@ -166,21 +180,23 @@ export abstract class BaseUnionModel<LANG_REF = unknown> extends BaseSchemaModel
 	}
 }
 
-export abstract class BasePrimitiveModel<LANG_REF = unknown> extends BaseSchemaModel<LANG_REF, 'primitive'> implements PrimitiveModel<LANG_REF> {
+export abstract class BasePrimitiveModel extends BaseSchemaModel implements PrimitiveModel {
 	constructor(
 		baseSettings: BaseSettingsType,
 	) {
-		super(baseSettings, 'primitive');
+		super(baseSettings);
 	}
 
-	get jsdType(): PrimitiveModelTypes {
-		return this.oae.type as PrimitiveModelTypes ?? 'any';
+	get jsdType(): PrimitiveModelType {
+		return this.oae.type as PrimitiveModelType ?? 'any';
 	}
 
 	toString(owned?: boolean) {
 		let id: string;
-		let retVal = ((this.oae.type as PrimitiveModelTypes) ?? 'any') as string;
-		if (retVal === 'string' && Array.isArray(this.oae.enum))
+		let retVal = ((this.oae.type as PrimitiveModelType) ?? 'any') as string;
+		if (Array.isArray(retVal))
+			retVal = retVal.join(' | ');
+		else if (retVal === 'string' && Array.isArray(this.oae.enum))
 			retVal = this.oae.enum.map(e => `'${e}'`).join(' | ');
 		if (isIdentifiedLangNeutral(this)) {
 			id = this.getIdentifier('intf');
@@ -196,14 +212,14 @@ export abstract class BasePrimitiveModel<LANG_REF = unknown> extends BaseSchemaM
 	}
 }
 
-export abstract class BaseArrayModel<LANG_REF = unknown> extends BaseSchemaModel<LANG_REF, 'array'> implements ArrayModel<LANG_REF> {
+export abstract class BaseArrayModel extends BaseSchemaModel implements ArrayModel {
 	constructor(
 		baseSettings: BaseSettingsType
 	) {
-		super(baseSettings, 'array');
+		super(baseSettings);
 	}
 
-	get items(): Model {
+	get items(): Readonly<Model> {
 		return this.#items;
 	}
 
@@ -230,11 +246,14 @@ export abstract class BaseArrayModel<LANG_REF = unknown> extends BaseSchemaModel
 	}
 }
 
-export abstract class BaseRecordModel<LANG_REF = unknown> extends BaseSchemaModel<LANG_REF, 'record'> implements RecordModel<LANG_REF> {
+export abstract class BaseRecordModel extends BaseSchemaModel implements RecordModel {
 	constructor(
 		baseSettings: BaseSettingsType,
 	) {
-		super(baseSettings, 'record');
+		super(baseSettings);
+		this.#unionOf = [];
+		this.#extendsFrom = [];
+		this.#properties = {};
 	}
 
 	get properties(): Readonly<Record<string, Readonly<RecordPropertyType>>> {
@@ -252,7 +271,7 @@ export abstract class BaseRecordModel<LANG_REF = unknown> extends BaseSchemaMode
 		};
 	}
 
-	get additionalProperties(): Model | false {
+	get additionalProperties(): Readonly<Model> | false {
 		return this.#additionalProperties ?? false;
 	}
 
@@ -265,20 +284,24 @@ export abstract class BaseRecordModel<LANG_REF = unknown> extends BaseSchemaMode
 	get extendsFrom(): ReadonlyArray<Readonly<Model>> {
 		return this.#extendsFrom;
 	}
-	#extendsFrom: Model<LANG_REF>[];
-	addExtendsFrom(sup: Model<LANG_REF>) {
-		if (! this.#extendsFrom)
+
+	#extendsFrom: Model[];
+
+	addExtendsFrom(sup: Model) {
+		if (!this.#extendsFrom)
 			this.#extendsFrom = [sup];
 		else
 			this.#extendsFrom.push(sup);
 	}
 
 	get unionOf(): ReadonlyArray<Readonly<Model>> {
-		return this.#unionOf;
+		return this.#unionOf.slice();
 	}
-	#unionOf: Model<LANG_REF>[];
-	addUnion(union: Model<LANG_REF>) {
-		if (! this.#unionOf)
+
+	#unionOf: Model[];
+
+	addUnion(union: Model) {
+		if (!this.#unionOf)
 			this.#unionOf = [union];
 		else
 			this.#unionOf.push(union);
@@ -300,7 +323,7 @@ export abstract class BaseRecordModel<LANG_REF = unknown> extends BaseSchemaMode
 					p += ' | ';
 				p += (m.toString as any)(true);
 				return p;
-			}, '& (') + ') ' + retVal ;
+			}, '& (') + ') ' + retVal;
 		}
 		const props = this.properties;
 		if (props) {
@@ -327,22 +350,46 @@ export abstract class BaseRecordModel<LANG_REF = unknown> extends BaseSchemaMode
 	}
 }
 
-export abstract class BaseTypedModel<LANG_REF = unknown> extends BaseSchemaModel<LANG_REF, 'typed'> implements TypedModel<LANG_REF> {
+export abstract class BaseTypedModel extends BaseSchemaModel implements TypedModel {
 	constructor(
 		baseSettings: BaseSettingsType
 	) {
-		super(baseSettings, 'typed');
+		super(baseSettings);
+		this.#importPath = null;
 	}
 
-	setTypedName(txt: string): this {
-		this.#typedName = txt;
+	get typeName(): string {
+		return this.#typeName;
+	}
+
+	#typeName: string;
+
+	setTypeName(txt: string, importPath?: string): this {
+		this.#typeName = txt;
+		if (importPath)
+			this.#importPath = importPath;
+		else
+			this.#importPath = null;
 		return this;
 	}
-	#typedName: string;
+
+	#importPath: string;
+
+	get importPath(): string {
+		return this.#importPath;
+	}
 
 	toString(owned?: boolean) {
-		if (this.name)
-			return (super.toString as any)(owned);
-		return this.#typedName;
+		if (this.name) {
+			if (owned)
+				return this.name;
+			return `type ${this.name} = ${this.#typeName}${os.EOL}`;
+		}
+		if (isOpenApiLangNeutral(this)) {
+			const constraints = SchemaJsdConstraints(this.oae);
+			if (constraints['format'])
+				return constraints['format'];
+		}
+		return this.#typeName;
 	}
 }

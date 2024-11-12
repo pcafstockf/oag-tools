@@ -1,21 +1,22 @@
 import {OpenAPIV3_1} from 'openapi-types';
 import {Model} from '../model';
 import {OpenApiResponse, Response} from '../response';
+import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, MixOpenApiLangNeutral} from './base-lang-neutral';
-import {BaseSettingsType} from './base-settings';
 
-export abstract class BaseResponse<LANG_REF = unknown, MODEL_LANG_REF = unknown> extends BaseLangNeutral<LANG_REF> implements Response<LANG_REF, MODEL_LANG_REF> {
+export abstract class BaseResponse extends BaseLangNeutral implements Response {
+	// noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
 	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
 
-	get model(): Model<MODEL_LANG_REF> {
+	get model(): Model {
 		return this.#model;
 	}
 
-	#model: Model<MODEL_LANG_REF>;
+	#model: Model;
 
-	protected setModel(model: Model<MODEL_LANG_REF>): void {
+	protected setModel(model: Model): void {
 		if (this.#model)
 			throw new Error('Parameter model already set');
 		this.#model = model;
@@ -23,15 +24,15 @@ export abstract class BaseResponse<LANG_REF = unknown, MODEL_LANG_REF = unknown>
 
 }
 
-type BaseResponseConstructor<LANG_REF = unknown, MODEL_LANG_REF = unknown> = new (baseSettings: BaseSettingsType) => BaseResponse<LANG_REF, MODEL_LANG_REF>;
+type BaseResponseConstructor = new (baseSettings: BaseSettingsType) => BaseResponse;
 
-// @ts-ignore
-export abstract class BaseOpenApiResponse<LANG_REF = unknown, MODEL_LANG_REF = unknown> extends MixOpenApiLangNeutral<OpenAPIV3_1.ResponseObject, OpenApiResponse, BaseResponseConstructor<LANG_REF, MODEL_LANG_REF>>(BaseResponse as BaseResponseConstructor<LANG_REF, MODEL_LANG_REF>) implements OpenApiResponse<LANG_REF, MODEL_LANG_REF> {
+export abstract class BaseOpenApiResponse extends MixOpenApiLangNeutral<OpenAPIV3_1.ResponseObject, OpenApiResponse, BaseResponseConstructor>(BaseResponse as BaseResponseConstructor) implements OpenApiResponse {
+	// noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
 	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
 
-	init(_doc: OpenAPIV3_1.Document, _jsonPath: string, oae: OpenAPIV3_1.ResponseObject, model: Model<MODEL_LANG_REF>): this {
+	init(_doc: OpenAPIV3_1.Document, _jsonPath: string, oae: OpenAPIV3_1.ResponseObject, model: Model): this {
 		this.setOae(oae);
 		this.setModel(model);
 		return this;

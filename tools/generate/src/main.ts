@@ -2,15 +2,15 @@ import 'reflect-metadata';
 import SwaggerParser from '@apidevtools/swagger-parser';
 import {Container} from 'async-injection';
 import {InitializeMarker, keyValueToConfig, loadConfigFile, makeConfig} from 'dyflex-config';
-import {rmSync as rimrafSync} from 'fs';
 import path from 'node:path';
+import {BaseSettings, cleanOutDir} from 'oag-shared/lang-neutral/settings';
 import {OpenAPIV3_1} from 'openapi-types';
 import {checkCliArgs} from './cli-opts';
 import {parseCliArgs} from './cli-yargs';
+import {SourceGeneratorToken} from './generators/source-generator';
 import {setupTsMorphClient} from './generators/tsmorph/client/setup';
 import {setupTsMorphServer} from './generators/tsmorph/server/setup';
 import {LangNeutralGenerator} from './lang-neutral-generator';
-import {BaseSettings} from 'oag-shared/lang-neutral/base/base-settings';
 import {ClientSettings, ClientSettingsType} from './settings/client';
 import {ServerSettings, ServerSettingsType} from './settings/server';
 import {TsMorphSettings, TsMorphSettingsType} from './settings/tsmorph';
@@ -64,39 +64,15 @@ import {TsMorphServerSettings} from './settings/tsmorph-server';
 		},
 		...settingsOverrides,
 	);
+	const lg = await container.resolve(SourceGeneratorToken);
 
-	// Clean up anything previously generated (if requested to do so).
-	if (cliArgs.d) {
-		if (cliArgs.d === 'all')
-			rimrafSync(cliArgs.o, {recursive: true, force: true});   // This may make all the follow statements irrelevant, but not necessarily.
-		if (config.base.modelIntfDir)
-			rimrafSync(path.join(cliArgs.o, config.base.modelIntfDir), {recursive: true, force: true});
-		if (config.base.modelImplDir)
-			rimrafSync(path.join(cliArgs.o, config.base.modelImplDir), {recursive: true, force: true});
-		if (config.base.modelPrivDir)
-			rimrafSync(path.join(cliArgs.o, config.base.modelPrivDir), {recursive: true, force: true});
-		if (config.base.apiIntfDir)
-			rimrafSync(path.join(cliArgs.o, config.base.apiIntfDir), {recursive: true, force: true});
-		if (config.base.role !== 'server' && config.base.apiImplDir)
-			rimrafSync(path.join(cliArgs.o, config.base.apiImplDir), {recursive: true, force: true});
-		if (config.base.apiPrivDir)
-			rimrafSync(path.join(cliArgs.o, config.base.apiPrivDir), {recursive: true, force: true});
-		if (config.base.apiHndlDir)
-			rimrafSync(path.join(cliArgs.o, config.base.apiHndlDir), {recursive: true, force: true});
-	}
-
-	const generator = new LangNeutralGenerator(container);
+	const lng = new LangNeutralGenerator(container);
 	const parser = new SwaggerParser();
 	const doc = await parser.bundle(cliArgs.i) as OpenAPIV3_1.Document;
-	const lang = await generator.generate(doc, !config.base.allModels);
+	const lang = await lng.generate(doc, !config.base.allModels);
 
-	lang.models.reverse().forEach(m => {
-		console.log(m.toString());
-	});
-	lang.apis.forEach(m => {
-		console.log(m.toString());
-	});
-
+	await cleanOutDir(cliArgs.d, cliArgs.o, config.base);
+	await lg.generate(lang);
 })().catch(err => {
 	console.error(err);
 });

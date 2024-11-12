@@ -17,27 +17,29 @@ export async function beginTsMorphSetup(dic: Container, path: string[], obj: obj
 				case 'null':
 				case 'any':
 					return dic.get(CodeGenPrimitiveModelToken);
+				case 'object':
+					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('Object');
 				case 'int32':
 				case 'int64':
 				case 'double':
 				case 'float':
-					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypedName('number');
+					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('number');
 				case 'binary':
-					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypedName('Blob');
+					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('Blob');
 				case 'date':
 				case 'date-time':
-					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypedName('Date');
+					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('Date');
 				case 'VOID':
-					if (! tsVoid)
-						tsVoid = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypedName('void');
+					if (!tsVoid)
+						tsVoid = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('void');
 					return tsVoid;
 				case 'ANY':
-					if (! tsAny)
-						tsAny = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypedName('any');
+					if (!tsAny)
+						tsAny = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('any');
 					return tsAny;
 				case 'UNKNOWN':
-					if (! tsUnknown)
-						tsUnknown = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypedName('unknown');
+					if (!tsUnknown)
+						tsUnknown = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('unknown');
 					return tsUnknown;
 				default:
 					return null;
@@ -46,6 +48,6 @@ export async function beginTsMorphSetup(dic: Container, path: string[], obj: obj
 }
 
 export async function finishTsMorphSetup(dic: Container, path: string[], obj: object): Promise<void> {
-	if (! dic.isIdKnown(CodeGenTypedModelToken))
+	if (!dic.isIdKnown(CodeGenTypedModelToken))
 		dic.bindClass(CodeGenTypedModelToken, TsmorphTypedModel);
 }

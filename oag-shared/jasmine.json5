@@ -2,12 +2,7 @@
 // All 'helpers' and 'spec_files' withing this file should be relative to this file.
 // jasmineMerge will adjust all paths to align with whatever the active jasmine.js configuration file lists as its 'spec_dir'.
 {
-	spec_dir: "",
-	spec_files: [
-		"certificates/certificates.spec.ts",
-		"core-node/console-logger.spec.ts",
-		"core-node/di-container.spec.ts"
-	],
+	spec_dir: "src",
 	helpers: [
 		"../scripts/jasmine-console-helpers.js"
 	],

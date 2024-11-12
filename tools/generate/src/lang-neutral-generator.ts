@@ -1,12 +1,12 @@
-import {Container} from 'async-injection';
 import SwaggerParser from '@apidevtools/swagger-parser';
-import {isPrimitiveModel} from 'oag-shared/lang-neutral/model';
-import {OpenAPIV3_1} from 'openapi-types';
+import {Container} from 'async-injection';
 import {Api, Model, Parameter} from 'oag-shared/lang-neutral';
-import {BaseApi, BaseArrayModel, BaseUnionModel, BaseBodyParameter, BaseMethod, BaseNamedParameter, BaseOpenApiResponse, BaseRecordModel, BaseSchemaModel, CodeGenAst, CodeGenApiToken, CodeGenArrayModelToken, CodeGenBodyParameterToken, CodeGenCommonModelsToken, CodeGenMethodToken, CodeGenUnionModelToken, CodeGenNamedParameterToken, CodeGenOpenApiResponseToken, CodeGenRecordModelToken, CommonModelTypes, OpenApiSchemaWithModelRef, BaseSettingsToken} from 'oag-shared/lang-neutral/base';
+import {BaseApi, BaseArrayModel, BaseBodyParameter, BaseMethod, BaseNamedParameter, BaseOpenApiResponse, BaseRecordModel, BaseSchemaModel, BaseSettingsToken, BaseUnionModel, CodeGenApiToken, CodeGenArrayModelToken, CodeGenAst, CodeGenBodyParameterToken, CodeGenCommonModelsToken, CodeGenMethodToken, CodeGenNamedParameterToken, CodeGenOpenApiResponseToken, CodeGenRecordModelToken, CodeGenUnionModelToken, CommonModelTypes, OpenApiSchemaWithModelRef} from 'oag-shared/lang-neutral/base';
+import {isPrimitiveModel} from 'oag-shared/lang-neutral/model';
 import {OpenAPIV3_1Visitor} from 'oag-shared/openapi/document-visitor';
 import * as nameUtils from 'oag-shared/utils/name-utils';
 import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
+import {OpenAPIV3_1} from 'openapi-types';
 import {ClientSettingsToken, ClientSettingsType} from './settings/client';
 
 interface SchemaModel {
@@ -129,7 +129,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 
 		let model: BaseSchemaModel;
 		let schemaType = schema.type;
-		if (! schemaType) {
+		if (!schemaType) {
 			if (typeof (schema as OpenAPIV3_1.ArraySchemaObject).items !== 'undefined')
 				schemaType = 'array';
 			else if (typeof schema.properties !== 'undefined' || typeof schema.additionalProperties !== 'undefined' || typeof schema.discriminator !== 'undefined')
@@ -195,7 +195,10 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 			const asUnion = (Array.isArray(schema.anyOf) && schema.anyOf.length > 0) || (Array.isArray(schema.oneOf) && schema.oneOf.length > 0);
 			switch (schemaType) {
 				case 'object':
-					model = this.container.get<BaseSchemaModel>(CodeGenRecordModelToken);
+					if (!asUnion && !schema.additionalProperties && Object.keys(schema.properties ?? {}).length == 0)
+						model = this.container.get(CodeGenCommonModelsToken)(schemaType) as BaseSchemaModel;
+					else
+						model = this.container.get<BaseSchemaModel>(CodeGenRecordModelToken);
 					break;
 				case 'array':
 					model = this.container.get<BaseSchemaModel>(CodeGenArrayModelToken);
@@ -452,7 +455,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 			const param = this.container.get<BaseNamedParameter>(CodeGenNamedParameterToken);
 			param.init(this.activeDoc, p.jsonPath, p.param, p.model);
 			return param;
-		}) as Parameter<OpenAPIV3_1.ParameterObject | OpenAPIV3_1.RequestBodyObject>[];
+		}) as Parameter[];
 		// Make a NamedParameter for each parameter (if any) that we collected for this operation.
 		(this.activeOpParams ?? []).reduce((r, p) => {
 			const param = this.container.get<BaseNamedParameter>(CodeGenNamedParameterToken);
@@ -505,7 +508,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		// Order our responses in (what we consider to be) an optimal ordering.
 		const rspCodes = this.activeOpResponse.map(e => e.code);
 		const hasOk = rspCodes.some(c => c.startsWith('2') || c.startsWith('d') || c.startsWith('D'));
-		if (! hasOk) {
+		if (!hasOk) {
 			// Method's always have a "success" return type, but the schema does not define one (e.g. what will be returned is unknown).
 			const rsp = this.container.get<BaseOpenApiResponse>(CodeGenOpenApiResponseToken);
 			rsp.init(this.activeDoc, undefined, undefined, this.container.get(CodeGenCommonModelsToken)('UNKNOWN'));

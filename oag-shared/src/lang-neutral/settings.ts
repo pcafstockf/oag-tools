@@ -1,6 +1,8 @@
 import {InjectableId} from 'async-injection';
 import {RegisterConfigMarker} from 'dyflex-config';
-import {NameCase} from '../../utils/name-utils';
+import {rmSync as rimrafSync} from 'fs';
+import path from 'node:path';
+import {NameCase} from '../utils/name-utils';
 
 export const BaseSettings = {
 	[RegisterConfigMarker]: 'CODE_GEN_BASE',
@@ -16,6 +18,7 @@ export const BaseSettings = {
 	apiIntfDir: 'apis',  // if truthy, generate api interfaces
 	apiImplDir: 'services',  // if truthy, generate api classes
 	apiPrivDir: null as string, // if falsy, apiImplDir will be used when/if needed.
+	apiMockDir: null as string,  // if truthy, generate mock api classes; Ignored if the role is not 'client'.
 	apiHndlDir: 'handlers', // Ignored if the role is not 'server'.
 
 	// How should identifiers and files be cased?
@@ -73,3 +76,25 @@ export const BaseSettings = {
 
 export type BaseSettingsType = Omit<typeof BaseSettings, '__conf_register'>;
 export const BaseSettingsToken = Symbol.for(BaseSettings[RegisterConfigMarker]) as InjectableId<BaseSettingsType>;
+
+export async function cleanOutDir(del: boolean | string, outDir: string, settings: BaseSettingsType): Promise<void> {
+	// Clean up anything previously generated (if requested to do so).
+	if (del) {
+		if (del === 'all')
+			rimrafSync(outDir, {recursive: true, force: true});   // This may make all the follow statements irrelevant, but not necessarily.
+		if (settings.modelIntfDir)
+			rimrafSync(path.join(outDir, settings.modelIntfDir), {recursive: true, force: true});
+		if (settings.modelImplDir)
+			rimrafSync(path.join(outDir, settings.modelImplDir), {recursive: true, force: true});
+		if (settings.modelPrivDir)
+			rimrafSync(path.join(outDir, settings.modelPrivDir), {recursive: true, force: true});
+		if (settings.apiIntfDir)
+			rimrafSync(path.join(outDir, settings.apiIntfDir), {recursive: true, force: true});
+		if (settings.role !== 'server' && settings.apiImplDir)
+			rimrafSync(path.join(outDir, settings.apiImplDir), {recursive: true, force: true});
+		if (settings.apiPrivDir)
+			rimrafSync(path.join(outDir, settings.apiPrivDir), {recursive: true, force: true});
+		if (settings.apiHndlDir)
+			rimrafSync(path.join(outDir, settings.apiHndlDir), {recursive: true, force: true});
+	}
+}

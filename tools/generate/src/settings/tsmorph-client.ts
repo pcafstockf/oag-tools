@@ -1,5 +1,5 @@
 import {Container, InjectableId} from 'async-injection';
-import {InitializeMarker, RegisterConfigMarker, InitializerFn} from 'dyflex-config';
+import {InitializeMarker, InitializerFn, RegisterConfigMarker} from 'dyflex-config';
 
 // @ts-ignore
 export const TsMorphClientSettings = {

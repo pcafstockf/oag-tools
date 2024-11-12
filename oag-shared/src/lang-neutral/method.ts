@@ -4,7 +4,7 @@ import {IdentifiedLangNeutral, LangNeutral, OpenApiLangNeutral} from './lang-neu
 import {Parameter} from './parameter';
 import {Response} from './response';
 
-interface MethodT<LANG_REF = unknown> extends LangNeutral<LANG_REF>, IdentifiedLangNeutral {
+interface MethodT extends LangNeutral, IdentifiedLangNeutral {
 	/**
 	 * The URI path component for this method.
 	 */
@@ -15,7 +15,7 @@ interface MethodT<LANG_REF = unknown> extends LangNeutral<LANG_REF>, IdentifiedL
 	 * required will come first, followed by optional.
 	 * The body (if any) will be the last in its associated group (required or optional).
 	 */
-	readonly parameters: ReadonlyArray<Readonly<Parameter<unknown>>>;
+	readonly parameters: ReadonlyArray<Readonly<Parameter>>;
 
 	/**
 	 * Keys are http status code responses in the form: 201, or 2xx, or default.
@@ -30,7 +30,7 @@ interface MethodT<LANG_REF = unknown> extends LangNeutral<LANG_REF>, IdentifiedL
 	readonly preferredAcceptTypes?: ReadonlyArray<string>;
 }
 
-export interface Method<LANG_REF = unknown> extends MethodT<LANG_REF>, OpenApiLangNeutral<OpenAPIV3_1.OperationObject, MethodT> {
+export interface Method extends MethodT, OpenApiLangNeutral<OpenAPIV3_1.OperationObject, MethodT> {
 }
 
 export const CodeGenMethodToken = new InjectionToken<Method>('codegen-method');

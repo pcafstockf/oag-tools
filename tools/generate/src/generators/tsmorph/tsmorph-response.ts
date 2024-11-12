@@ -1,5 +1,5 @@
-import {LangNeutralTypes} from 'oag-shared/lang-neutral';
-import {BaseSettingsType, BaseOpenApiResponse} from 'oag-shared/lang-neutral/base';
+import {LangNeutralType} from 'oag-shared/lang-neutral';
+import {BaseOpenApiResponse, BaseSettingsType} from 'oag-shared/lang-neutral/base';
 import {ReturnTypedNode} from 'ts-morph';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
 
@@ -12,11 +12,12 @@ export abstract class TsmorphResponse extends BaseOpenApiResponse {
 		super(baseSettings);
 	}
 
-	getType(type: 'intf'): ResponseReturnTypedNode;
-	getType(type: 'impl'): ResponseReturnTypedNode;
-	getType(type: 'hndl'): ResponseReturnTypedNode;
-	override getType(type: LangNeutralTypes): ResponseReturnTypedNode {
+	getLangNode(type: 'intf'): ResponseReturnTypedNode;
+	getLangNode(type: 'impl'): ResponseReturnTypedNode;
+	getLangNode(type: 'hndl'): ResponseReturnTypedNode;
+	override getLangNode(type: LangNeutralType): ResponseReturnTypedNode {
 		return this.#tsTypes[type];
 	}
+
 	#tsTypes: Record<string, ResponseReturnTypedNode>;
 }

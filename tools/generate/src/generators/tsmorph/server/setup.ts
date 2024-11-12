@@ -1,14 +1,16 @@
 import {Container} from 'async-injection';
 import {CodeGenApiToken} from 'oag-shared/lang-neutral/api';
-import { CodeGenOpenApiResponseToken} from 'oag-shared/lang-neutral/base';
+import {CodeGenOpenApiResponseToken} from 'oag-shared/lang-neutral/base';
 import {CodeGenMethodToken} from 'oag-shared/lang-neutral/method';
-import {CodeGenArrayModelToken, CodeGenUnionModelToken, CodeGenPrimitiveModelToken, CodeGenRecordModelToken} from 'oag-shared/lang-neutral/model';
+import {CodeGenArrayModelToken, CodeGenPrimitiveModelToken, CodeGenRecordModelToken, CodeGenUnionModelToken} from 'oag-shared/lang-neutral/model';
 import {CodeGenBodyParameterToken, CodeGenNamedParameterToken} from 'oag-shared/lang-neutral/parameter';
+import {SourceGeneratorToken} from '../../source-generator';
 import {beginTsMorphSetup, finishTsMorphSetup} from '../setup';
 import {TsmorphServerApi} from './tsmorph-server-api';
+import {TsmorphServerGenerator} from './tsmorph-server-generator';
 import {TsmorphServerMethod} from './tsmorph-server-method';
-import {TsmorphArrayServerModel, TsmorphUnionServerModel, TsmorphPrimitiveServerModel, TsmorphRecordServerModel} from './tsmorph-server-model';
-import {TsmorphServerBodyParameter, TsmorphClinetNamedParameter} from './tsmorph-server-parameter';
+import {TsmorphArrayServerModel, TsmorphPrimitiveServerModel, TsmorphRecordServerModel, TsmorphUnionServerModel} from './tsmorph-server-model';
+import {TsmorphClinetNamedParameter, TsmorphServerBodyParameter} from './tsmorph-server-parameter';
 import {TsmorphServerResponse} from './tsmorph-server-response';
 
 export async function setupTsMorphServer(dic: Container, path: string[], obj: object): Promise<void> {
@@ -37,4 +39,7 @@ export async function setupTsMorphServer(dic: Container, path: string[], obj: ob
 
 	// Now that we have all the server stuff in place
 	await finishTsMorphSetup(dic, path, obj);
+
+	if (!dic.isIdKnown(SourceGeneratorToken))
+		dic.bindClass(SourceGeneratorToken, TsmorphServerGenerator);
 }

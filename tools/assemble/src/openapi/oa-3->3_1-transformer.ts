@@ -7,6 +7,7 @@ export class Transform3to3_1 extends OpenAPIV3Visitor<OpenAPIV3_1.Document> {
 	constructor() {
 		super();
 	}
+
 	private convertedSchema: Set<OpenAPIV3.SchemaObject>;
 
 	/**
@@ -37,7 +38,7 @@ export class Transform3to3_1 extends OpenAPIV3Visitor<OpenAPIV3_1.Document> {
 	visitSchema(schema: OpenAPIV3.SchemaObject, parent?: OpenAPIV3.SchemaObject): boolean | void {
 		const activePath = this.activeJsonPath;
 		const result = super.visitSchema(schema, parent);
-		if (! this.convertedSchema.has(schema)) {
+		if (!this.convertedSchema.has(schema)) {
 			// Since we are recursing, we do not want openapi-schema-to-json-schema doing recursive conversion too.
 			// So pull out any children, convert, and then put the children back.
 			const schemaSpecificProps = ['properties', 'additionalProperties', 'items', 'allOf', 'oneOf', 'anyOf', 'not'];

@@ -2,12 +2,11 @@ import os from 'node:os';
 import path from 'node:path';
 import {OpenAPIV3_1} from 'openapi-types';
 import {Api, LangNeutralApiTypes} from '../api';
-import {LangNeutralTypes} from '../lang-neutral';
 import {Method} from '../method';
+import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, BaseLangNeutralConstructor, MixOpenApiLangNeutral} from './base-lang-neutral';
-import {BaseSettingsType} from './base-settings';
 
-export abstract class BaseApi<LANG_REF = unknown> extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api, BaseLangNeutralConstructor>(BaseLangNeutral as BaseLangNeutralConstructor) implements Api<LANG_REF> {
+export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api, BaseLangNeutralConstructor>(BaseLangNeutral as BaseLangNeutralConstructor) implements Api {
 	protected constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
@@ -16,8 +15,6 @@ export abstract class BaseApi<LANG_REF = unknown> extends MixOpenApiLangNeutral<
 		this.setOae(tag);
 		return this;
 	}
-
-	abstract getType(type: LangNeutralTypes): LANG_REF;
 
 	getIdentifier(type: LangNeutralApiTypes): string {
 		switch (type) {

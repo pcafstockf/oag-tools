@@ -7,15 +7,15 @@ import {Model} from './model';
  * All CodeGenAst Method have a 'Response', but OpenApi v3.1 allows optional ResponsesObject in order to support
  * things like web sockets, etc.  'OpenApiResponse' is what will be found in most REST apis.
  */
-export interface Response<LANG_REF = unknown, MODEL_LANG_REF = unknown> extends LangNeutral<LANG_REF> {
-	readonly model: Model<MODEL_LANG_REF>;
+export interface Response extends LangNeutral {
+	readonly model: Model;
 }
 
 /**
  * @inheritDoc
  * This specialization is used whenever the OpenApi specification defines a ResponsesObject.
  */
-export interface OpenApiResponse<LANG_REF = unknown, MODEL_LANG_REF = unknown> extends Response<LANG_REF, MODEL_LANG_REF>, OpenApiLangNeutral<OpenAPIV3_1.ResponseObject, Response> {
+export interface OpenApiResponse extends Response, OpenApiLangNeutral<OpenAPIV3_1.ResponseObject, Response> {
 }
 
 export function isOpenApiResponse(obj: Response): obj is OpenApiResponse {

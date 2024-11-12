@@ -2,8 +2,8 @@ import {parse as json5Parse} from 'json5';
 import lodash from 'lodash';
 import {lstatSync, mkdirSync, readFileSync, Stats} from 'node:fs';
 import path from 'node:path';
+import {safeLStatSync} from 'oag-shared/utils/misc-utils';
 import unquotedValidator from 'unquoted-property-validator';
-import {safeLStatSync} from '../../../oag-shared/src/utils/misc-utils';
 
 export interface CLIOptionsBase<CONFIG, IN, OUT, VERBOSE, PROP, ROLE, DELETE, SETTINGS> {
 	/**

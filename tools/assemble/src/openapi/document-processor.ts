@@ -1,7 +1,7 @@
 import SwaggerParser from '@apidevtools/swagger-parser';
 import {mapSeries as asyncMapSeries} from 'async';
 import {parse as json5Parse} from 'json5';
-import {isEqual as lodashIsEqual, merge as lodashMerge, mergeWith as lodashMergeWith, set as lodashSet, unionWith as lodashUnionWith} from 'lodash';
+import {isEqual as lodashIsEqual, mergeWith as lodashMergeWith, set as lodashSet, unionWith as lodashUnionWith} from 'lodash';
 import constants from 'node:constants';
 import * as fs from 'node:fs';
 import path from 'node:path';
@@ -85,13 +85,10 @@ export class OpenApiInputProcessor {
 						object[key.substring(1)] = srcValue;
 				}
 				else if (key?.startsWith('~')) {
-					if (object[srcValue])
-						lodashMergeWith(object[srcValue], object[key.substring(1)], mergerFn);
-					else if (object[key.substring(1)])
-						object[srcValue] = object[key.substring(1)];
+					if (object[key.substring(1)])
+						object[key.substring(1)] = srcValue;
 					deletes.push(() => {
 						delete object[key];
-						delete object[key.substring(1)];
 					});
 				}
 				else if (Array.isArray(srcValue)) {

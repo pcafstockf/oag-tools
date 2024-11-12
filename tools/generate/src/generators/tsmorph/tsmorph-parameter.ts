@@ -1,5 +1,5 @@
-import {LangNeutral, LangNeutralTypes, Parameter} from 'oag-shared/lang-neutral';
-import {BaseLangNeutralConstructor, BaseSettingsType, BaseBodyParameter, BaseNamedParameter} from 'oag-shared/lang-neutral/base';
+import {LangNeutral, LangNeutralType, Parameter} from 'oag-shared/lang-neutral';
+import {BaseBodyParameter, BaseLangNeutralConstructor, BaseNamedParameter, BaseSettingsType} from 'oag-shared/lang-neutral/base';
 import {ParameterDeclaration} from 'ts-morph';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
 
@@ -11,23 +11,24 @@ interface OagParameterDeclaration extends ParameterDeclaration {
 type TsmorphParameterTypes = OagParameterDeclaration;
 
 function MixTsMorphParameter<T>(base: T) {
-	const derived = class TsMorphParameter extends (base as BaseLangNeutralConstructor) implements LangNeutral<TsmorphParameterTypes> {
+	const derived = class TsMorphParameter extends (base as BaseLangNeutralConstructor) implements LangNeutral {
 		constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType) {
 			super(baseSettings);
 		}
 
-		getType(type: 'intf'): OagParameterDeclaration;
-		getType(type: 'impl'): OagParameterDeclaration;
-		getType(type: 'hndl'): OagParameterDeclaration;
-		override getType(type: LangNeutralTypes): TsmorphParameterTypes {
+		getLangNode(type: 'intf'): OagParameterDeclaration;
+		getLangNode(type: 'impl'): OagParameterDeclaration;
+		getLangNode(type: 'hndl'): OagParameterDeclaration;
+		override getLangNode(type: LangNeutralType): TsmorphParameterTypes {
 			return this.#tsTypes[type];
 		}
+
 		#tsTypes: Record<string, TsmorphParameterTypes>;
 	};
 	return derived as unknown as new (baseSettings: BaseSettingsType, tsMorphSettings: TsMorphSettingsType) => T & typeof derived.prototype;
 }
 
-export class TsmorphNamedParameter extends MixTsMorphParameter<BaseNamedParameter<TsmorphParameterTypes>>(BaseNamedParameter as any) {
+export class TsmorphNamedParameter extends MixTsMorphParameter<BaseNamedParameter>(BaseNamedParameter as any) {
 	constructor(
 		baseSettings: BaseSettingsType,
 		tsMorphSettings: TsMorphSettingsType,
@@ -36,7 +37,7 @@ export class TsmorphNamedParameter extends MixTsMorphParameter<BaseNamedParamete
 	}
 }
 
-export class TsmorphBodyParameter extends MixTsMorphParameter<BaseBodyParameter<TsmorphParameterTypes>>(BaseBodyParameter as any) {
+export class TsmorphBodyParameter extends MixTsMorphParameter<BaseBodyParameter>(BaseBodyParameter as any) {
 	constructor(
 		baseSettings: BaseSettingsType,
 		tsMorphSettings: TsMorphSettingsType,

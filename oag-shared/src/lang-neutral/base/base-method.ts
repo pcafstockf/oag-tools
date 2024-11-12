@@ -1,5 +1,3 @@
-// noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
-
 import os from 'node:os';
 import {OpenAPIV3_1} from 'openapi-types';
 import * as nameUtils from '../../utils/name-utils';
@@ -7,11 +5,11 @@ import {LangNeutralApiTypes} from '../api';
 import {Method} from '../method';
 import {Parameter} from '../parameter';
 import {Response} from '../response';
+import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, BaseLangNeutralConstructor, MixOpenApiLangNeutral} from './base-lang-neutral';
-import {BaseSettingsType} from './base-settings';
 
-
-export abstract class BaseMethod<LANG_REF = unknown> extends MixOpenApiLangNeutral<OpenAPIV3_1.OperationObject, Method, BaseLangNeutralConstructor>(BaseLangNeutral as BaseLangNeutralConstructor) implements Method<LANG_REF> {
+export abstract class BaseMethod extends MixOpenApiLangNeutral<OpenAPIV3_1.OperationObject, Method, BaseLangNeutralConstructor>(BaseLangNeutral as BaseLangNeutralConstructor) implements Method {
+	// noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
 	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
@@ -44,8 +42,6 @@ export abstract class BaseMethod<LANG_REF = unknown> extends MixOpenApiLangNeutr
 		return this.#httpMethod.toUpperCase();
 	}
 
-	abstract getType(type: string): LANG_REF;
-
 	getIdentifier(_type: LangNeutralApiTypes): string {
 		return this.toOperationName(this.ensureOperationId());
 	}
@@ -57,15 +53,15 @@ export abstract class BaseMethod<LANG_REF = unknown> extends MixOpenApiLangNeutr
 		return id;
 	}
 
-	addParameter(param: Parameter<unknown>): void {
+	addParameter(param: Parameter): void {
 		if (!this.#parameters)
 			this.#parameters = [];
 		this.#parameters.push(param);
 	}
 
-	#parameters: Parameter<unknown>[];
+	#parameters: Parameter[];
 
-	get parameters(): Parameter<unknown>[] {
+	get parameters(): Parameter[] {
 		return this.#parameters?.slice(0) ?? [];
 	}
 

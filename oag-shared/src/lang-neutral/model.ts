@@ -1,12 +1,10 @@
 import {InjectionToken} from 'async-injection';
 import {OpenAPIV3_1} from 'openapi-types';
-import {LangNeutral, LangNeutralTypes, OpenApiLangNeutral, OpenApiLangNeutralBackRef} from './lang-neutral';
+import {isOpenApiLangNeutral, LangNeutral, LangNeutralType, OpenApiLangNeutral, OpenApiLangNeutralBackRef} from './lang-neutral';
 
-export type LangNeutralModelTypes = Extract<LangNeutralTypes, 'intf' | 'impl' | 'json'>;
-export type ModelKind = 'primitive' | 'array' | 'record' | 'union' | 'typed';
+export type LangNeutralModelTypes = Extract<LangNeutralType, 'intf' | 'impl' | 'json'>;
 
-export interface Model<LANG_REF = unknown, KIND extends ModelKind = ModelKind> extends LangNeutral<LANG_REF> {
-	readonly kind: KIND;
+export interface Model extends LangNeutral {
 	readonly name?: string;
 
 	/**
@@ -15,36 +13,43 @@ export interface Model<LANG_REF = unknown, KIND extends ModelKind = ModelKind> e
 	matches(model: Readonly<Model>): boolean;
 }
 
-export interface UnionModel<LANG_REF = unknown> extends Model<LANG_REF, 'union'> {
-	readonly unionOf?: ReadonlyArray<Readonly<Model>>;
+export interface UnionModel extends Model {
+	readonly unionOf: ReadonlyArray<Readonly<Model>>;
 }
+
 export const CodeGenUnionModelToken = new InjectionToken<UnionModel>('codegen-union-model');
 
-export interface SchemaModel<LANG_REF = unknown, KIND extends ModelKind = ModelKind> extends Model<LANG_REF, KIND>, OpenApiLangNeutral<OpenAPIV3_1.SchemaObject, SchemaModel> {
+export interface SchemaModel extends Model, OpenApiLangNeutral<OpenAPIV3_1.SchemaObject, SchemaModel> {
 	readonly nullable: boolean;
 }
+
 export type OpenApiSchemaWithModelRef = OpenAPIV3_1.SchemaObject & OpenApiLangNeutralBackRef<SchemaModel>;
 
-export type PrimitiveModelTypes = 'integer' | 'number' | 'string' | 'enum' | 'boolean' | 'null' | 'any';
-export interface PrimitiveModel<LANG_REF = unknown> extends SchemaModel<LANG_REF, 'primitive'> {
-	readonly jsdType: PrimitiveModelTypes;
+export const PrimitiveModelTypes = ['integer', 'number', 'string', 'boolean', 'null', 'any', 'enum'] as const;
+export type PrimitiveModelType = typeof PrimitiveModelTypes[number];
+
+export interface PrimitiveModel extends SchemaModel {
+	readonly jsdType: PrimitiveModelType;
 }
+
 export const CodeGenPrimitiveModelToken = new InjectionToken<PrimitiveModel>('codegen-primitive-model');
 
-export interface ArrayModel<LANG_REF = unknown> extends SchemaModel<LANG_REF, 'array'> {
+export interface ArrayModel extends SchemaModel {
 	/**
 	 * Model may be synthetically constructed.
 	 */
 	readonly items: Readonly<Model>;
 }
+
 export const CodeGenArrayModelToken = new InjectionToken<ArrayModel>('codegen-array-model');
 
 export interface RecordPropertyType {
 	readonly model: Readonly<Model>,
 	readonly required?: boolean;
 }
-export interface RecordModel<LANG_REF = unknown> extends SchemaModel<LANG_REF, 'record'>, Omit<UnionModel<LANG_REF>, 'kind'> {
-	readonly extendsFrom?: ReadonlyArray<Readonly<Model>>;
+
+export interface RecordModel extends SchemaModel, UnionModel {
+	readonly extendsFrom: ReadonlyArray<Readonly<Model>>;
 
 	readonly properties: Readonly<Record<string, Readonly<RecordPropertyType>>>;
 	/**
@@ -52,27 +57,41 @@ export interface RecordModel<LANG_REF = unknown> extends SchemaModel<LANG_REF, '
 	 */
 	readonly additionalProperties: Readonly<Model> | false;
 }
+
 export const CodeGenRecordModelToken = new InjectionToken<RecordModel>('codegen-record-model');
 
-export function isSchemaModel(obj: Readonly<Model>): obj is SchemaModel {
-	return typeof (obj as unknown as SchemaModel).oae !== 'undefined';
-}
-export function isPrimitiveModel(obj: Readonly<Model>): obj is PrimitiveModel {
-	return obj.kind === 'primitive';
-}
-export function isUnionModel(obj: Readonly<Model>): obj is UnionModel {
-	if (obj.kind === 'union')
-		return true;
-	if (obj.kind === 'record')
-		return Array.isArray((obj as RecordModel).unionOf)
-	return false;
-}
-export function isRecordModel(obj: Readonly<Model>): obj is RecordModel {
-	return obj.kind === 'record';
+export interface TypedModel extends Model {
+	readonly typeName: string;
+	readonly importPath: string | null;
 }
 
-export interface TypedModel<LANG_REF = unknown> extends Model<LANG_REF, 'typed'> {
+export function isSchemaModel(obj: Readonly<Object>): obj is SchemaModel {
+	return typeof (obj as Model).getLangNode === 'function' && isOpenApiLangNeutral(obj) && typeof (obj as SchemaModel).nullable === 'boolean';
 }
+
+export function isPrimitiveModel(obj: Readonly<Model>): obj is PrimitiveModel {
+	const t = (obj as PrimitiveModel)?.jsdType;
+	return typeof obj.getLangNode === 'function' && t && PrimitiveModelTypes.includes(t);
+}
+
+export function isArrayModel(obj: Readonly<Model>): obj is ArrayModel {
+	return typeof obj.getLangNode === 'function' && Array.isArray((obj as ArrayModel)?.items);
+}
+
+export function isRecordModel(obj: Readonly<Model>): obj is RecordModel {
+	const p = (obj as RecordModel)?.properties;
+	return typeof obj.getLangNode === 'function' && p && typeof p === 'object';
+}
+
+export function isUnionModel(obj: Readonly<Model>): obj is UnionModel {
+	return typeof obj.getLangNode === 'function' && Array.isArray((obj as UnionModel)?.unionOf);
+}
+
+export function isTypedModel(obj: Readonly<Model>): obj is TypedModel {
+	const p = (obj as TypedModel)?.importPath;
+	return typeof obj.getLangNode === 'function' && p === null || typeof p === 'string';
+}
+
 export const CodeGenTypedModelToken = new InjectionToken<TypedModel>('codegen-typed-model');
 
 export const CommonModelKeys = [
@@ -102,5 +121,5 @@ export const CommonModelKeys = [
 	'duration'
 ] as const;
 export type CommonModelTypes = typeof CommonModelKeys[number];
-export type CommonModelFactory<LANG_REF = unknown> = (key: CommonModelTypes) => Model<LANG_REF>;
+export type CommonModelFactory = (key: CommonModelTypes) => Model;
 export const CodeGenCommonModelsToken = new InjectionToken<CommonModelFactory>('codegen-common-models');

@@ -1,4 +1,4 @@
-export {LangNeutral, LangNeutralTypes} from './lang-neutral';
+export {LangNeutral, LangNeutralType} from './lang-neutral';
 export {Model} from './model';
 export {Parameter} from './parameter';
 export {Response} from './response';

@@ -7,7 +7,7 @@ export type NameCase = 'kebab' | 'pascal' | 'snake' | 'camel' | undefined | null
  * This uses lodash to convert to camelCase and then upper cases the first letter.
  */
 export const pascalCase = (str?: string) => lodashCamelCase(str).replace(/^(.)/, toUpper);
-export const kebabCase = (str?: string) => str.match(/[A-Z]{2,}(?=[A-Z.][f-z]+[0-9]*|\b)|[A-Z.]?[f-z.]+[0-9.]*|[A-Z.]|[0-9.]+/g).join('-').toLowerCase();
+export const kebabCase = (str?: string) => str.trim().replace(/([a-z])([A-Z])/g, '$1-$2').replace(/[\s_]+/g, '-').toLowerCase();
 export const snakeCase = lodashSnakeCase;
 export const camelCase = lodashCamelCase;
 

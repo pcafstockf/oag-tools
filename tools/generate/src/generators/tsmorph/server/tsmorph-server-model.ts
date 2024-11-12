@@ -1,8 +1,8 @@
 import {Inject, Injectable} from 'async-injection';
 import {BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/base';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmorph';
-import {TsmorphArrayModel, TsmorphUnionModel, TsmorphPrimitiveModel, TsmorphRecordModel} from '../tsmorph-model';
 import {TsMorphServerSettingsToken, TsMorphServerSettingsType} from '../../../settings/tsmorph-server';
+import {TsmorphArrayModel, TsmorphPrimitiveModel, TsmorphRecordModel, TsmorphUnionModel} from '../tsmorph-model';
 
 @Injectable()
 export class TsmorphPrimitiveServerModel extends TsmorphPrimitiveModel {
@@ -50,9 +50,9 @@ export class TsmorphRecordServerModel extends TsmorphRecordModel {
 export class TsmorphUnionServerModel extends TsmorphUnionModel {
 	constructor(
 		@Inject(BaseSettingsToken)
-		baseSettings: BaseSettingsType,
+			baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-		tsMorphSettings: TsMorphSettingsType,
+			tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphServerSettingsToken)
 		protected tsMorphServerSettings: TsMorphServerSettingsType
 	) {
