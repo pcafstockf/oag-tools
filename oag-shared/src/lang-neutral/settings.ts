@@ -40,26 +40,31 @@ export const BaseSettings = {
 	jsonPrefix: '',
 	jsonSuffix: 'schema',
 	hndlSuffix: 'handler',
+	mockPrefix: 'mock',
+	mockSuffix: '',
 	intfFileSuffix: '',
 	implFileSuffix: 'srvc',
 	jsonFileSuffix: 'schema',
 	hndlFileSuffix: 'handler',
+	mockFileSuffix: 'mock',
 	// Fine-grained control over how identifiers are named
 	intfName_Tmpl: `#{name} #{typeSuffix} #{intfSuffix}`,
 	implName_Tmpl: '#{name} #{typeSuffix} #{implSuffix}',
 	jsonName_Tmpl: '#{name} #{jsonSuffix}',
 	hndlName_Tmpl: '#{name} #{hndlSuffix}',
+	mockName_Tmpl: '#{mockPrefix} #{name}',
 	apiIntfName_Tmpl: null as string,
 	apiImplName_Tmpl: null as string,
 	modelIntfName_Tmpl: null as string,
 	modelImplName_Tmpl: null as string,
 	modelJsonName_Tmpl: null as string,
 	// Fine-grained control over file names.
-	fileBasename_Tmpl: '#{name} #{typeSuffix}',
+	fileBasename_Tmpl: '#{name}.#{typeSuffix}',
 	intfFileBasename_Tmpl: '#{name} #{typeSuffix} #{intfFileSuffix}',
 	implFileBasename_Tmpl: '#{name} #{typeSuffix} #{implFileSuffix}',
 	jsonFileBasename_Tmpl: '#{name} #{jsonFileSuffix}',
 	hndlFileBasename_Tmpl: '#{name} #{hndlFileSuffix}',
+	mockFileBasename_Tmpl: '#{name} #{mockFileSuffix}',
 	modelIntfFileBasename_Tmpl: null as string,
 	modelImplFileBasename_Tmpl: null as string,
 	modelJsonFileBasename_Tmpl: null as string,
@@ -71,7 +76,8 @@ export const BaseSettings = {
 
 	role: 'client' as 'client' | 'server',
 	target: 'browser' as 'browser' | 'node' | undefined,
-	emitDescriptions: true
+	emitDescriptions: true,
+	verboseJsonSchema: false
 };
 
 export type BaseSettingsType = Omit<typeof BaseSettings, '__conf_register'>;

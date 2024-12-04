@@ -172,8 +172,7 @@ export abstract class BaseUnionModel extends BaseSchemaModel implements UnionMod
 				return id ?? retVal;
 		}
 		if (isFileBasedLangNeutral(this)) {
-			const sf = this.getFilepath('intf');
-			if (sf)
+			if (this.getFilepath('intf') || this.getFilepath('impl'))
 				retVal = `type ${id} = ${retVal}${os.EOL}`;
 		}
 		return retVal;
@@ -204,8 +203,7 @@ export abstract class BasePrimitiveModel extends BaseSchemaModel implements Prim
 				return id ?? retVal;
 		}
 		if (isFileBasedLangNeutral(this)) {
-			const sf = this.getFilepath('intf');
-			if (sf)
+			if (this.getFilepath('intf') || this.getFilepath('impl'))
 				retVal = `type ${id} = ${retVal}${os.EOL}`;
 		}
 		return retVal;
@@ -238,8 +236,7 @@ export abstract class BaseArrayModel extends BaseSchemaModel implements ArrayMod
 				return id ?? retVal;
 		}
 		if (isFileBasedLangNeutral(this)) {
-			const sf = this.getFilepath('intf');
-			if (sf)
+			if (this.getFilepath('intf') || this.getFilepath('impl'))
 				retVal = `type ${id} = ${retVal}${os.EOL}`;
 		}
 		return retVal;
@@ -343,8 +340,7 @@ export abstract class BaseRecordModel extends BaseSchemaModel implements RecordM
 		const id = this.getIdentifier('intf');
 		if (owned)
 			return id ?? retVal;
-		const sf = this.getFilepath('intf');
-		if (sf)
+		if (this.getFilepath('intf') || this.getFilepath('impl'))
 			retVal = `type ${id} = ${retVal}${os.EOL}`;
 		return retVal;
 	}

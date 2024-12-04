@@ -10,7 +10,7 @@ export abstract class BaseLangNeutral implements LangNeutral {
 	constructor(protected baseSettings: BaseSettingsType) {
 	}
 
-	abstract getLangNode(type: LangNeutralType): unknown;
+	abstract getLangNode<T = unknown>(type: LangNeutralType): T;
 
 	protected toIntfName(name: string, type: 'api' | 'model'): string {
 		let templ = this.baseSettings.intfName_Tmpl;

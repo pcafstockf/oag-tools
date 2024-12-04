@@ -41,9 +41,7 @@ export class TsmorphClientGenerator implements SourceGenerator {
 		delete this.tempFile;
 		// Format and write all remaining project files to disk.
 		for (const file of this.project.getSourceFiles()) {
-			//TODO: Enable optimizations once we have completed the manual regressions (see above).
-
-			// file.organizeImports(this.tsmorphSettings.format);
+			file.organizeImports(this.tsmorphSettings.format);
 			const fp = file.getFilePath();
 			const parentDir = path.dirname(fp);
 			let stat = safeLStatSync(parentDir);

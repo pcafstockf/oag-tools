@@ -3,5 +3,16 @@
 	o: './test-out/client/petstore/src',
 	d: 'all',
 	r: 'client',
-	p: 'tsmorph.client.httplib="node"'
+	p: [
+		'tsmorph.client.httplib="node"',
+		//		'base.modelIntfDir=""',
+		'base.implSuffix="DTO"',
+		'base.implFileSuffix="dto"',
+		'base.modelImplDir="dto"',
+		'base.implFileBasename_Tmpl="#{name}.#{implFileSuffix}"',
+		'base.jsonSuffix="Schema"',
+		'base.jsonFileSuffix="schema"',
+		'base.modelJsonDir="schema"',
+		'base.jsonFileBasename_Tmpl="#{name}.#{jsonFileSuffix}"'
+	]
 }
