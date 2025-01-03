@@ -35,90 +35,84 @@ interface ModelTypeAliasDeclaration extends TypeAliasDeclaration {
 	readonly $ast?: Model & TsmorphModel;
 }
 
-export interface TsmorphModel<I extends Node = Node, C extends Node = Node, J extends Node = Node> extends Model {
-	getLangNode(type: 'intf'): I;
-	getLangNode(type: 'impl'): C;
-	getLangNode(type: 'json'): J;
+export interface TsmorphModel<I extends Node = Node, C extends Node | void = Node> extends Model {
+	readonly tsMorphSettings: TsMorphSettingsType;
 
-	getTypeNode(type: 'intf'): TypeNode | Identifier | undefined;
+	getLangNode(mlnType: 'intf'): I;
 
-	getTypeNode(type: 'impl'): TypeNode | Identifier | undefined;
+	getLangNode(mlnType: 'impl'): C;
 
-	getTypeNode(type: 'json'): TypeNode | Identifier | undefined;
+	getLangNode(mlnType: 'json'): ModelVariableStatement;
 
 	genIntf(sf: SourceFile): Promise<I>;
 	genImpl(sf: SourceFile): Promise<C>;
-	genJson(sf: SourceFile): Promise<J>;
 
-	bind(type: 'intf', ast: Omit<I, '$ast'>): I;
-	bind(type: 'impl', ast: Omit<C, '$ast'>): C;
-	bind(type: 'json', ast: Omit<J, '$ast'>): J;
+	genJson(sf: SourceFile): Promise<ModelVariableStatement>;
 
-	addDependency(scope: 'intf' | 'impl' | 'json', sf: SourceFile, dependent: TsmorphModel, scopeOfDependent: 'intf' | 'impl' | 'json'): void;
-	makeJsDoc(): JSDocStructure;
+	makeJsDoc(): JSDocStructure | undefined;
 
-	readonly dependencies: Record<'intf' | 'impl' | 'json', ReadonlyArray<Model>>;
-	baseSettings: BaseSettingsType;
+	getTypeNode(preferredMlnType: LangNeutralModelTypes): TypeNode | Identifier | undefined;
 }
 
 export function isTsmorphModel(obj: Readonly<Model>): obj is TsmorphModel {
 	if (typeof obj.getLangNode === 'function')
 		if (typeof (obj as unknown as TsmorphModel).genIntf === 'function')
-			if (typeof (obj as unknown as TsmorphModel).bind === 'function')
-				if (typeof (obj as unknown as TsmorphModel).makeJsDoc === 'function')
-					if (typeof (obj as any).getSrcFile === 'function')
+			if (typeof (obj as unknown as any).getSrcFile === 'function')
+				if (typeof (obj as unknown as any).bind === 'function')
+					if (typeof (obj as unknown as any).makeJsDoc === 'function')
 						return true;
 	return false;
 }
 
-function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends Node = Node>(base: T) {
-	// @ts-ignore
-	const derived = class extends base implements Model, TsmorphModel<I, C, J> {
-		constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType) {
+function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends Node | void = Node>(base: any) {
+	//@ts-ignore
+	const derived = class extends base implements TsmorphModel<I, C> {
+		constructor(baseSettings: BaseSettingsType, readonly tsMorphSettings: TsMorphSettingsType) {
 			super(baseSettings);
 			this.#tsTypes = {} as any;
 			this.#dependencies = {intf: [], impl: [], json: []};
 		}
-
 		readonly #tsTypes: {
 			intf: I,
 			impl: C,
 			json: VariableStatement
 		};
 
-		get dependencies(): Record<'intf' | 'impl' | 'json', ReadonlyArray<Model>> {
+		get dependencies(): Record<LangNeutralModelTypes, ReadonlyArray<TsmorphModel>> {
 			return this.#dependencies;
 		}
 
-		readonly #dependencies: Record<'intf' | 'impl' | 'json', Model[]>;
+		readonly #dependencies: Record<LangNeutralModelTypes, TsmorphModel[]>;
 
-		getLangNode(type: 'intf'): I;
-		getLangNode(type: 'impl'): C;
-		getLangNode(type: 'json'): ModelVariableStatement;
-		getLangNode(type: Extract<LangNeutralType, 'intf' | 'impl' | 'json'>): I | C | ModelVariableStatement | undefined {
-			return this.#tsTypes[type];
+		getLangNode(mlnType: 'intf'): I;
+		getLangNode(mlnType: 'impl'): C;
+		getLangNode(mlnType: 'json'): ModelVariableStatement;
+		getLangNode(mlnType: LangNeutralModelTypes): I | C | ModelVariableStatement | undefined {
+			return this.#tsTypes[mlnType];
 		}
 
 		/**
 		 * By wrapping 'bindAst' we not only perform the binding, but we set our own reference, so that once this call is done, the binding is bidirectional.
 		 * This is important for nested generation calls.
 		 */
-		bind(type: 'intf', ast: Omit<I, '$ast'>): I;
-		bind(type: 'impl', ast: Omit<C, '$ast'>): C;
-		bind(type: 'json', ast: Omit<ModelVariableStatement, '$ast'>): ModelVariableStatement;
-		bind(type: Extract<LangNeutralType, 'intf' | 'impl' | 'json'>, ast: Omit<I, '$ast'> | Omit<C, '$ast'> | Omit<ModelVariableStatement, '$ast'>): I | C | ModelVariableStatement {
-			this.#tsTypes[type] = bindAst(ast as any, this) as any;
-			return this.#tsTypes[type];
+		bind(mlnType: 'intf', ast: Omit<I, '$ast'>): I;
+		bind(mlnType: 'impl', ast: Omit<C, '$ast'>): C;
+		bind(mlnType: 'json', ast: Omit<ModelVariableStatement, '$ast'>): ModelVariableStatement;
+		bind(mlnType: LangNeutralModelTypes, ast: Omit<I, '$ast'> | Omit<C, '$ast'> | Omit<ModelVariableStatement, '$ast'>): I | C | ModelVariableStatement {
+			this.#tsTypes[mlnType] = bindAst(ast as any, this) as any;
+			return this.#tsTypes[mlnType];
+		}
+
+		getTypeNode(preferredMlnType: LangNeutralModelTypes): TypeNode | Identifier | undefined {
+			throw new Error('Bad internal logic');
 		}
 
 		genIntf(sf: SourceFile): Promise<I> {
 			throw new Error('Bad internal logic');
 		}
-
 		genImpl(sf: SourceFile): Promise<C> {
 			throw new Error('Bad internal logic');
 		}
-
 		async genJson(sf: SourceFile): Promise<ModelVariableStatement> {
 			if (this.getLangNode('json'))
 				return this.getLangNode('json');
@@ -148,7 +142,7 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 							if (key === 'description' && isTsmorphModel(this) && (!this.baseSettings.verboseJsonSchema))
 								return undefined;
 							if (value[CodeGenAst] && (!Object.is(value[CodeGenAst], this))) {
-								const model = value[CodeGenAst] as TsmorphModel;
+								const model = value[CodeGenAst] as TsmorphModel & this;
 								if (isIdentifiedLangNeutral(model)) {
 									const varName = model.getIdentifier('json');
 									schemaVarNames[varName] = varName;
@@ -184,30 +178,29 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			return Promise.resolve(null);
 		}
 
-		protected addDependency(scope: 'intf' | 'impl' | 'json', sf: SourceFile, dependent: TsmorphModel, scopeOfDependent: Extract<LangNeutralType, 'intf' | 'impl' | 'json'>): void {
+		protected addDependency(mlnType: LangNeutralModelTypes, sf: SourceFile, dependent: TsmorphModel, depMlnType: LangNeutralModelTypes): void {
 			if (isFileBasedLangNeutral(dependent)) {
-				if (!this.#dependencies[scope].find(d => Object.is(d, dependent))) {
-					const t = dependent.getTypeNode(scopeOfDependent as any);
+				if (!this.#dependencies[mlnType].find(d => Object.is(d, dependent))) {
+					const t = dependent.getTypeNode(depMlnType);
 					if (t)
 						importIfNotSameFile(sf, t, t.getText());
-					this.#dependencies[scope].push(dependent);
+					this.#dependencies[mlnType].push(dependent);
 				}
 			}
 			else {
-				dependent.dependencies[scope].forEach(md => {
-					if (isTsmorphModel(md)) {
-						if (!this.#dependencies[scope].find(d => Object.is(d, md))) {
-							const t = md.getTypeNode(scopeOfDependent as any);
-							if (t)
-								importIfNotSameFile(sf, t, t.getText());
-							this.#dependencies[scope].push(md);
-						}
+				// Everything we might add will of course be a TsMorphModel mixin.
+				(dependent as unknown as this).dependencies[depMlnType].forEach(md => {
+					if (!this.#dependencies[mlnType].find(d => Object.is(d, md))) {
+						const t = md.getTypeNode(depMlnType);
+						if (t)
+							importIfNotSameFile(sf, t, t.getText());
+						this.#dependencies[mlnType].push(md);
 					}
 				});
 			}
 		}
 
-		protected makeJsDoc() {
+		makeJsDoc() {
 			if (isSchemaModel(this)) {
 				const oae = this.oae;
 				let txt: string;
@@ -249,14 +242,29 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			return undefined;
 		}
 
-		protected async getSrcFile(type: Extract<LangNeutralType, 'intf' | 'impl' | 'json'>, proj: Project, sf?: SourceFile): Promise<SourceFile> {
+		protected async getSrcFile(mlnType: LangNeutralModelTypes | Uppercase<LangNeutralModelTypes>, proj: Project, sf?: SourceFile): Promise<SourceFile> {
+			switch (mlnType) {
+				case 'intf':
+					if (!this.baseSettings.modelIntfDir)
+						return Promise.resolve(null);
+					break;
+				case 'impl':
+					if (!this.baseSettings.modelImplDir)
+						return Promise.resolve(null);
+					break;
+				case 'json':
+					if (!this.baseSettings.modelJsonDir)
+						return Promise.resolve(null);
+					break;
+			}
+			mlnType = mlnType.toLowerCase() as LangNeutralModelTypes;
 			if (isFileBasedLangNeutral(this)) {
-				const fp = this.getFilepath(type);
+				const fp = this.getFilepath(mlnType);
 				if (fp) {
 					const fullPath = path.join(proj.getCompilerOptions().outDir, fp) + '.ts';
 					// Can be configured to only generate api-impl if non-existent
-					if (type === 'impl' && (this as unknown as TsmorphModel).baseSettings.role === 'server' && safeLStatSync(fp))
-						return undefined;
+					if (mlnType === 'impl' && this.baseSettings.role === 'server' && safeLStatSync(fp))
+						return Promise.resolve(null);
 					sf = proj.getSourceFile(fullPath);
 					if (!sf)
 						sf = proj.createSourceFile(fullPath, '', {overwrite: false});
@@ -287,7 +295,10 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 	return derived as new (baseSettings: BaseSettingsType, tsMorphSettings: TsMorphSettingsType) => T & typeof derived.prototype & TsmorphModel<I, C>;
 }
 
-export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelTypeAliasDeclaration, ModelClassDeclaration>(BaseUnionModel as any) {
+/**
+ * A union can never be a class (only a type alias).
+ */
+export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelTypeAliasDeclaration, void>(BaseUnionModel as any) {
 	constructor(
 		baseSettings: BaseSettingsType,
 		tsMorphSettings: TsMorphSettingsType
@@ -295,18 +306,19 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 		super(baseSettings, tsMorphSettings);
 	}
 
-	getTypeNode(type: Extract<LangNeutralType, 'intf' | 'impl' | 'json'>): TypeNode | Identifier | undefined {
-		const n = this.getLangNode<Node>(type);
+	override getTypeNode(preferredMlnType: LangNeutralModelTypes): TypeNode | Identifier | undefined {
+		if (preferredMlnType === 'impl')
+			preferredMlnType = 'intf';
+		const n = this.getLangNode<Node>(preferredMlnType);
 		if (n) {
-			switch (type) {
-				case 'intf':
-					if (Node.isTypeAliasDeclaration(n)) {
-						if (isIdentifiedLangNeutral(this))
-							return n.getNameNode();
-						return n.getTypeNode();
-					}
-					break;
+			if (Node.isTypeAliasDeclaration(n)) {
+				if (isIdentifiedLangNeutral(this))
+					return n.getNameNode();
+				return n.getTypeNode();
 			}
+			if (Node.isVariableStatement(n))
+				if (isIdentifiedLangNeutral(this))
+					return n.getFirstDescendantByKind(SyntaxKind.VariableDeclaration)?.getNameNode() as Identifier;
 		}
 		return undefined;
 	}
@@ -315,18 +327,20 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 		if (this.getLangNode('intf'))
 			return this.getLangNode('intf');
 		sf = await this.getSrcFile('intf', sf.getProject(), sf);
+		if (!sf)
+			return Promise.resolve(null);
 		const {id, fake} = this.ensureIdentifier('intf');
-		let retVal: ModelTypeAliasDeclaration = sf.getTypeAlias(id);
-		let types: Node[] = [];
-		for (let u of this.unionOf) {
-			if (isTsmorphModel(u)) {
-				await u.genIntf(sf);
-				types.push(u.getTypeNode('intf'));
-				this.addDependency('intf', sf, u, 'intf');
-			}
-		}
-		const typeTxt = types.map(t => t.getText());
+		let retVal: ModelTypeAliasDeclaration = fake ? undefined : sf.getTypeAlias(id);
 		if (!retVal) {
+			let types: Node[] = [];
+			for (let u of this.unionOf) {
+				if (isTsmorphModel(u)) {
+					await u.genIntf(sf);
+					types.push(u.getTypeNode('intf'));
+					this.addDependency('intf', sf, u, 'intf');
+				}
+			}
+			const typeTxt = types.map(t => t.getText());
 			retVal = this.bind('intf', sf.addTypeAlias({
 				name: id,
 				isExported: !fake,
@@ -343,40 +357,8 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 		return retVal;
 	}
 
-	override async genImpl(sf: SourceFile): Promise<ModelClassDeclaration> {
-		if (this.getLangNode('impl'))
-			return this.getLangNode('impl');
-		if (!isIdentifiedLangNeutral(this))
-			return Promise.resolve(null);
-		sf = await this.getSrcFile('impl', sf.getProject(), sf);
-		if (!sf)
-			return Promise.resolve(null);
-		const {id} = this.ensureIdentifier('impl');
-		let retVal: ModelClassDeclaration = sf.getClass(id);
-		if (!retVal) {
-			const intf = this.getTypeNode('intf');
-			retVal = this.bind('impl', sf.addClass({
-				name: id,
-				isExported: true,
-				implements: intf ? [intf.getText()] : undefined
-			}));
-			if (intf)
-				importIfNotSameFile(sf, intf, intf.getText());
-			if (this.baseSettings.emitDescriptions) {
-				const docs = intf ? <JSDocStructure>{
-					kind: StructureKind.JSDoc,
-					tags: [{
-						kind: StructureKind.JSDocTag,
-						tagName: 'inheritDoc'
-					}]
-				} : this.makeJsDoc();
-				if (docs)
-					retVal.addJsDoc(docs);
-			}
-		}
-		else if (!retVal.$ast)
-			retVal = this.bind('impl', retVal);
-		return retVal;
+	override async genImpl(sf: SourceFile): Promise<void> {
+		return Promise.resolve();
 	}
 }
 
@@ -396,6 +378,7 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 		if (n) {
 			switch (type) {
 				case 'intf':
+				case 'impl':
 					if (Node.isNamed(n)) {
 						if (isIdentifiedLangNeutral(this))
 							return n.getNameNode();
@@ -408,6 +391,8 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 								throw new Error('Bad internal logic');
 						}
 					}
+					else if (Node.isClassDeclaration(n))
+						return n.getExtends();
 					break;
 				case 'json':
 					if (Node.isVariableStatement(n)) {
@@ -423,7 +408,10 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 	override async genIntf(sf: SourceFile): Promise<Node<ts.NamedDeclaration>> {
 		if (this.getLangNode('intf'))
 			return this.getLangNode('intf');
-		sf = await this.getSrcFile('intf', sf.getProject(), sf);
+		// primitive models are the one thing we can always construct even if we do not have a dedicated file for them.
+		sf = await this.getSrcFile('INTF', sf.getProject(), sf);
+		if (!sf)
+			return Promise.resolve(undefined);
 		const {id, fake} = this.ensureIdentifier('intf');
 		let nativeType = this.jsdType;
 		let retVal: Node<ts.NamedDeclaration> & JSDocableNode;
@@ -480,10 +468,10 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 	override async genImpl(sf: SourceFile): Promise<ModelClassDeclaration> {
 		if (this.getLangNode('impl'))
 			return this.getLangNode('impl');
-		const {id, fake} = this.ensureIdentifier('impl');
 		sf = await this.getSrcFile('impl', sf.getProject(), sf);
 		if (!sf)
 			return Promise.resolve(null);
+		const {id, fake} = this.ensureIdentifier('impl');
 		let intf = this.getTypeNode('intf');
 		if (!intf) {
 			await this.genIntf(sf);
@@ -567,6 +555,8 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 		if (this.getLangNode('intf'))
 			return this.getLangNode('intf');
 		sf = await this.getSrcFile('intf', sf.getProject(), sf);
+		if (!sf)
+			return Promise.resolve(null);
 		if (isTsmorphModel(this.items)) {
 			await this.items.genIntf(sf);
 			super.addDependency('intf', sf, this.items, 'intf');
@@ -597,11 +587,15 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 	override async genImpl(sf: SourceFile): Promise<ModelTypeAliasDeclaration> {
 		if (this.getLangNode('impl'))
 			return this.getLangNode('impl');
+		sf = await this.getSrcFile('impl', sf.getProject(), sf);
+		if (!sf)
+			return Promise.resolve(null);
+		let itemsScope: Extract<LangNeutralType, 'intf' | 'impl'>;
 		if (isTsmorphModel(this.items)) {
 			await this.items.genImpl(sf);
-			super.addDependency('impl', sf, this.items, this.items.getLangNode('intf') ? 'intf' : 'impl');
+			itemsScope = this.items.getLangNode('intf') ? 'intf' : 'impl';
+			super.addDependency('impl', sf, this.items, itemsScope);
 		}
-		sf = await this.getSrcFile('impl', sf.getProject(), sf);
 		if (!sf)
 			return Promise.resolve(null);
 		const {id, fake} = this.ensureIdentifier('impl');
@@ -613,7 +607,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 				type: 'Array'
 			}));
 			if (isTsmorphModel(this.items)) {
-				const itemsType = this.items.getLangNode('intf') ? this.items.getTypeNode('intf') : this.items.getTypeNode('impl');
+				const itemsType = this.items.getTypeNode(itemsScope);
 				(retVal.getTypeNode() as TypeReferenceNode).addTypeArgument(itemsType.getText());
 			}
 			if (this.baseSettings.emitDescriptions) {
@@ -657,6 +651,12 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		const n = this.getLangNode<Node>(type);
 		if (n) {
 			switch (type) {
+				case 'impl':
+					if (Node.isClassDeclaration(n)) {
+						if (isIdentifiedLangNeutral(this))
+							return n.getNameNode();
+					}
+				// Fall-thru is intentional.  If this is not an isIdentifiedLangNeutral, then genImpl will have created an inline type interface declaration.
 				case 'intf':
 					if (Node.isInterfaceDeclaration(n)) {
 						if (isIdentifiedLangNeutral(this))
@@ -667,12 +667,10 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 							retVal = n.getFirstDescendantByKind(SyntaxKind.TypeReference);
 						return retVal;
 					}
-					break;
-				case 'impl':
-					if (Node.isClassDeclaration(n)) {
+					else if (Node.isTypeAliasDeclaration(n)) {
 						if (isIdentifiedLangNeutral(this))
 							return n.getNameNode();
-						throw new Error('Maybe need to look for Object literal?');
+						return n.getTypeNode();
 					}
 					break;
 				case 'json':
@@ -710,64 +708,12 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		if (this.getLangNode('intf'))
 			return this.getLangNode('intf');
 		sf = await this.getSrcFile('intf', sf.getProject(), sf);
+		if (!sf)
+			return Promise.resolve(null);
 		const {id, fake} = this.ensureIdentifier('intf');
 		let retVal: ModelInterfaceDeclaration = fake ? undefined : sf.getInterface(id);
 		if (!retVal) {
-			let unionTxt = '';
-			for (let u of this.unionOf) {
-				if (isTsmorphModel(u)) {
-					await u.genIntf(sf);
-					this.addDependency('intf', sf, u, 'intf');
-					const t = u.getTypeNode('intf');
-					if (unionTxt)
-						unionTxt += ' | ';
-					unionTxt += t.getText();
-				}
-			}
-			let subTypes: string[] = [];
-			let asTypeAlias = unionTxt || fake;
-			for (let e of this.extendsFrom) {
-				if (isTsmorphModel(e)) {
-					await e.genIntf(sf);
-					this.addDependency('intf', sf, e, 'intf');
-					if (!isIdentifiedLangNeutral(e))
-						asTypeAlias = true;
-					const t = e.getTypeNode('intf');
-					subTypes.push(t.getText());
-				}
-			}
-			const hasProps = Object.keys(this.properties).length > 0 || this.additionalProperties;
-			if (asTypeAlias) {
-				let line: string;
-				if (unionTxt)
-					line = subTypes.join(' & ') + ` ${subTypes.length > 0 ? ' & ' : ''}(` + unionTxt + `)${hasProps ? ' & {}' : ''}`;
-				else if (subTypes.length > 0)
-					line = subTypes.join(' & ') + `${hasProps ? ' & {}' : ''}`;
-				else
-					line = '{}';
-				const ta = sf.addTypeAlias({
-					name: id,
-					isExported: !fake,
-					type: (writer) => {
-						writer.writeLine(line);
-					}
-				});
-				if (hasProps) {
-					const tls = ta.getDescendants().filter(d => d.getKind() == SyntaxKind.TypeLiteral);
-					if (tls.length > 0)
-						await this.genIntfProperties(sf, tls[tls.length - 1] as TypeLiteralNode);
-				}
-				retVal = this.bind('intf', ta);
-			}
-			else {
-				retVal = this.bind('intf', sf.addInterface({
-					name: id,
-					isExported: true,
-					extends: subTypes.length > 0 ? subTypes : undefined
-				}));
-				if (hasProps)
-					await this.genIntfProperties(sf, retVal);
-			}
+			retVal = this.bind('intf', await this.createIntf(sf, id, fake, 'intf'));
 			if (this.baseSettings.emitDescriptions && !fake) {
 				const docs = this.makeJsDoc();
 				if (docs)
@@ -775,70 +721,92 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			}
 		}
 		else if (!retVal.$ast)
-			this.bind('intf', retVal);
+			retVal = this.bind('intf', retVal);
 		return retVal;
 	}
 
-	protected async genIntfProperties(sf: SourceFile, owner: InterfaceDeclaration | TypeLiteralNode): Promise<void> {
-		for (const [key, value] of Object.entries(this.properties)) {
-			const propModel = value.model;
-			if (!isTsmorphModel(propModel))
-				continue;
-			await propModel.genIntf(sf);
-			this.addDependency('intf', sf, propModel, 'intf');
-			const propType = propModel.getTypeNode('intf');
-			const prop = owner.addProperty({
-				name: key,
-				hasQuestionToken: !value.required,
-				type: propType.getText()
-			});
-			if (this.baseSettings.emitDescriptions) {
-				if (propModel.name) {
-					prop.addJsDoc({
-						kind: StructureKind.JSDoc,
-						description: '@see ' + propModel.name
-					});
-				}
-				else {
-					const docs = propModel.makeJsDoc();
-					if (docs)
-						prop.addJsDoc(docs);
-				}
+	/**
+	 * This method is shared for both interface creation and in rare scenarios for class "support".
+	 * We can't generate a class without a name.
+	 * If no name was provided (e.g. is fake), we create a fake interface, and use it's type (aka interface) in API params.
+	 */
+	private async createIntf(sf: SourceFile, id: string, fake: boolean, scope: 'intf' | 'impl'): Promise<InterfaceDeclaration | TypeAliasDeclaration> {
+		let retVal: InterfaceDeclaration | TypeAliasDeclaration;
+		let unionTxt = '';
+		for (let u of this.unionOf) {
+			if (isTsmorphModel(u)) {
+				await u.genIntf(sf);
+				this.addDependency(scope, sf, u, 'intf');
+				const t = u.getTypeNode('intf');
+				if (unionTxt)
+					unionTxt += ' | ';
+				unionTxt += t.getText();
 			}
 		}
-		const ap = this.additionalProperties;
-		if (ap && isTsmorphModel(ap)) {
-			await ap.genIntf(sf);
-			this.addDependency('intf', sf, ap, 'intf');
-			const apType = ap.getTypeNode('intf');
-			const sig = (owner as InterfaceDeclaration | TypeLiteralNode).addIndexSignature({
-				keyName: 'key',
-				keyType: 'string | number',
-				returnType: apType.getText()
-			});
-			if (this.baseSettings.emitDescriptions) {
-				if (apType) {
-					const docs = ap.makeJsDoc();
-					if (docs)
-						sig.addJsDoc(docs);
-				}
+		let subTypes: string[] = [];
+		let asTypeAlias = unionTxt || fake;
+		for (let e of this.extendsFrom) {
+			if (isTsmorphModel(e)) {
+				await e.genIntf(sf);
+				this.addDependency(scope, sf, e, 'intf');
+				if (!isIdentifiedLangNeutral(e))
+					asTypeAlias = true;
+				const t = e.getTypeNode('intf');
+				subTypes.push(t.getText());
 			}
 		}
+		const hasProps = Object.keys(this.properties).length > 0 || this.additionalProperties;
+		if (asTypeAlias) {
+			let line: string;
+			if (unionTxt)
+				line = subTypes.join(' & ') + ` ${subTypes.length > 0 ? ' & ' : ''}(` + unionTxt + `)${hasProps ? ' & {}' : ''}`;
+			else if (subTypes.length > 0)
+				line = subTypes.join(' & ') + `${hasProps ? ' & {}' : ''}`;
+			else
+				line = '{}';
+			retVal = sf.addTypeAlias({
+				name: id,
+				isExported: !fake,
+				type: (writer) => {
+					writer.writeLine(line);
+				}
+			});
+			if (hasProps) {
+				const tls = retVal.getDescendants().filter(d => d.getKind() == SyntaxKind.TypeLiteral);
+				if (tls.length > 0)
+					await this.genProperties(sf, scope, tls[tls.length - 1] as TypeLiteralNode);
+			}
+		}
+		else {
+			retVal = sf.addInterface({
+				name: id,
+				isExported: true,
+				extends: subTypes.length > 0 ? subTypes : undefined
+			});
+			if (hasProps)
+				await this.genProperties(sf, 'intf', retVal);
+		}
+		return retVal;
 	}
 
-	protected async genImplProperties(sf: SourceFile, owner: ClassDeclaration): Promise<void> {
+	private async genProperties(sf: SourceFile, ownerScope: 'intf' | 'impl', owner: ClassDeclaration | InterfaceDeclaration | TypeLiteralNode): Promise<void> {
 		for (const [key, value] of Object.entries(this.properties)) {
 			const propModel = value.model;
 			if (!isTsmorphModel(propModel))
 				continue;
-			await propModel.genImpl(sf);
+			if (ownerScope === 'intf')
+				await propModel.genIntf(sf);
+			else
+				await propModel.genImpl(sf);
 			let propScope: 'intf' | 'impl' = 'intf';
 			let propType = propModel.getTypeNode(propScope);
-			if (!propType) {
-				propScope = 'impl';
-				propType = propModel.getTypeNode(propScope);
+			if (ownerScope === 'impl') {
+				if (!propType) {
+					propScope = 'impl';
+					propType = propModel.getTypeNode(propScope);    //URGENT: When propModel is [string, null], we could legitimately declare the property EVEN though there cannot be a impl class.
+				}
 			}
-			this.addDependency('impl', sf, propModel, propScope);
+			this.addDependency(ownerScope, sf, propModel, propScope);
 			const prop = owner.addProperty({
 				name: key,
 				hasQuestionToken: !value.required,
@@ -860,46 +828,92 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		}
 		const ap = this.additionalProperties;
 		if (ap && isTsmorphModel(ap)) {
-			await ap.genIntf(sf);
-			/*
-			this.addDependency(ap, sf, 'intf');
-			const apType = ap.getTypeNode('intf');
-			const sig = owner.addIndexSignature({
-				keyName: 'key',
-				keyType: 'string | number',
-				returnType: apType.getText()
-			});
+			if (ownerScope === 'intf')
+				await ap.genIntf(sf);
+			else
+				await ap.genImpl(sf);
+			let propScope: 'intf' | 'impl' = 'intf';
+			let propType = ap.getTypeNode(propScope);
+			if (ownerScope === 'impl') {
+				if (!propType) {
+					propScope = 'impl';
+					propType = ap.getTypeNode(propScope);
+				}
+			}
+			this.addDependency(ownerScope, sf, ap, propScope);
+			let sig;
+			if (Node.isClassDeclaration(owner)) {
+				// See https://github.com/dsherret/ts-morph/issues/1413
+				// Thanks @draconisNoctis !
+				const declMergeIntf = owner.getSourceFile().addInterface({
+					name: owner.getName(),
+					isExported: true
+				});
+				sig = declMergeIntf.addIndexSignature({
+					keyName: 'key',
+					keyType: 'string | number',
+					returnType: propType.getText()
+				});
+			}
+			else {
+				sig = owner.addIndexSignature({
+					keyName: 'key',
+					keyType: 'string | number',
+					returnType: propType.getText()
+				});
+			}
 			if (this.baseSettings.emitDescriptions) {
-				if (apType) {
+				if (propType) {
 					const docs = ap.makeJsDoc();
 					if (docs)
 						sig.addJsDoc(docs);
 				}
 			}
-		 */
 		}
 	}
 
 	override async genImpl(sf: SourceFile): Promise<ModelClassDeclaration> {
+		/*
+	The scenario described in genIntf gets more complicated for a class:
+	type Person = NameAge & Origin & {race: string;} & (Contacts | Addresses);
+
+	If all were interfaces, we would need to define all properties as declared in NameAge, Origin, and race.
+	Then we would need to define all properties in Contacts and Addresses as optional (although perhaps overlaps could be marked required).
+	Lastly we would need to provide type-guards for Contacts and Addresses.
+
+	But if some (or all) were classes, it gets even more complicated.
+	We might for instance define Person as having race and implementing Contacts and Addresses (with type-guards),
+	but then we would have to mixin NameAge and Origin (assuming they were classes).
+	The combinations of all these become quite overwhelming.
+		 */
 		if (this.getLangNode('impl'))
 			return this.getLangNode('impl');
 		sf = await this.getSrcFile('impl', sf.getProject(), sf);
-		const identifier = this.getIdentifier('impl');
-		let retVal: ModelClassDeclaration = sf.getClass(identifier);
-		if (!retVal) {
-			const i = this.getLangNode('intf');
-			retVal = this.bind('impl', sf.addClass({
-				name: identifier,
-				isExported: true,
-				implements: i ? [i.getName()] : undefined
-			}));
-			if (isTsmorphModel(this))
-				this.addDependency('impl', sf, this, 'intf');
-			if (Object.keys(this.properties).length > 0 || this.additionalProperties)
-				await this.genImplProperties(sf, retVal);
+		if (!sf)
+			return Promise.resolve(null);
+		const {id, fake} = this.ensureIdentifier('impl');
+		let retVal: ModelClassDeclaration = fake ? undefined : sf.getClass(id);
+		const intf = this.getLangNode('intf');
+		if (fake) {
+			if (intf)
+				return Promise.resolve(null);
+			retVal = this.bind('impl', await this.createIntf(sf, id, fake, 'impl'));
 		}
-		else if (!retVal.$ast)
-			this.bind('impl', retVal);
+		else {
+			if (!retVal) {
+				retVal = this.bind('impl', sf.addClass({
+					name: id,
+					isExported: true,
+					implements: intf ? [intf.getName()] : undefined
+				}));
+				if (intf)
+					this.addDependency('impl', sf, this, 'intf');
+				if (Object.keys(this.properties).length > 0 || this.additionalProperties)
+					await this.genProperties(sf, 'impl', retVal);
+			}
+			else if (!retVal.$ast)
+				retVal = this.bind('impl', retVal);
+		}
 		return retVal;
 	}
 
@@ -951,6 +965,8 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel>(BaseTyped
 		if (this.getLangNode('intf'))
 			return this.getLangNode('intf');
 		sf = await this.getSrcFile('intf', sf.getProject(), sf);
+		if (!sf)
+			return Promise.resolve(null);
 		const {id, fake} = this.ensureIdentifier('intf');
 		let retVal: ModelTypeAliasDeclaration = fake ? undefined : sf.getTypeAlias(id);
 		if (!retVal) {
@@ -974,6 +990,8 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel>(BaseTyped
 		if (this.getLangNode('impl'))
 			return this.getLangNode('impl');
 		sf = await this.getSrcFile('impl', sf.getProject(), sf);
+		if (!sf)
+			return Promise.resolve(null);
 		const {id, fake} = this.ensureIdentifier('impl');
 		let retVal: ModelTypeAliasDeclaration = fake ? undefined : sf.getTypeAlias(id);
 		if (!retVal) {

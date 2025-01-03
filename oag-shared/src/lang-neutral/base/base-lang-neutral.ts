@@ -106,6 +106,9 @@ export abstract class BaseLangNeutral implements LangNeutral {
 
 export function MixOpenApiLangNeutral<OAE, AST, T extends MixinConstructor = MixinConstructor>(base: T) {
 	return class BaseOpenApiLangNeutral extends base implements OpenApiLangNeutral<OAE, AST> {
+		constructor(...args: any[]) {
+			super(...args);
+		}
 		get oae(): OAE & OpenApiLangNeutralBackRef<AST> {
 			return this.#oae;
 		}
