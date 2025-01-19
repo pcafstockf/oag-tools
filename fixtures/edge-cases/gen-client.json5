@@ -1,0 +1,21 @@
+{
+	i: "./fixtures/edge-cases/edge-cases.bundle.json",
+	o: './test-out/edge-cases',
+	d: 'all',
+	r: 'client',
+	p: [
+		'base.apiSuffix=""',
+		// Already appends 'Api' to tags
+		'tsmorph.client.httplib="node"',
+		// This is a node based client.
+		//				'base.modelIntfDir=""',
+		'base.implSuffix="DTO"',
+		'base.implFileSuffix="dto"',
+		'base.modelImplDir="dto"',
+		'base.implFileBasename_Tmpl="#{name}.#{implFileSuffix}"',
+		//		'base.jsonSuffix="Schema"',
+		//		'base.jsonFileSuffix="schema"',
+		//		'base.modelJsonDir="schema"',
+		//		'base.jsonFileBasename_Tmpl="#{name}.#{jsonFileSuffix}"'
+	],
+}

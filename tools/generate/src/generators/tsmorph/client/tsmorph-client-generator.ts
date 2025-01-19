@@ -23,15 +23,8 @@ export class TsmorphClientGenerator implements SourceGenerator {
 		//TODO: Remove the console.log and the sort, as they  are only used for manual comparison of regression
 		for (let m of ast.models.sort((a, b) => a.name.localeCompare(b.name))) {
 			console.log(m.toString());
-			if (isTsmorphModel(m)) {
-				// The tempFile is really just access to the project, as models at this level typically create their own files.
-				if (this.baseSettings.modelIntfDir)
-					await m.genIntf(this.tempFile);
-				if (this.baseSettings.modelImplDir)
-					await m.genImpl(this.tempFile);
-				if (this.baseSettings.modelJsonDir)
-					await m.genJson(this.tempFile);
-			}
+			if (isTsmorphModel(m))
+				await m.generate(this.tempFile);
 		}
 		ast.apis.forEach(m => {
 			console.log(m.toString());

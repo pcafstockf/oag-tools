@@ -25,12 +25,7 @@ export class TsmorphServerGenerator implements SourceGenerator {
 			console.log(m.toString());
 			if (isTsmorphModel(m)) {
 				// The tempFile is really just access to the project, as models at this level typically create their own files.
-				if (this.baseSettings.modelIntfDir)
-					await m.genIntf(this.tempFile);
-				if (this.baseSettings.modelImplDir)
-					await m.genImpl(this.tempFile);
-				if (this.baseSettings.modelJsonDir)
-					await m.genJson(this.tempFile);
+				await m.generate(this.tempFile);
 			}
 		}
 		ast.apis.forEach(m => {

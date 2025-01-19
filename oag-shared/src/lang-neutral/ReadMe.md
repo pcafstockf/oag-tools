@@ -24,8 +24,8 @@ These are denoted by the `kind` property of a `Model`
 * `primitive`: is what most languages call a "primitive":
     * `integer`, `number`, `string`, `enum` | `boolean`, `null`
     * A pseudo primitive `any` is also possible
-* `array`: matches the OpenApi schema type 'array'
-* `record`: matches the OpenApi schema type 'object'
+* `array`: modelsMatch the OpenApi schema type 'array'
+* `record`: modelsMatch the OpenApi schema type 'object'
     * Calling it an 'object' is ambiguous (is it a type/interface/record, or instance), so we go with record.
     * Complex records will also contain one or more of the OpenApi `anyOf`, `allOf`, `oneOf` specifiers.
     * `not`, is unsupported by the code generator. While it is provable by a validator, it is not really a type (none of the supported languages support "any **except**", types).

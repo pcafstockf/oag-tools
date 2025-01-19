@@ -10,7 +10,7 @@ export interface Model extends LangNeutral {
 	/**
 	 * Returns true if this type is physically or logically the same as another.
 	 */
-	matches(model: Readonly<Model>): boolean;
+	modelsMatch(model: Readonly<Model>): boolean;
 }
 
 export interface UnionModel extends Model {
@@ -65,31 +65,34 @@ export interface TypedModel extends Model {
 	readonly importPath: string | null;
 }
 
+export function isModel(obj: Readonly<Object>): obj is Model {
+	return typeof (obj as Model)?.getLangNode === 'function' && typeof (obj as Model)?.modelsMatch === 'function';
+}
 export function isSchemaModel(obj: Readonly<Object>): obj is SchemaModel {
-	return typeof (obj as Model).getLangNode === 'function' && isOpenApiLangNeutral(obj) && typeof (obj as SchemaModel).nullable === 'boolean';
+	return isModel(obj) && isOpenApiLangNeutral(obj) && typeof (obj as SchemaModel).nullable === 'boolean';
 }
 
 export function isPrimitiveModel(obj: Readonly<Model>): obj is PrimitiveModel {
 	const t = (obj as PrimitiveModel)?.jsdType;
-	return typeof obj.getLangNode === 'function' && t && PrimitiveModelTypes.includes(t);
+	return t && isModel(obj) && PrimitiveModelTypes.includes(t);
 }
 
 export function isArrayModel(obj: Readonly<Model>): obj is ArrayModel {
-	return typeof obj.getLangNode === 'function' && Array.isArray((obj as ArrayModel)?.items);
+	return isModel(obj) && isModel((obj as ArrayModel)?.items);
 }
 
 export function isRecordModel(obj: Readonly<Model>): obj is RecordModel {
 	const p = (obj as RecordModel)?.properties;
-	return typeof obj.getLangNode === 'function' && p && typeof p === 'object';
+	return p && isModel(obj) && typeof p === 'object';
 }
 
 export function isUnionModel(obj: Readonly<Model>): obj is UnionModel {
-	return typeof obj.getLangNode === 'function' && Array.isArray((obj as UnionModel)?.unionOf);
+	return isModel(obj) && Array.isArray((obj as UnionModel)?.unionOf);
 }
 
 export function isTypedModel(obj: Readonly<Model>): obj is TypedModel {
 	const p = (obj as TypedModel)?.importPath;
-	return typeof obj.getLangNode === 'function' && p === null || typeof p === 'string';
+	return (p === null || typeof p === 'string') && isModel(obj);
 }
 
 export const CodeGenTypedModelToken = new InjectionToken<TypedModel>('codegen-typed-model');

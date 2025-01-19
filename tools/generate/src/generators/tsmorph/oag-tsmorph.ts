@@ -1,6 +1,5 @@
 import {randomUUID} from 'crypto';
 import path from 'node:path';
-import {LangNeutral} from 'oag-shared/lang-neutral';
 import * as nameUtils from 'oag-shared/utils/name-utils';
 import {Node, SourceFile} from 'ts-morph';
 
@@ -11,14 +10,14 @@ export const TempFileName = '_$temp-File.ts';
  * @param obj
  * @param ast
  */
-export function bindAst<T extends Node = Node, A = LangNeutral>(obj: Omit<T, '$ast'>, ast: A): T {
+export function bindAst<T extends Node = Node, N = Node>(obj: Omit<T, '$ast'>, ast: N): (T & { readonly $ast: N }) {
 	if (obj && (!obj.hasOwnProperty('$ast')))
 		Object.defineProperty(obj, '$ast', {
 			get() {
 				return ast;
 			}
 		});
-	return obj as T;
+	return obj as (T & { readonly $ast: N });
 }
 
 /**

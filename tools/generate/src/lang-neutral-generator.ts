@@ -595,7 +595,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		for (let sm of schemaModels) {
 			let isDuplicate = false;
 			for (let elem of unique)
-				if (elem.model.matches(sm.model)) {
+				if (elem.model.modelsMatch(sm.model)) {
 					isDuplicate = true;
 					break;
 				}

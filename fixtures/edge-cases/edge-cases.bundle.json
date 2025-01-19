@@ -1,0 +1,135 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Edge-cases",
+		"version": "1",
+		"description": "This is a document for capturing edge case code generation issues (e.g. testing and regression)"
+	},
+	"servers": [
+		{
+			"url": "{defaultHost}",
+			"variables": {
+				"defaultHost": {
+					"default": "http://localhost:3000"
+				}
+			}
+		}
+	],
+	"paths": {
+		"/test": {
+			"get": {
+				"responses": {
+					"201": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"NameAge": {
+				"type": "object",
+				"required": [
+					"name",
+					"age"
+				],
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"age": {
+						"type": "integer"
+					}
+				}
+			},
+			"Origin": {
+				"type": "object",
+				"required": [
+					"country"
+				],
+				"properties": {
+					"country": {
+						"type": "string"
+					}
+				}
+			},
+			"Channel": {
+				"type": "object",
+				"properties": {
+					"type": {
+						"type": "string",
+						"enum": [
+							"email",
+							"phone",
+							"social"
+						]
+					},
+					"value": {
+						"type": "string"
+					}
+				}
+			},
+			"Address": {
+				"type": "object",
+				"properties": {
+					"street": {
+						"type": "string"
+					},
+					"city": {
+						"type": "string"
+					},
+					"state": {
+						"type": "string"
+					},
+					"zip": {
+						"type": "string"
+					}
+				}
+			},
+			"Contacts": {
+				"type": "array",
+				"items": {
+					"$ref": "#/components/schemas/Channel"
+				}
+			},
+			"Addresses": {
+				"type": "array",
+				"items": {
+					"$ref": "#/components/schemas/Address"
+				}
+			},
+			"Person": {
+				"type": "object",
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/NameAge"
+					},
+					{
+						"$ref": "#/components/schemas/Origin"
+					}
+				],
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/Contacts"
+					},
+					{
+						"$ref": "#/components/schemas/Addresses"
+					}
+				],
+				"properties": {
+					"race": {
+						"type": "string"
+					}
+				}
+			}
+		}
+	}
+}

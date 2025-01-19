@@ -15,7 +15,7 @@ export abstract class BaseModel extends BaseLangNeutral implements Model, FileBa
 		super(baseSettings);
 	}
 
-	matches(model: Model): boolean {
+	modelsMatch(model: Model): boolean {
 		if (Object.is(this, model))
 			return true;
 		return this.name === model.name;
@@ -111,8 +111,8 @@ export abstract class BaseSchemaModel extends MixOpenApiLangNeutral<OpenAPIV3_1.
 	/**
 	 * Returns true if this Model is physically or logically the same as another.
 	 */
-	override matches(model: Model): boolean {
-		if (!super.matches(model))
+	override modelsMatch(model: Model): boolean {
+		if (!super.modelsMatch(model))
 			return false;
 		if (!isSchemaModel(model))
 			return false;
@@ -187,6 +187,8 @@ export abstract class BasePrimitiveModel extends BaseSchemaModel implements Prim
 	}
 
 	get jsdType(): PrimitiveModelType {
+		if (this.oae.type === 'string' && Array.isArray(this.oae.enum))
+			return 'enum';
 		return this.oae.type as PrimitiveModelType ?? 'any';
 	}
 
@@ -195,7 +197,7 @@ export abstract class BasePrimitiveModel extends BaseSchemaModel implements Prim
 		let retVal = ((this.oae.type as PrimitiveModelType) ?? 'any') as string;
 		if (Array.isArray(retVal))
 			retVal = retVal.join(' | ');
-		else if (retVal === 'string' && Array.isArray(this.oae.enum))
+		else if (retVal === 'enum')
 			retVal = this.oae.enum.map(e => `'${e}'`).join(' | ');
 		if (isIdentifiedLangNeutral(this)) {
 			id = this.getIdentifier('intf');
