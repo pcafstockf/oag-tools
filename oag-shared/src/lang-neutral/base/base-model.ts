@@ -194,7 +194,7 @@ export abstract class BasePrimitiveModel extends BaseSchemaModel implements Prim
 
 	toString(owned?: boolean) {
 		let id: string;
-		let retVal = ((this.oae.type as PrimitiveModelType) ?? 'any') as string;
+		let retVal = this.jsdType as string;
 		if (Array.isArray(retVal))
 			retVal = retVal.join(' | ');
 		else if (retVal === 'enum')

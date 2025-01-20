@@ -1,11 +1,11 @@
 {
-	i: './fixtures/petstore.bundle.json',
-	o: './test-out/client/petstore/src',
+	i: './fixtures/petstore/petstore.bundle.json',
+	o: './test-out/petstore/client/src',
 	d: 'all',
 	r: 'client',
 	p: [
 		'tsmorph.client.httplib="node"',
-		//		'base.modelIntfDir=""',
+		//				'base.modelIntfDir=""',
 		'base.implSuffix="DTO"',
 		'base.implFileSuffix="dto"',
 		'base.modelImplDir="dto"',

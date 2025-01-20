@@ -1,4 +1,4 @@
-// This file is parsed as a JSON5 file.
+// This configuration bundles a swagger v3 spec into the codegen required v3.1 bundle.
 {
 	i: "../../fixtures/openapi-petstore.json",
 	o: "../../test-out/petstore/client/petstore.bundle.json",

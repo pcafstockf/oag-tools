@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="petstore-bundle" type="NodeJSConfigurationType" application-parameters="-v -c ../../fixtures/petstore-oa-bundle.json5" node-parameters="--require source-map-support/register  --require ts-node/register/transpile-only  --require tsconfig-paths/register" path-to-js-file="src/main.ts" working-dir="$PROJECT_DIR$/tools/assemble">
+  <configuration default="false" name="petstore-bundle" type="NodeJSConfigurationType" application-parameters="-v -c ../../fixtures/petstore/oa-bundle.json5" node-parameters="--require source-map-support/register  --require ts-node/register/transpile-only  --require tsconfig-paths/register" path-to-js-file="src/main.ts" working-dir="$PROJECT_DIR$/tools/assemble">
     <envs>
       <env name="TS_NODE_PROJECT" value="tsconfig.json" />
     </envs>
