@@ -189,7 +189,7 @@ export abstract class BasePrimitiveModel extends BaseSchemaModel implements Prim
 	get jsdType(): PrimitiveModelType {
 		if (this.oae.type === 'string' && Array.isArray(this.oae.enum))
 			return 'enum';
-		return this.oae.type as PrimitiveModelType ?? 'any';
+		return this.oae.type as PrimitiveModelType ?? 'object';
 	}
 
 	toString(owned?: boolean) {

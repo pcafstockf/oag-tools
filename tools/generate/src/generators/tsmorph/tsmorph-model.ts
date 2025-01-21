@@ -7,7 +7,7 @@ import {Model} from 'oag-shared/lang-neutral';
 import {BaseArrayModel, BasePrimitiveModel, BaseRecordModel, BaseSettingsToken, BaseSettingsType, BaseTypedModel, BaseUnionModel, CodeGenAst} from 'oag-shared/lang-neutral/base';
 import {BaseModel} from 'oag-shared/lang-neutral/base/base-model';
 import {isFileBasedLangNeutral, isIdentifiedLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
-import {isArrayModel, isPrimitiveModel, isRecordModel, isSchemaModel, isTypedModel, isUnionModel, LangNeutralModelTypes} from 'oag-shared/lang-neutral/model';
+import {isArrayModel, isPrimitiveModel, isRecordModel, isSchemaModel, isTypedModel, isUnionModel, LangNeutralModelTypes, PrimitiveModelType} from 'oag-shared/lang-neutral/model';
 import {safeLStatSync} from 'oag-shared/utils/misc-utils';
 import * as nameUtils from 'oag-shared/utils/name-utils';
 import {ClassDeclaration, EnumDeclaration, ExportableNode, Identifier, InterfaceDeclaration, JSDocableNode, JSDocStructure, Node, ObjectLiteralElement, Project, SourceFile, StructureKind, ts, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeReferenceNode, VariableDeclarationKind, VariableStatement} from 'ts-morph';
@@ -68,6 +68,10 @@ export function isTsmorphModel(obj: any): obj is TsmorphModel {
 								return true;
 	return false;
 }
+
+const ExcludedFixCodes = [
+	2552
+];
 
 function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends Node | void = Node>(base: any) {
 	//@ts-ignore
@@ -356,7 +360,7 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 	}
 
 	override async generate(sf: SourceFile): Promise<void> {
-		if (!this.getLangNode('intf') && this.baseSettings.modelIntfDir) {
+		if (!this.getLangNode('intf')) {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
 				const {id, fake} = this.ensureIdentifier('intf');
@@ -367,7 +371,7 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 					this.bind('intf', typeAlias);
 			}
 		}
-		if (!this.getLangNode('json'))
+		if (!this.getLangNode('json') && this.baseSettings.modelJsonDir)
 			await this.genJson(sf);
 	}
 
@@ -408,7 +412,8 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 	}
 
 	override getTypeNode(ln?: Node<ts.NamedDeclaration> | ModelClassDeclaration): BoundTypeNode {
-		const n = ln ?? this.getLangNode(this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf');
+		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
+		const n: InterfaceDeclaration | ClassDeclaration | TypeAliasDeclaration = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
 			if (Node.isNamed(n)) {
 				if (isIdentifiedLangNeutral(this) && Node.isExportable(n) && n.isExported())
@@ -432,20 +437,28 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 	}
 
 	override async generate(sf: SourceFile): Promise<void> {
-		if (!this.getLangNode('intf') && this.baseSettings.modelIntfDir) {
+		if (!this.getLangNode('intf')) {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
 				const {id, fake} = this.ensureIdentifier('intf');
 				this.bind('intf', await this.createDecl(sf, id, fake));
 			}
 		}
-		if (!this.getLangNode('impl')) {
+		if (!this.getLangNode('impl') && this.baseSettings.modelImplDir) {
 			sf = await this.getSrcFile('impl', sf.getProject(), sf);
 			if (sf) {
 				let retVal: ModelClassDeclaration | ModelTypeAliasDeclaration | undefined;
 				let {id, fake} = this.ensureIdentifier('impl');
 				let extTxt: string;
-				switch (this.jsdType) {
+				let jsdType = this.jsdType;
+				let nullable = jsdType === null || jsdType === 'null';
+				if (Array.isArray(jsdType)) {
+					nullable = jsdType.findIndex(t => t !== null && t !== 'null') >= 0;
+					jsdType = jsdType.filter(t => t !== null && t !== 'null') as any;
+					if (jsdType.length === 1)
+						jsdType = jsdType[0] as PrimitiveModelType;
+				}
+				switch (jsdType) {
 					case 'integer':
 					case 'number':
 						extTxt = 'Number';
@@ -456,6 +469,9 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 					case 'boolean':
 						extTxt = 'Boolean';
 						break;
+					case 'object':
+						extTxt = 'Object';
+						break;
 					case 'enum':
 						retVal = this.bind('impl', await this.createDecl(sf, id, true) as TypeAliasDeclaration);   // Its a fake enum.
 						break;
@@ -465,11 +481,18 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 				if (extTxt)
 					retVal = sf.getClass(id);
 				if (!retVal) {
-					retVal = sf.addClass({
-						name: id,
-						isExported: !fake,
-						extends: extTxt
-					});
+					if (nullable && fake)
+						retVal = sf.addTypeAlias({
+							name: id,
+							isExported: !fake,
+							type: extTxt + ' | null'
+						});
+					else
+						retVal = sf.addClass({
+							name: id,
+							isExported: !fake,
+							extends: extTxt
+						});
 					if (this.baseSettings.emitDescriptions && !fake) {
 						const docs = this.makeJsDoc();
 						if (docs)
@@ -480,7 +503,7 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 					this.bind('impl', retVal);
 			}
 		}
-		if (!this.getLangNode('json'))
+		if (!this.getLangNode('json') && this.baseSettings.modelJsonDir)
 			await this.genJson(sf);
 	}
 
@@ -522,6 +545,8 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 			if (!retVal) {
 				if (nativeType === 'integer')
 					nativeType = 'number';
+				else if (nativeType === 'object')
+					nativeType = 'Object' as any;
 				else if (Array.isArray(nativeType))
 					nativeType = nativeType.map(e => e === 'integer' ? 'number' : e).join(' | ') as any;
 				retVal = sf.addTypeAlias({
@@ -553,15 +578,13 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 
 	override getTypeNode(ln?: ModelTypeAliasDeclaration | ModelClassDeclaration): BoundTypeNode {
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
-		const n = ln ?? this.getLangNode(mlnType);
+		const n = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
 			if (isIdentifiedLangNeutral(this) && Node.isExportable(n) && n.isExported())
 				return bindAst(n.getNameNode(), this);
 			else if (Node.isClassDeclaration(n)) {
-				// If this *class* is not named, we need to treat it as a literal type.
-				let retVal: TypeNode = n.getFirstDescendantByKind(SyntaxKind.TypeLiteral);
-				if (!retVal && mlnType === 'impl')
-					retVal = n.getExtends();
+				// Remember, we are an array.  So if this *class* is not named, we need to treat it as a literal type.
+				let retVal: TypeNode = mlnType === 'impl' ? n.getExtends() : undefined ?? n.getFirstDescendantByKind(SyntaxKind.TypeLiteral);
 				if (!retVal)
 					retVal = n.getFirstDescendantByKind(SyntaxKind.TypeReference);
 				return bindAst(retVal, this);
@@ -585,7 +608,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 			await this.items.generate(sf);
 			this.addDependency(this.items);
 		}
-		if (!this.getLangNode('intf') && this.baseSettings.modelIntfDir) {
+		if (!this.getLangNode('intf')) {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
 				const {id, fake} = this.ensureIdentifier('intf');
@@ -597,7 +620,9 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 						type: 'Array'
 					}));
 					if (isTsmorphModel(this.items)) {
-						const itemsType = this.items.getTypeNode();
+						let itemsType = this.items.getTypeNode();
+						if (!itemsType)
+							itemsType = this.items.getTypeNode();
 						(retVal.getTypeNode() as TypeReferenceNode).addTypeArgument(itemsType.getText());
 					}
 					if (this.baseSettings.emitDescriptions && !fake) {
@@ -611,7 +636,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 				this.dependencies.forEach(d => d.importInto(sf));
 			}
 		}
-		if (!this.getLangNode('impl')) {
+		if (!this.getLangNode('impl') && this.baseSettings.modelImplDir) {
 			sf = await this.getSrcFile('impl', sf.getProject(), sf);
 			if (sf) {
 				let {id, fake} = this.ensureIdentifier('impl');
@@ -648,7 +673,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 				this.dependencies.forEach(d => d.importInto(sf));
 			}
 		}
-		if (!this.getLangNode('json'))
+		if (!this.getLangNode('json') && this.baseSettings.modelJsonDir)
 			await this.genJson(sf);
 	}
 }
@@ -665,11 +690,12 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 	}
 
 	override getTypeNode(ln?: ModelInterfaceDeclaration | ModelClassDeclaration): BoundTypeNode {
-		const n = ln ?? this.getLangNode<InterfaceDeclaration | ClassDeclaration>(this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf');
+		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
+		const n = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
 			if (isIdentifiedLangNeutral(this) && Node.isExportable(n) && n.isExported())
 				return bindAst(n.getNameNode(), this);
-			if (Node.isInterfaceDeclaration(n)) {
+			if (Node.isInterfaceDeclaration(n) || Node.isClassDeclaration(n)) {
 				// If this *object* is not named, we need to treat it as a literal type.
 				let retVal: TypeNode = n.getFirstDescendantByKind(SyntaxKind.TypeLiteral);
 				if (!retVal)
@@ -698,15 +724,18 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		}
 		for (const [_, value] of Object.entries(this.properties)) {
 			const propModel = value.model;
-			if (isTsmorphModel(propModel))
+			if (isTsmorphModel(propModel)) {
 				await propModel.generate(sf);
+				this.addDependency(propModel);
+			}
 		}
 		const ap = this.additionalProperties;
 		if (isTsmorphModel(ap)) {
 			await ap.generate(sf);
+			this.addDependency(ap);
 		}
 
-		if (!this.getLangNode('intf') && this.baseSettings.modelIntfDir) {
+		if (!this.getLangNode('intf')) {
 			/*
 			  Person:
 				type: object
@@ -738,7 +767,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				this.dependencies.forEach(d => d.importInto(sf));
 			}
 		}
-		if (!this.getLangNode('impl')) {
+		if (!this.getLangNode('impl') && this.baseSettings.modelImplDir) {
 			/*
 				We need to extend what we can.
 				The scenario described above for 'intf' gets more complicated for a class:
@@ -762,7 +791,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 					if (fake)
 						throw new Error('BLOCK-EXIT');
 					let retVal: ModelClassDeclaration = sf.getClass(id);
-					let intf = this.getLangNode('intf');
+					let intf = this.ensureIdentifier('intf')?.fake ? undefined : this.getLangNode('intf');
 					if (!retVal) {
 						let extTxt: string;
 						let singleExt: TsmorphModel = undefined;
@@ -868,6 +897,8 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 						const supportedCodeFixes = ls.compilerObject.getSupportedCodeFixes(sf.getFilePath());
 						const sem = ls.compilerObject.getSemanticDiagnostics(sf.getFilePath());
 						sem.reverse().forEach(s => {
+							if (ExcludedFixCodes.indexOf(s.code) >= 0)
+								return;
 							if (supportedCodeFixes.indexOf(String(s.code)) >= 0) {
 								const fixes = ls.getCodeFixesAtPosition(sf,
 									s.start,
@@ -898,7 +929,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				}
 			}
 		}
-		if (!this.getLangNode('json'))
+		if (!this.getLangNode('json') && this.baseSettings.modelJsonDir)
 			await this.genJson(sf);
 	}
 
@@ -972,9 +1003,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			const propModel = value.model;
 			if (!isTsmorphModel(propModel))
 				continue;
-			await propModel.generate(sf);
 			let propType = propModel.getTypeNode();
-			this.addDependency(propModel);
 			const prop = owner.addProperty({
 				name: key,
 				hasQuestionToken: !value.required,
@@ -996,9 +1025,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		}
 		const ap = this.additionalProperties;
 		if (ap && isTsmorphModel(ap)) {
-			await ap.generate(sf);
 			let propType = ap.getTypeNode();
-			this.addDependency(ap);
 			let sig;
 			if (Node.isClassDeclaration(owner)) {
 				// See https://github.com/dsherret/ts-morph/issues/1413
@@ -1043,7 +1070,8 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel>(BaseTyped
 	}
 
 	getTypeNode(ln?: Node): BoundTypeNode {
-		const n = ln ?? this.getLangNode<Node>(this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf');
+		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
+		const n = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
 			if (Node.isTypeAliasDeclaration(n)) {
 				if (isIdentifiedLangNeutral(this))
@@ -1055,7 +1083,7 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel>(BaseTyped
 	}
 
 	override async generate(sf: SourceFile): Promise<void> {
-		if (!this.getLangNode('intf') && this.baseSettings.modelIntfDir) {
+		if (!this.getLangNode('intf')) {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
 				const {id, fake} = this.ensureIdentifier('intf');
@@ -1076,7 +1104,7 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel>(BaseTyped
 					this.bind('intf', retVal);
 			}
 		}
-		if (!this.getLangNode('impl')) {
+		if (!this.getLangNode('impl') && this.baseSettings.modelImplDir) {
 			sf = await this.getSrcFile('impl', sf.getProject(), sf);
 			if (sf) {
 				let {id, fake} = this.ensureIdentifier('impl');
@@ -1098,7 +1126,7 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel>(BaseTyped
 					this.bind('impl', retVal);
 			}
 		}
-		if (!this.getLangNode('json'))
+		if (!this.getLangNode('json') && this.baseSettings.modelJsonDir)
 			await this.genJson(sf);
 	}
 }
