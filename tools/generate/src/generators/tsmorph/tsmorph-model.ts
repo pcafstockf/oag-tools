@@ -710,6 +710,8 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 					if (isTsmorphModel(this.items)) {
 						tTxt = this.items.getTypeNode().getText();
 						extTxt += `<${tTxt}>`;
+						if ((this.items as this).ensureIdentifier('impl').fake)
+							tTxt = undefined;   // fake means inline, which could mean comments, which would result in nested comments.
 					}
 					retVal = sf.addClass({
 						name: id,
@@ -718,7 +720,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 					});
 					if (this.baseSettings.emitDescriptions && !fake) {
 						let docs = this.makeJsDoc();
-						if (!docs && tTxt) {
+						if (!docs && (!fake) && tTxt) {
 							docs = <JSDocStructure>{
 								kind: StructureKind.JSDoc,
 								tags: [{

@@ -209,34 +209,34 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 				case 'number':
 					key = schema.type as string;
 					constraints = SchemaJsdConstraints(schema);
-					switch (constraints['format']) {
+					switch (constraints.format) {
 						case 'float':
 						case 'double':
-							key = constraints['format'];
+							key = constraints.format;
 							break;
 					}
 					break;
 				case 'string':
 					key = schema.type as string;
 					constraints = SchemaJsdConstraints(schema);
-					switch (constraints['format']) {
+					switch (constraints.format) {
 						case 'binary':
 						case 'byte':
 						case 'date':
 						case 'date-time':
 						case 'uri':
 						case 'regex':
-							key = constraints['format'];
+							key = constraints.format;
 							break;
 					}
 					break;
 				case 'integer':
 					key = schema.type as string;
 					constraints = SchemaJsdConstraints(schema);
-					switch (constraints['format']) {
+					switch (constraints.format) {
 						case 'int32':
 						case 'int64':
-							key = constraints['format'];
+							key = constraints.format;
 							break;
 					}
 					break;

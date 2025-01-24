@@ -378,17 +378,24 @@ export abstract class BaseTypedModel extends BaseSchemaModel implements TypedMod
 		return this.#importPath;
 	}
 
+	/**
+	 * This is a language neutral toString, so it will return SchemaObject.type if it can (rather than this.typeName);
+	 */
 	toString(owned?: boolean) {
+		let baseType: string;
+		// This is a language neutral
+		if (isOpenApiLangNeutral(this)) {
+			const constraints = SchemaJsdConstraints(this.oae);
+			if (constraints.format)
+				baseType = `${this.oae.type}:${constraints.format}`;
+			else if (this.oae.type)
+				baseType = this.oae.type.toString();
+		}
 		if (this.name) {
 			if (owned)
 				return this.name;
-			return `type ${this.name} = ${this.#typeName}${os.EOL}`;
+			return `type ${this.name} = ${this.typeName || baseType}${os.EOL}`;
 		}
-		if (isOpenApiLangNeutral(this)) {
-			const constraints = SchemaJsdConstraints(this.oae);
-			if (constraints['format'])
-				return constraints['format'];
-		}
-		return this.#typeName;
+		return baseType || this.typeName;
 	}
 }
