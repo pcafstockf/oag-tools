@@ -1,5 +1,10 @@
 import {OpenAPIV3_1} from 'openapi-types';
 
+interface JsdConstraints {
+	format?: string;
+
+	[key: string]: string | number | boolean;
+}
 export function SchemaJsdConstraints(oae: OpenAPIV3_1.SchemaObject) {
 	const s: Record<string, string | number | boolean> = oae as any;
 	return [
@@ -22,5 +27,5 @@ export function SchemaJsdConstraints(oae: OpenAPIV3_1.SchemaObject) {
 		if (typeof s[key] !== 'undefined')
 			p[key] = s[key];
 		return p;
-	}, {} as Record<string, string | number | boolean>);
+	}, {} as JsdConstraints);
 }

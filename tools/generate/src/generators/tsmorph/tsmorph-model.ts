@@ -7,10 +7,11 @@ import {Model} from 'oag-shared/lang-neutral';
 import {BaseArrayModel, BasePrimitiveModel, BaseRecordModel, BaseSettingsToken, BaseSettingsType, BaseTypedModel, BaseUnionModel, CodeGenAst} from 'oag-shared/lang-neutral/base';
 import {BaseModel} from 'oag-shared/lang-neutral/base/base-model';
 import {isFileBasedLangNeutral, isIdentifiedLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
-import {isArrayModel, isPrimitiveModel, isRecordModel, isSchemaModel, isTypedModel, isUnionModel, LangNeutralModelTypes, PrimitiveModelType} from 'oag-shared/lang-neutral/model';
+import {isArrayModel, isPrimitiveModel, isRecordModel, isSchemaModel, isTypedModel, isUnionModel, LangNeutralModelTypes, PrimitiveModelType, RecordPropertyType} from 'oag-shared/lang-neutral/model';
 import {safeLStatSync} from 'oag-shared/utils/misc-utils';
 import * as nameUtils from 'oag-shared/utils/name-utils';
-import {ClassDeclaration, EnumDeclaration, ExportableNode, Identifier, InterfaceDeclaration, JSDocableNode, JSDocStructure, Node, ObjectLiteralElement, Project, SourceFile, StructureKind, ts, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeReferenceNode, VariableDeclarationKind, VariableStatement} from 'ts-morph';
+import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
+import {ClassDeclaration, EnumDeclaration, ExportableNode, ExpressionWithTypeArguments, Identifier, InterfaceDeclaration, JSDocableNode, JSDocStructure, Node, ObjectLiteralElement, Project, ScriptTarget, SourceFile, StructureKind, ts, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeReferenceNode, VariableDeclarationKind, VariableStatement} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
 import {bindAst, importIfNotSameFile, makeFakeIdentifier, TempFileName} from './oag-tsmorph';
 import SyntaxKind = ts.SyntaxKind;
@@ -37,6 +38,15 @@ interface ModelTypeAliasDeclaration extends TypeAliasDeclaration {
 
 type BoundTypeNode = (TypeNode & { readonly $ast: TsmorphModel }) | (Identifier & { readonly $ast: TsmorphModel } & Node) | undefined;
 type BoundJsonNode = (Identifier & { readonly $ast: TsmorphModel } & Node) | undefined;
+
+class CannotGenerateError extends Error {
+	static Name = 'CannotGenerate';
+
+	constructor(message?: string, options?: ErrorOptions) {
+		super(message, options);
+		this.name = CannotGenerateError.Name;
+	}
+};
 
 /**
  * All methods of this interface MUST be idempotent.
@@ -153,7 +163,7 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 									return undefined;
 								if (key === 'description' && isTsmorphModel(this) && (!this.baseSettings.verboseJsonSchema))
 									return undefined;
-								if (value[CodeGenAst] && (!Object.is(value[CodeGenAst], this))) {
+								if (value && value[CodeGenAst] && (!Object.is(value[CodeGenAst], this))) {
 									const model = value[CodeGenAst] as TsmorphModel & this;
 									if (isIdentifiedLangNeutral(model)) {
 										const varName = model.getIdentifier('json');
@@ -360,6 +370,12 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 	}
 
 	override async generate(sf: SourceFile): Promise<void> {
+		for (let u of this.unionOf) {
+			if (isTsmorphModel(u)) {
+				await u.generate(sf);
+				this.addDependency(u);
+			}
+		}
 		if (!this.getLangNode('intf')) {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
@@ -369,6 +385,7 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 					this.bind('intf', await this.createTypeAlias(sf, id, fake));
 				else if (!typeAlias.$ast)
 					this.bind('intf', typeAlias);
+				this.dependencies.forEach(d => d.importInto(sf));
 			}
 		}
 		if (!this.getLangNode('json') && this.baseSettings.modelJsonDir)
@@ -379,10 +396,8 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 		let types: Node[] = [];
 		for (let u of this.unionOf) {
 			if (isTsmorphModel(u)) {
-				await u.generate(sf);
 				let propType = u.getTypeNode();
 				types.push(propType);
-				this.addDependency(u);
 			}
 		}
 		const typeTxt = types.map(t => t.getText());
@@ -415,21 +430,41 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
 		const n: InterfaceDeclaration | ClassDeclaration | TypeAliasDeclaration = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
+			const proxyGetTextFn = (r: ExpressionWithTypeArguments | TypeNode, cb: (t: string) => string) => new Proxy(r, {
+				get(target, prop) {
+					if (prop === 'getText')
+						return () => cb(target.getText());
+					return prop in target ? target[prop as keyof typeof r] : undefined;
+				}
+			});
 			if (Node.isNamed(n)) {
 				if (isIdentifiedLangNeutral(this) && Node.isExportable(n) && n.isExported())
 					return bindAst(n.getNameNode(), this);
+				const toLowerFn = (txt: string) => this.jsdType === 'enum' ? txt : txt.toLowerCase();
 				switch (n.getKind()) {
 					case SyntaxKind.TypeAliasDeclaration:
-						return bindAst((n as TypeAliasDeclaration).getTypeNode(), this);
+						return bindAst(proxyGetTextFn((n as TypeAliasDeclaration).getTypeNode(), toLowerFn), this);
 					case SyntaxKind.ClassDeclaration:
-						return bindAst((n as ClassDeclaration).getExtends(), this);
+						return bindAst(proxyGetTextFn((n as ClassDeclaration).getExtends(), toLowerFn), this);
 					case SyntaxKind.EnumDeclaration:    // We cannot have an enum that is not exported.
 					default:
 						throw new Error('Bad internal logic');
 				}
 			}
-			else if (Node.isClassDeclaration(n))
-				return bindAst(n.getExtends(), this);
+			else if (Node.isClassDeclaration(n)) {
+				// interface foo {bar: Number} just looks weird in TypeScript, so without interfering with ts-morph, ensure our callers get string/number/boolean/object.
+				return bindAst(n.isExported() ? n.getNameNode() : proxyGetTextFn(n.getExtends(), (origTxt) => {
+					switch (origTxt) {
+						case 'String':
+						case 'Number':
+						case 'Boolean':
+						case 'Object':
+							return origTxt.toLowerCase();
+						default:
+							return origTxt;
+					}
+				}), this);
+			}
 			else if (Node.isTypeAliasDeclaration(n))
 				return bindAst(n.getTypeNode(), this);
 		}
@@ -446,61 +481,78 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 		}
 		if (!this.getLangNode('impl') && this.baseSettings.modelImplDir) {
 			sf = await this.getSrcFile('impl', sf.getProject(), sf);
-			if (sf) {
-				let retVal: ModelClassDeclaration | ModelTypeAliasDeclaration | undefined;
-				let {id, fake} = this.ensureIdentifier('impl');
-				let extTxt: string;
-				let jsdType = this.jsdType;
-				let nullable = jsdType === null || jsdType === 'null';
-				if (Array.isArray(jsdType)) {
-					nullable = jsdType.findIndex(t => t !== null && t !== 'null') >= 0;
-					jsdType = jsdType.filter(t => t !== null && t !== 'null') as any;
-					if (jsdType.length === 1)
-						jsdType = jsdType[0] as PrimitiveModelType;
-				}
-				switch (jsdType) {
-					case 'integer':
-					case 'number':
-						extTxt = 'Number';
-						break;
-					case 'string':
-						extTxt = 'String';
-						break;
-					case 'boolean':
-						extTxt = 'Boolean';
-						break;
-					case 'object':
-						extTxt = 'Object';
-						break;
-					case 'enum':
-						retVal = this.bind('impl', await this.createDecl(sf, id, true) as TypeAliasDeclaration);   // Its a fake enum.
-						break;
-					default:
-						break;
-				}
-				if (extTxt)
-					retVal = sf.getClass(id);
-				if (!retVal) {
-					if (nullable && fake)
-						retVal = sf.addTypeAlias({
-							name: id,
-							isExported: !fake,
-							type: extTxt + ' | null'
-						});
-					else
-						retVal = sf.addClass({
-							name: id,
-							isExported: !fake,
-							extends: extTxt
-						});
-					if (this.baseSettings.emitDescriptions && !fake) {
-						const docs = this.makeJsDoc();
-						if (docs)
-							retVal.addJsDoc(docs);
+			try {
+				if (sf) {
+					let retVal: ModelClassDeclaration | ModelTypeAliasDeclaration | undefined;
+					let extTxt: string;
+					let jsdType = this.jsdType;
+					let nullable = jsdType === null || jsdType === 'null';
+					if (Array.isArray(jsdType)) {
+						nullable = jsdType.findIndex(t => t !== null && t !== 'null') >= 0;
+						jsdType = jsdType.filter(t => t !== null && t !== 'null') as any;
+						if (jsdType.length === 1)
+							jsdType = jsdType[0] as PrimitiveModelType;
 					}
+					let {id, fake} = this.ensureIdentifier('impl');
+					switch (jsdType) {
+						case 'integer':
+							extTxt = 'Number';
+							if (SchemaJsdConstraints(this.oae).format === 'int64') {
+								if (this.tsMorphSettings.project.compilerOptions.target < ScriptTarget.ES2020)
+									throw new CannotGenerateError(`schema requires 64 bit integer support (target=${ScriptTarget[this.tsMorphSettings.project.compilerOptions.target]})`);
+								extTxt = 'BigInt';
+							}
+							break;
+						case 'number':
+							extTxt = 'Number';
+							break;
+						case 'string':
+							extTxt = 'String';
+							break;
+						case 'boolean':
+							extTxt = 'Boolean';
+							break;
+						case 'object':
+							extTxt = 'Object';
+							break;
+						case 'enum':
+							if (!fake)
+								throw new CannotGenerateError(`Cannot instantiate a '${jsdType}'`);
+							retVal = this.bind('impl', await this.createDecl(sf, id, true) as TypeAliasDeclaration);   // Its a fake enum.
+							break;
+						default:
+							throw new CannotGenerateError(`Cannot instantiate a '${jsdType}'`);
+					}
+					if (extTxt)
+						retVal = sf.getClass(id);
+					if (!retVal) {
+						if (nullable && fake)
+							retVal = sf.addTypeAlias({
+								name: id,
+								isExported: !fake,
+								type: extTxt + ' | null'
+							});
+						else
+							retVal = sf.addClass({
+								name: id,
+								isExported: !fake,
+								extends: extTxt
+							});
+						if (this.baseSettings.emitDescriptions && !fake) {
+							const docs = this.makeJsDoc();
+							if (docs)
+								retVal.addJsDoc(docs);
+						}
+					}
+					if (retVal && !retVal.$ast)
+						this.bind('impl', retVal);
 				}
-				if (retVal && !retVal.$ast)
-					this.bind('impl', retVal);
+			}
+			catch (e) {
+				if (e instanceof CannotGenerateError)
+					sf.deleteImmediatelySync();
+				else
+					throw e;
 			}
 		}
 		if (!this.getLangNode('json') && this.baseSettings.modelJsonDir)
@@ -543,12 +595,23 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 		else {
 			retVal = sf.getTypeAlias(id);
 			if (!retVal) {
-				if (nativeType === 'integer')
-					nativeType = 'number';
-				else if (nativeType === 'object')
-					nativeType = 'Object' as any;
-				else if (Array.isArray(nativeType))
-					nativeType = nativeType.map(e => e === 'integer' ? 'number' : e).join(' | ') as any;
+				const typeMapperFn = (t: PrimitiveModelType) => {
+					if (t === 'integer') {
+						if (SchemaJsdConstraints(this.oae).format === 'int64') {
+							if (this.tsMorphSettings.project.compilerOptions.target < ScriptTarget.ES2020)
+								throw new CannotGenerateError(`schema requires 64 bit integer support (target=${ScriptTarget[this.tsMorphSettings.project.compilerOptions.target]})`);
+							return 'BigInt';
+						}
+						return 'number';
+					}
+					else if (t === 'object')
+						return 'Object';
+					return t;
+				};
+				if (Array.isArray(nativeType))
+					nativeType = nativeType.map(e => typeMapperFn(e)).join(' | ') as any;
+				else
+					nativeType = typeMapperFn(nativeType) as any;
 				retVal = sf.addTypeAlias({
 					name: id,
 					isExported: !fake,
@@ -759,12 +822,11 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
 				const {id, fake} = this.ensureIdentifier('intf');
-				let retVal: ModelInterfaceDeclaration = fake ? undefined : sf.getInterface(id);
-				if (!retVal)
-					this.bind('intf', await this.createIntf(sf, id, fake, 'intf'));
-				else if (!retVal.$ast)
-					this.bind('intf', retVal);
-				this.dependencies.forEach(d => d.importInto(sf));
+				let intf: ModelInterfaceDeclaration = fake ? undefined : sf.getInterface(id);
+				if (!intf)
+					this.bind('intf', await this.createIntf(sf, id, fake));
+				else if (!intf.$ast)
+					this.bind('intf', intf);
 			}
 		}
 		if (!this.getLangNode('impl') && this.baseSettings.modelImplDir) {
@@ -782,150 +844,24 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				but then we would have to mixin NameAge and Origin (assuming they were classes).
 				The combinations of all these becomes overwhelming.
 			*/
-			// Perform some sanity checks to see if a TypeScript class can actually implement this Model
-
-			sf = await this.getSrcFile('impl', sf.getProject(), sf);
-			if (sf) {
-				const {id, fake} = this.ensureIdentifier('impl');
-				try {
-					if (fake)
-						throw new Error('BLOCK-EXIT');
-					let retVal: ModelClassDeclaration = sf.getClass(id);
-					let intf = this.ensureIdentifier('intf')?.fake ? undefined : this.getLangNode('intf');
-					if (!retVal) {
-						let extTxt: string;
-						let singleExt: TsmorphModel = undefined;
-						for (let e of this.extendsFrom) {
-							if (isTsmorphModel(e)) {
-								// Not possible to extend one *or* the other as a TypeScript class.
-								if (isUnionModel(e) && (!isRecordModel(e)))
-									throw new Error('BLOCK-EXIT');
-								if (isArrayModel(e) || isPrimitiveModel(e)) {
-									if (singleExt) {
-										// Not feasible to extend *or* even implement multiple arrays and/or primitives simultaneously as a TypeScript class.
-										if (isArrayModel(singleExt) || isPrimitiveModel(singleExt))
-											throw new Error('BLOCK-EXIT');
-										singleExt = e;
-									}
-								}
-								else if (isTypedModel(e))   // This may be a problem, but for now, we will assume extend a user type is always the prefered default.
-									singleExt = e;
-								else if (isRecordModel(e)) {
-									if (isRecordModel(singleExt)) {
-										if (Object.keys(e.properties).length > Object.keys(singleExt.properties).length)
-											singleExt = e;
-									}
-									else
-										singleExt = e;
-								}
-							}
+			const {id, fake} = this.ensureIdentifier('impl');
+			if (!fake) {
+				sf = await this.getSrcFile('impl', sf.getProject(), sf);
+				if (sf) {
+					let impl: ModelClassDeclaration = sf.getClass(id);
+					if (!impl) {
+						try {
+							this.bind('impl', await this.createImpl(sf, id));
 						}
-						let typeParameters: string[];
-						let mutableUnionOf = this.unionOf.slice() as TsmorphModel[];
-						if (mutableUnionOf.length === 1) {
-							const u = mutableUnionOf[0];
-							if (isTsmorphModel(u))
-								if (isArrayModel(u) || isPrimitiveModel(u) || isTypedModel(u))
-									singleExt = u;
-						}
-						else if (mutableUnionOf.length > 1) {
-							if (mutableUnionOf.every(u => isTsmorphModel(u) && isArrayModel(u))) {
-								singleExt = undefined;
-								intf = undefined;
-								mutableUnionOf.forEach(m => m.importInto(sf));
-								let types = mutableUnionOf.map(m => {
-									if (isTsmorphModel(m) && isArrayModel(m) && isTsmorphModel(m.items))
-										return m.items.getTypeNode().getText();
-									return null;
-								});
-								typeParameters = [`T=${types.join('|')}`];
-								extTxt = `Array<T>`;
-								mutableUnionOf = [];
-							}
-						}
-						let implTxts: string[];
-						if (intf)
-							implTxts = [intf.getName()];
-						else {
-							let intfModels = [] as TsmorphModel[];
-							for (let e of this.extendsFrom) {
-								if (isTsmorphModel(e))
-									if (!singleExt || !Object.is(singleExt, e))
-										intfModels.push(e);
-							}
-							for (let e of mutableUnionOf) {
-								if (isTsmorphModel(e))
-									if (!singleExt || !Object.is(singleExt, e))
-										intfModels.push(e);
-							}
-							intfModels.forEach(m => m.importInto(sf));
-							implTxts = intfModels.map(m => {
-								if (isTsmorphModel(m))
-									return m.getTypeNode().getText();
-								return null;
-							});
-						}
-						if (singleExt) {
-							singleExt.importInto(sf, 'impl');
-							extTxt = singleExt.getTypeNode(singleExt.getLangNode('impl')).getText();
-						}
-
-						retVal = this.bind('impl', sf.addClass({
-							name: id,
-							isExported: true,
-							extends: extTxt,
-							implements: implTxts.length > 0 ? implTxts : undefined,
-							typeParameters: typeParameters
-						}));
-						this.importInto(sf);
-						if (Object.keys(this.properties).length > 0 || this.additionalProperties)
-							await this.genProperties(sf, 'impl', retVal);
-						this.dependencies.forEach(d => d.importInto(sf));
-						if (this.baseSettings.emitDescriptions) {
-							const docs = intf ? <JSDocStructure>{
-								kind: StructureKind.JSDoc,
-								tags: [{
-									kind: StructureKind.JSDocTag,
-									tagName: 'inheritDoc'
-								}]
-							} : this.makeJsDoc();
-							if (docs)
-								retVal.addJsDoc(docs);
-						}
-						let rebind = false;
-						const ls = sf.getProject().getLanguageService();
-						const supportedCodeFixes = ls.compilerObject.getSupportedCodeFixes(sf.getFilePath());
-						const sem = ls.compilerObject.getSemanticDiagnostics(sf.getFilePath());
-						sem.reverse().forEach(s => {
-							if (ExcludedFixCodes.indexOf(s.code) >= 0)
-								return;
-							if (supportedCodeFixes.indexOf(String(s.code)) >= 0) {
-								const fixes = ls.getCodeFixesAtPosition(sf,
-									s.start,
-									s.start + s.length,
-									[s.code],
-									this.tsMorphSettings.format,
-									undefined
-								);
-								fixes.slice().reverse().forEach(fix => {
-									fix.getChanges().reverse().forEach(c => c.applyChanges());
-									rebind = true;
-								});
-							}
+						catch (e) {
+							if (e instanceof CannotGenerateError)
+								sf.deleteImmediatelySync();
 							else
-								throw new Error('BLOCK-EXIT');
-						});
-						if (rebind)
-							this.bind('impl', sf.getClass(id));
+								throw e;
+						}
 					}
-					else if (!retVal.$ast)
-						this.bind('impl', retVal);
-				}
-				catch (e) {
-					if ((e as Error).message !== 'BLOCK-EXIT')
-						throw e;
-					if (!fake)
-						sf.deleteImmediatelySync();
+					else if (!impl.$ast)
+						this.bind('impl', impl);
 				}
 			}
 		}
@@ -933,12 +869,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			await this.genJson(sf);
 	}
 
-	/**
-	 * This method is shared for both interface creation and in rare scenarios for class "support".
-	 * We can't generate a class without a name.
-	 * If no name was provided (e.g. is fake), we create a fake interface, and use it's type (aka inline) in API params.
-	 */
-	private async createIntf(sf: SourceFile, id: string, fake: boolean, scope: 'intf' | 'impl'): Promise<InterfaceDeclaration | TypeAliasDeclaration> {
+	private async createIntf(sf: SourceFile, id: string, fake: boolean): Promise<InterfaceDeclaration | TypeAliasDeclaration> {
 		let retVal: InterfaceDeclaration | TypeAliasDeclaration;
 		let unionTxt = '';
 		for (let u of this.unionOf) {
@@ -949,17 +880,28 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				unionTxt += t.getText();
 			}
 		}
+		let props = [] as Readonly<Record<string, Readonly<RecordPropertyType>>>[];
+		if (Object.keys(this.properties).length > 0)
+			props.push(this.properties);
+		let hasProps = props.length > 0 || this.additionalProperties;
 		let subTypes: string[] = [];
 		let asTypeAlias = unionTxt || fake;
 		for (let e of this.extendsFrom) {
 			if (isTsmorphModel(e)) {
-				if (!isIdentifiedLangNeutral(e))
-					asTypeAlias = true;
-				const t = e.getTypeNode();
-				subTypes.push(t.getText());
+				if (!isIdentifiedLangNeutral(e)) {
+					if (isRecordModel(e) && Object.keys(e.properties).length > 0 && !e.additionalProperties) {
+						hasProps = true;
+						props.push(e.properties);
+					}
+					else {
+						asTypeAlias = true;
+						subTypes.push(e.getTypeNode().getText());
+					}
+				}
+				else
+					subTypes.push(e.getTypeNode().getText());
 			}
 		}
-		const hasProps = Object.keys(this.properties).length > 0 || this.additionalProperties;
 		if (asTypeAlias) {
 			let line: string;
 			if (unionTxt)
@@ -978,7 +920,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			if (hasProps) {
 				const tls = retVal.getDescendants().filter(d => d.getKind() == SyntaxKind.TypeLiteral);
 				if (tls.length > 0)
-					await this.genProperties(sf, scope, tls[tls.length - 1] as TypeLiteralNode);
+					await this.genProperties(props, sf, 'intf', tls[tls.length - 1] as TypeLiteralNode);
 			}
 		}
 		else {
@@ -988,41 +930,191 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				extends: subTypes.length > 0 ? subTypes : undefined
 			});
 			if (hasProps)
-				await this.genProperties(sf, 'intf', retVal);
+				await this.genProperties(props, sf, 'intf', retVal);
 		}
 		if (this.baseSettings.emitDescriptions && !fake) {
 			const docs = this.makeJsDoc();
 			if (docs)
 				retVal.addJsDoc(docs);
 		}
+		this.dependencies.forEach(d => d.importInto(sf));
 		return retVal;
 	}
 
-	private async genProperties(sf: SourceFile, ownerScope: 'intf' | 'impl', owner: ClassDeclaration | InterfaceDeclaration | TypeLiteralNode): Promise<void> {
-		for (const [key, value] of Object.entries(this.properties)) {
-			const propModel = value.model;
-			if (!isTsmorphModel(propModel))
-				continue;
-			let propType = propModel.getTypeNode();
-			const prop = owner.addProperty({
-				name: key,
-				hasQuestionToken: !value.required,
-				type: propType.getText()
-			});
-			if (this.baseSettings.emitDescriptions) {
-				if (propModel.name) {
-					prop.addJsDoc({
-						kind: StructureKind.JSDoc,
-						description: '@see ' + propModel.name
-					});
+	private async createImpl(sf: SourceFile, id: string): Promise<ClassDeclaration> {
+		let props = [] as Readonly<Record<string, Readonly<RecordPropertyType>>>[];
+		if (Object.keys(this.properties).length > 0)
+			props.push(this.properties);
+
+		// First we work on optimizing the extends statement.
+		// Since TypeScript is single inheritance, we make extra effort to figure out what to best use as our base class (if any).
+		let singleExt: TsmorphModel = undefined;
+		for (let e of this.extendsFrom) {
+			if (isTsmorphModel(e)) {
+				// Not possible to extend one *or* the other as a TypeScript class.
+				if (isUnionModel(e) && (!isRecordModel(e)))
+					throw new CannotGenerateError('class cannot extend a union');
+				if (isArrayModel(e) || isPrimitiveModel(e)) {
+					// Not feasible to extend *or* even implement multiple arrays and/or primitives simultaneously as a TypeScript class.
+					if (isArrayModel(singleExt) || isPrimitiveModel(singleExt))
+						throw new CannotGenerateError('class cannot extend multiple js types');
+					singleExt = e;
 				}
-				else {
-					const docs = (propModel as this).makeJsDoc();
-					if (docs)
-						prop.addJsDoc(docs);
+				else if (isTypedModel(e))   // This may be a problem, but for now, we will assume extend a user type is always the preferred default.
+					singleExt = e;
+				else if (isRecordModel(e) && isIdentifiedLangNeutral(e)) {
+					if (isRecordModel(singleExt)) {
+						if (Object.keys(e.properties).length > Object.keys(singleExt!.properties).length)
+							singleExt = e;
+					}
+					else
+						singleExt = e;
 				}
 			}
 		}
+		let intf = this.ensureIdentifier('intf')?.fake ? undefined : this.getLangNode('intf');
+		let extTxt: string;
+		let typeParameters: string[];
+		let mutableUnionOf = this.unionOf.slice() as TsmorphModel[];
+		// Perform some special case tests to see if we can leverage inheritance to more closely represent a union.
+		if (!singleExt) {
+			if (mutableUnionOf.length === 1) {
+				const u = mutableUnionOf[0];
+				if (isArrayModel(u) || isPrimitiveModel(u) || isTypedModel(u)) {
+					singleExt = u;
+					mutableUnionOf = [];
+					u.importInto(sf);
+				}
+			}
+			else if (mutableUnionOf.length > 0) {
+				if (mutableUnionOf.every(u => isArrayModel(u))) {
+					let types = mutableUnionOf.map(m => {
+						if (isArrayModel(m) && isTsmorphModel(m.items))
+							return m.items.getTypeNode().getText();
+						return null;
+					});
+					typeParameters = [`T=${types.join('|')}`];
+					extTxt = `Array<T>`;
+					intf = undefined;
+					singleExt = undefined;
+					mutableUnionOf = [];
+					mutableUnionOf.forEach(m => m.importInto(sf));
+				}
+			}
+		}
+
+		// Now work on optimizing the implements statement.
+		const implTxts = [] as string[];
+		if (intf)
+			implTxts.push(intf.getName());
+		else {
+			for (let e of mutableUnionOf.concat(this.extendsFrom as TsmorphModel[])) {
+				// Is it basically an inline definition of properties?  If so, we can just incorporate those properties into our body.
+				if (!Object.is(singleExt, e) && !isIdentifiedLangNeutral(e) && isRecordModel(e) && Object.keys(e.properties).length > 0 && !e.additionalProperties) {
+					e.importInto(sf);
+					props.push(e.properties);
+				}
+				else if (!singleExt || !Object.is(singleExt, e)) {
+					e.importInto(sf);
+					implTxts.push(e.getTypeNode().getText());
+				}
+			}
+		}
+
+		// If we have found a base class, pull it in and get it's name.
+		if (singleExt) {
+			singleExt.importInto(sf, 'impl');
+			extTxt = singleExt.getTypeNode(singleExt.getLangNode('impl')).getText();
+		}
+
+		// We have everything we need to create a class!
+		let retVal = sf.addClass({
+			name: id,
+			isExported: true,
+			extends: extTxt,
+			implements: implTxts.length > 0 ? implTxts : undefined,
+			typeParameters: typeParameters
+		});
+		if (intf)
+			this.importInto(sf);
+
+		// Generate our properties as well as any we picked up in our implements optimizations.
+		if (props.length > 0 || this.additionalProperties)
+			await this.genProperties(props, sf, 'impl', retVal);
+
+		// Now the JSDoc.
+		if (this.baseSettings.emitDescriptions) {
+			const docs = intf ? <JSDocStructure>{
+				kind: StructureKind.JSDoc,
+				tags: [{
+					kind: StructureKind.JSDocTag,
+					tagName: 'inheritDoc'
+				}]
+			} : this.makeJsDoc();
+			if (docs)
+				retVal.addJsDoc(docs);
+		}
+
+		// Import all our dependnecies (or the TypeScript LanguageService will attempt it for us, and it's usually wrong).
+		this.dependencies.forEach(d => d.importInto(sf));
+
+		// Finally, take advantage of the TypeScript LanguageService to automatically implement any properties we missed as we jumped through our implements statement optimizations.
+		let refresh = false;
+		const ls = sf.getProject().getLanguageService();
+		const supportedCodeFixes = ls.compilerObject.getSupportedCodeFixes(sf.getFilePath());
+		const sem = ls.compilerObject.getSemanticDiagnostics(sf.getFilePath());
+		sem.reverse().forEach(s => {
+			if (ExcludedFixCodes.indexOf(s.code) >= 0)
+				return;
+			if (supportedCodeFixes.indexOf(String(s.code)) >= 0) {
+				const fixes = ls.getCodeFixesAtPosition(sf,
+					s.start,
+					s.start + s.length,
+					[s.code],
+					this.tsMorphSettings.format,
+					undefined
+				);
+				fixes.slice().reverse().forEach(fix => {
+					fix.getChanges().reverse().forEach(c => c.applyChanges());
+					refresh = true;
+				});
+			}
+			else
+				throw new CannotGenerateError('unable to fix semantic errors');
+		});
+		// Semantic fixes regenerate the source file, so we need to update our reference to the ts-morph class.
+		if (refresh)
+			retVal = sf.getClass(id);
+		return retVal;
+	}
+
+	private async genProperties(props: Readonly<Record<string, Readonly<RecordPropertyType>>>[], sf: SourceFile, ownerScope: 'intf' | 'impl', owner: ClassDeclaration | InterfaceDeclaration | TypeLiteralNode): Promise<void> {
+		props.forEach(p => {
+			for (const [key, value] of Object.entries(p)) {
+				const propModel = value.model;
+				if (!isTsmorphModel(propModel))
+					continue;
+				let propType = propModel.getTypeNode();
+				const prop = owner.addProperty({
+					name: key,
+					hasQuestionToken: !value.required,
+					type: propType.getText()
+				});
+				if (this.baseSettings.emitDescriptions) {
+					if (propModel.name) {
+						prop.addJsDoc({
+							kind: StructureKind.JSDoc,
+							description: '@see ' + propModel.name
+						});
+					}
+					else {
+						const docs = (propModel as this).makeJsDoc();
+						if (docs)
+							prop.addJsDoc(docs);
+					}
+				}
+			}
+		});
 		const ap = this.additionalProperties;
 		if (ap && isTsmorphModel(ap)) {
 			let propType = ap.getTypeNode();

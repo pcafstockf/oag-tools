@@ -16,9 +16,8 @@ export async function beginTsMorphSetup(dic: Container, path: string[], obj: obj
 				case 'boolean':
 				case 'null':
 				case 'any':
-					return dic.get(CodeGenPrimitiveModelToken);
 				case 'object':
-					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('Object');
+					return dic.get(CodeGenPrimitiveModelToken);
 				case 'int32':
 				case 'int64':
 				case 'double':

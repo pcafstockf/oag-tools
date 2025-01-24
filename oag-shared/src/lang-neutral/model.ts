@@ -30,7 +30,7 @@ export type OpenApiSchemaWithModelRef = OpenAPIV3_1.SchemaObject & OpenApiLangNe
  * We artificially change 'string' to 'enum' when appropriate.
  * While left ambiguous by the spec, most tools default absence of type to mean 'object'.
  */
-export const PrimitiveModelTypes = ['integer', 'number', 'string', 'boolean', 'null', 'any', 'enum', 'object'] as const;
+export const PrimitiveModelTypes = ['integer', 'number', 'string', 'boolean', 'null', 'object', 'any', 'enum'] as const;
 export type PrimitiveModelType = typeof PrimitiveModelTypes[number];
 
 export interface PrimitiveModel extends SchemaModel {
