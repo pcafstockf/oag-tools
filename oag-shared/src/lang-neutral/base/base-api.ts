@@ -16,25 +16,54 @@ export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObjec
 		return this;
 	}
 
+	get name(): string | undefined {
+		return this.oae.name;
+	}
+
 	getIdentifier(type: LangNeutralApiTypes): string {
+		const name = this.name;
+		if (!name)
+			return;
+		// A special hack that signifies this instance *implements* IdentifiedLangNeutral
+		if (type === null)
+			return true as any;
 		switch (type) {
 			case 'intf':
-				return this.toIntfName(this.oae.name, 'api');
+				return this.toIntfName(name, 'api');
 			case 'impl':
-				return this.toImplName(this.oae.name, 'api');
+				return this.toImplName(name, 'api');
 			case 'hndl':
-				return this.toHndlName(this.oae.name);
+				return this.toHndlName(name);
+			case 'mock':
+				return this.toMockName(name);
 		}
 	}
 
 	getFilepath(type: LangNeutralApiTypes): string {
+		const name = this.name;
+		if (!name)
+			return;
+		// A special hack that signifies this instance *implements* FileBasedLangNeutral
+		if (type === null)
+			return true as any;
+		let base: string;
 		switch (type) {
 			case 'intf':
-				return path.join(this.baseSettings.apiIntfDir, this.toIntfFileBasename(this.oae.name, 'api'));
+				base = this.toIntfFileBasename(name, 'api');
+				if (this.baseSettings.apiIntfDir && base)
+					return path.join(this.baseSettings.apiIntfDir, base);
 			case 'impl':
-				return path.join(this.baseSettings.apiImplDir, this.toImplFileBasename(this.oae.name, 'api'));
+				base = this.toImplFileBasename(name, 'api');
+				if (this.baseSettings.apiImplDir && base)
+					return path.join(this.baseSettings.apiImplDir, base);
 			case 'hndl':
-				return path.join(this.baseSettings.apiHndlDir, this.toHndlFileBasename(this.oae.name));
+				base = this.toHndlFileBasename(name);
+				if (this.baseSettings.apiHndlDir && base)
+					return path.join(this.baseSettings.apiHndlDir, base);
+			case 'mock':
+				base = this.toMockFileBasename(name);
+				if (this.baseSettings.apiMockDir && base)
+					return path.join(this.baseSettings.apiMockDir, base);
 		}
 	}
 

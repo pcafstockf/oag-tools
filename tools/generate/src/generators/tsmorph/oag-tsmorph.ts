@@ -67,3 +67,12 @@ export function makeFakeIdentifier(): string {
 	id = id.slice(match[1].length) + match[0];
 	return id;
 }
+
+export class CannotGenerateError extends Error {
+	static Name = 'CannotGenerate';
+
+	constructor(message?: string, options?: ErrorOptions) {
+		super(message, options);
+		this.name = CannotGenerateError.Name;
+	}
+}

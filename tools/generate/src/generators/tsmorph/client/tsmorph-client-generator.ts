@@ -8,6 +8,7 @@ import {Project, SourceFile} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmorph';
 import {CodeGenAst, SourceGenerator} from '../../source-generator';
 import {TempFileName} from '../oag-tsmorph';
+import {isTsmorphApi} from '../tsmorph-api';
 import {isTsmorphModel} from '../tsmorph-model';
 
 @Injectable()
@@ -22,13 +23,15 @@ export class TsmorphClientGenerator implements SourceGenerator {
 		// Generate all the models
 		//TODO: Remove the console.log and the sort, as they  are only used for manual comparison of regression
 		for (let m of ast.models.sort((a, b) => a.name.localeCompare(b.name))) {
-			console.log(m.toString());
 			if (isTsmorphModel(m))
 				await m.generate(this.tempFile);
 		}
-		ast.apis.forEach(m => {
-			console.log(m.toString());
-		});
+		for (let a of ast.apis.sort((a, b) => a.name.localeCompare(b.name))) {
+			console.log(a.toString());
+			if (isTsmorphApi(a))
+				await a.generate(this.tempFile);
+		}
+		;
 		// Remove the temp file
 		this.tempFile.deleteImmediatelySync();
 		delete this.tempFile;

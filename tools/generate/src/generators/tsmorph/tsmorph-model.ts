@@ -1,3 +1,5 @@
+// noinspection JSUnusedGlobalSymbols
+
 import {Inject, Injectable} from 'async-injection';
 import {stringify as json5Stringify} from 'json5';
 import {template as lodashTemplate} from 'lodash';
@@ -13,8 +15,26 @@ import * as nameUtils from 'oag-shared/utils/name-utils';
 import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
 import {ClassDeclaration, EnumDeclaration, ExportableNode, ExpressionWithTypeArguments, Identifier, InterfaceDeclaration, JSDocableNode, JSDocStructure, Node, ObjectLiteralElement, Project, ScriptTarget, SourceFile, StructureKind, ts, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeReferenceNode, VariableDeclarationKind, VariableStatement} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
-import {bindAst, importIfNotSameFile, makeFakeIdentifier, TempFileName} from './oag-tsmorph';
-import SyntaxKind = ts.SyntaxKind;
+import {bindAst, CannotGenerateError, importIfNotSameFile, makeFakeIdentifier, TempFileName} from './oag-tsmorph';
+
+/**
+ * All methods of this interface MUST be idempotent.
+ */
+export interface TsmorphModel<I extends Node = Node, C extends Node | void = Node> extends Model {
+	getLangNode(mlnType: 'intf'): Readonly<I>;
+
+	getLangNode(mlnType: 'impl'): Readonly<C>;
+
+	getLangNode(mlnType: 'json'): Readonly<ModelVariableStatement>;
+
+	importInto(sf: SourceFile, mlnType?: LangNeutralModelTypes): void;
+
+	getTypeNode(ln?: Readonly<I | C>): BoundTypeNode;
+
+	getJsonNode(): BoundJsonNode;
+
+	generate(sf: SourceFile): Promise<void>;
+}
 
 interface ModelInterfaceDeclaration extends InterfaceDeclaration {
 	readonly $ast?: TsmorphModel<InterfaceDeclaration | ClassDeclaration | ObjectLiteralElement>;
@@ -28,44 +48,16 @@ interface ModelVariableStatement extends VariableStatement {
 	readonly $ast?: TsmorphModel<InterfaceDeclaration | ClassDeclaration | ObjectLiteralElement>;
 }
 
-interface ModelEnumDeclaration extends EnumDeclaration {
+interface ModelTypeAliasDeclaration extends TypeAliasDeclaration {
 	readonly $ast?: TsmorphModel;
 }
 
-interface ModelTypeAliasDeclaration extends TypeAliasDeclaration {
+interface ModelNamedDeclaration extends Node<ts.NamedDeclaration> {
 	readonly $ast?: TsmorphModel;
 }
 
 type BoundTypeNode = (TypeNode & { readonly $ast: TsmorphModel }) | (Identifier & { readonly $ast: TsmorphModel } & Node) | undefined;
 type BoundJsonNode = (Identifier & { readonly $ast: TsmorphModel } & Node) | undefined;
-
-class CannotGenerateError extends Error {
-	static Name = 'CannotGenerate';
-
-	constructor(message?: string, options?: ErrorOptions) {
-		super(message, options);
-		this.name = CannotGenerateError.Name;
-	}
-};
-
-/**
- * All methods of this interface MUST be idempotent.
- */
-export interface TsmorphModel<I extends Node = Node, C extends Node | void = Node> extends Model {
-	generate(sf: SourceFile): Promise<void>;
-
-	getLangNode(mlnType: 'intf'): Readonly<I>;
-
-	getLangNode(mlnType: 'impl'): Readonly<C>;
-
-	getLangNode(mlnType: 'json'): Readonly<ModelVariableStatement>;
-
-	getTypeNode(ln?: Readonly<I | C>): BoundTypeNode;
-
-	getJsonNode(): BoundJsonNode;
-
-	importInto(sf: SourceFile, mlnType?: LangNeutralModelTypes): void;
-}
 
 export function isTsmorphModel(obj: any): obj is TsmorphModel {
 	if (obj)
@@ -91,6 +83,7 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			this.#tsTypes = {} as any;
 			this.#dependencies = [];
 		}
+
 		readonly #tsTypes: {
 			intf: I,
 			impl: C,
@@ -131,7 +124,7 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			if (isIdentifiedLangNeutral(this)) {
 				const n = this.getLangNode('json');
 				if (n)
-					return bindAst<Identifier, TsmorphModel>(n.getFirstDescendantByKind(SyntaxKind.VariableDeclaration)?.getNameNode() as Identifier, this as unknown as TsmorphModel);
+					return bindAst<Identifier, TsmorphModel>(n.getFirstDescendantByKind(ts.SyntaxKind.VariableDeclaration)?.getNameNode() as Identifier, this as unknown as TsmorphModel);
 			}
 			return undefined;
 		}
@@ -221,7 +214,7 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			switch (mlnType) {
 				case 'json':
 					t = this.getJsonNode();
-					ex = t?.getFirstAncestorByKind(SyntaxKind.VariableStatement);
+					ex = t?.getFirstAncestorByKind(ts.SyntaxKind.VariableStatement);
 					break;
 				case 'intf':
 					t = this.getTypeNode(this.getLangNode(mlnType));
@@ -416,7 +409,7 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 }
 
 @Injectable()
-export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, Node<ts.NamedDeclaration>, ModelClassDeclaration>(BasePrimitiveModel as any) {
+export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, ModelNamedDeclaration, ModelClassDeclaration>(BasePrimitiveModel as any) {
 	constructor(
 		@Inject(BaseSettingsToken)
 			baseSettings: BaseSettingsType,
@@ -426,7 +419,7 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 		super(baseSettings, tsMorphSettings);
 	}
 
-	override getTypeNode(ln?: Node<ts.NamedDeclaration> | ModelClassDeclaration): BoundTypeNode {
+	override getTypeNode(ln?: ModelNamedDeclaration | ModelClassDeclaration): BoundTypeNode {
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
 		const n: InterfaceDeclaration | ClassDeclaration | TypeAliasDeclaration = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
@@ -442,11 +435,11 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, N
 					return bindAst(n.getNameNode(), this);
 				const toLowerFn = (txt: string) => this.jsdType === 'enum' ? txt : txt.toLowerCase();
 				switch (n.getKind()) {
-					case SyntaxKind.TypeAliasDeclaration:
+					case ts.SyntaxKind.TypeAliasDeclaration:
 						return bindAst(proxyGetTextFn((n as TypeAliasDeclaration).getTypeNode(), toLowerFn), this);
-					case SyntaxKind.ClassDeclaration:
+					case ts.SyntaxKind.ClassDeclaration:
 						return bindAst(proxyGetTextFn((n as ClassDeclaration).getExtends(), toLowerFn), this);
-					case SyntaxKind.EnumDeclaration:    // We cannot have an enum that is not exported.
+					case ts.SyntaxKind.EnumDeclaration:    // We cannot have an enum that is not exported.
 					default:
 						throw new Error('Bad internal logic');
 				}
@@ -647,9 +640,9 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 				return bindAst(n.getNameNode(), this);
 			else if (Node.isClassDeclaration(n)) {
 				// Remember, we are an array.  So if this *class* is not named, we need to treat it as a literal type.
-				let retVal: TypeNode = mlnType === 'impl' ? n.getExtends() : undefined ?? n.getFirstDescendantByKind(SyntaxKind.TypeLiteral);
+				let retVal: TypeNode = mlnType === 'impl' ? n.getExtends() : undefined ?? n.getFirstDescendantByKind(ts.SyntaxKind.TypeLiteral);
 				if (!retVal)
-					retVal = n.getFirstDescendantByKind(SyntaxKind.TypeReference);
+					retVal = n.getFirstDescendantByKind(ts.SyntaxKind.TypeReference);
 				return bindAst(retVal, this);
 			}
 			else if (Node.isTypeAliasDeclaration(n))
@@ -762,9 +755,9 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				return bindAst(n.getNameNode(), this);
 			if (Node.isInterfaceDeclaration(n) || Node.isClassDeclaration(n)) {
 				// If this *object* is not named, we need to treat it as a literal type.
-				let retVal: TypeNode = n.getFirstDescendantByKind(SyntaxKind.TypeLiteral);
+				let retVal: TypeNode = n.getFirstDescendantByKind(ts.SyntaxKind.TypeLiteral);
 				if (!retVal)
-					retVal = n.getFirstDescendantByKind(SyntaxKind.TypeReference);
+					retVal = n.getFirstDescendantByKind(ts.SyntaxKind.TypeReference);
 				return bindAst(retVal, this);
 			}
 			if (Node.isTypeAliasDeclaration(n))
@@ -774,7 +767,6 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 	}
 
 	override async generate(sf: SourceFile): Promise<void> {
-		let retVal: InterfaceDeclaration | TypeAliasDeclaration;
 		for (let u of this.unionOf) {
 			if (isTsmorphModel(u)) {
 				await u.generate(sf);
@@ -920,9 +912,9 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				}
 			});
 			if (hasProps) {
-				const tls = retVal.getDescendants().filter(d => d.getKind() == SyntaxKind.TypeLiteral);
+				const tls = retVal.getDescendants().filter(d => d.getKind() == ts.SyntaxKind.TypeLiteral);
 				if (tls.length > 0)
-					await this.genProperties(props, sf, 'intf', tls[tls.length - 1] as TypeLiteralNode);
+					await this.genProperties(props, sf, tls[tls.length - 1] as TypeLiteralNode);
 			}
 		}
 		else {
@@ -932,7 +924,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				extends: subTypes.length > 0 ? subTypes : undefined
 			});
 			if (hasProps)
-				await this.genProperties(props, sf, 'intf', retVal);
+				await this.genProperties(props, sf, retVal);
 		}
 		if (this.baseSettings.emitDescriptions && !fake) {
 			const docs = this.makeJsDoc();
@@ -1042,7 +1034,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 
 		// Generate our properties as well as any we picked up in our implements optimizations.
 		if (props.length > 0 || this.additionalProperties)
-			await this.genProperties(props, sf, 'impl', retVal);
+			await this.genProperties(props, sf, retVal);
 
 		// Now the JSDoc.
 		if (this.baseSettings.emitDescriptions) {
@@ -1090,7 +1082,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		return retVal;
 	}
 
-	private async genProperties(props: Readonly<Record<string, Readonly<RecordPropertyType>>>[], sf: SourceFile, ownerScope: 'intf' | 'impl', owner: ClassDeclaration | InterfaceDeclaration | TypeLiteralNode): Promise<void> {
+	private async genProperties(props: Readonly<Record<string, Readonly<RecordPropertyType>>>[], sf: SourceFile, owner: ClassDeclaration | InterfaceDeclaration | TypeLiteralNode): Promise<void> {
 		props.forEach(p => {
 			for (const [key, value] of Object.entries(p)) {
 				const propModel = value.model;
@@ -1102,6 +1094,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 					hasQuestionToken: !value.required,
 					type: propType.getText()
 				});
+				propModel.importInto(sf);
 				if (this.baseSettings.emitDescriptions) {
 					if (propModel.name) {
 						prop.addJsDoc({
@@ -1153,7 +1146,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 }
 
 @Injectable()
-export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel>(BaseTypedModel as any) {
+export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel, ModelTypeAliasDeclaration, ModelTypeAliasDeclaration>(BaseTypedModel as any) {
 	constructor(
 		@Inject(BaseSettingsToken)
 			baseSettings: BaseSettingsType,
@@ -1163,7 +1156,7 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel>(BaseTyped
 		super(baseSettings, tsMorphSettings);
 	}
 
-	getTypeNode(ln?: Node): BoundTypeNode {
+	getTypeNode(ln?: ModelTypeAliasDeclaration): BoundTypeNode {
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
 		const n = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {

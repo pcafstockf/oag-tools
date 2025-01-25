@@ -4,7 +4,7 @@ export {BaseSettingsType, BaseSettingsToken} from '../settings';
 export {BaseLangNeutral, BaseLangNeutralConstructor} from './base-lang-neutral';
 export {BaseArrayModel, BasePrimitiveModel, BaseRecordModel, BaseSchemaModel, BaseUnionModel, BaseModelConstructor, BaseTypedModel} from './base-model';
 export {Parameter, CodeGenBodyParameterToken, CodeGenNamedParameterToken} from '../parameter';
-export {BaseBodyParameter, BaseNamedParameter} from './base-parameter';
+export {BaseBodyParameter, BaseNamedParameter, BaseParameter} from './base-parameter';
 export {Response, CodeGenOpenApiResponseToken} from '../response';
 export {BaseResponse, BaseOpenApiResponse} from './base-response';
 export {Method, CodeGenMethodToken} from '../method';

@@ -3,9 +3,11 @@ import {OpenAPIV3_1} from 'openapi-types';
 import {FileBasedLangNeutral, IdentifiedLangNeutral, LangNeutral, LangNeutralType, OpenApiLangNeutral} from './lang-neutral';
 import {Method} from './method';
 
-export type LangNeutralApiTypes = Extract<LangNeutralType, 'intf' | 'impl' | 'hndl'>;
+export type LangNeutralApiTypes = Extract<LangNeutralType, 'intf' | 'impl' | 'hndl' | 'mock'>;
 
 interface ApiT extends LangNeutral, IdentifiedLangNeutral, FileBasedLangNeutral {
+	readonly name: string;
+
 	readonly methods: Method[];
 }
 

@@ -7,7 +7,7 @@ import {BodyParameter, NamedParameter, Parameter, ParameterKind} from '../parame
 import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, MixOpenApiLangNeutral} from './base-lang-neutral';
 
-abstract class BaseParameter<KIND extends ParameterKind = ParameterKind> extends BaseLangNeutral implements Parameter<KIND> {
+export abstract class BaseParameter<KIND extends ParameterKind = ParameterKind> extends BaseLangNeutral implements Parameter<KIND> {
 	abstract readonly name: string;
 	abstract readonly required?: boolean;
 

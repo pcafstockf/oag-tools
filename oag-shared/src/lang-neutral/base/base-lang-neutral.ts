@@ -74,9 +74,21 @@ export abstract class BaseLangNeutral implements LangNeutral {
 		return nameUtils.setCase(iname, this.baseSettings.hndlNameCasing);
 	}
 
+	protected toMockName(name: string): string {
+		let templ = this.baseSettings.mockName_Tmpl;
+		let iname = interpolateBashStyle(templ, {name: name, mockSuffix: this.baseSettings.mockSuffix});
+		return nameUtils.setCase(iname, this.baseSettings.mockNameCasing);
+	}
+
 	protected toHndlFileBasename(name: string): string {
 		let templ = this.baseSettings.hndlFileBasename_Tmpl;
 		let fname = interpolateBashStyle(templ, {name: name, hndlFileSuffix: this.baseSettings.hndlFileSuffix});
+		return nameUtils.setCase(fname, this.baseSettings.fileCasing);
+	}
+
+	protected toMockFileBasename(name: string): string {
+		let templ = this.baseSettings.mockFileBasename_Tmpl;
+		let fname = interpolateBashStyle(templ, {name: name, mockFileSuffix: this.baseSettings.mockFileSuffix});
 		return nameUtils.setCase(fname, this.baseSettings.fileCasing);
 	}
 

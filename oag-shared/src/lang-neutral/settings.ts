@@ -26,6 +26,7 @@ export const BaseSettings = {
 	implNameCasing: 'pascal' as NameCase,
 	jsonNameCasing: 'pascal' as NameCase,
 	hndlNameCasing: 'pascal' as NameCase,
+	mockNameCasing: 'pascal' as NameCase,
 	enumNameCasing: 'pascal' as NameCase,
 	enumElemCasing: 'camel' as NameCase,
 	fileCasing: 'kebab' as NameCase,

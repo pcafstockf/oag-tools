@@ -2,10 +2,10 @@ import {Inject, Injectable} from 'async-injection';
 import {BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/base';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmorph';
 import {TsMorphClientSettingsToken, TsMorphClientSettingsType} from '../../../settings/tsmorph-client';
-import {TsmorphMethod} from '../tsmorph-method';
+import {BaseTsmorphMethod} from '../tsmorph-method';
 
 @Injectable()
-export class TsmorphClientMethod extends TsmorphMethod {
+export class TsmorphClientMethod extends BaseTsmorphMethod {
 	constructor(
 		@Inject(BaseSettingsToken)
 			baseSettings: BaseSettingsType,
