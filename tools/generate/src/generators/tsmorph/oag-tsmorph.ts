@@ -1,7 +1,9 @@
 import {randomUUID} from 'crypto';
+import os from 'node:os';
 import path from 'node:path';
 import * as nameUtils from 'oag-shared/utils/name-utils';
-import {Node, SourceFile} from 'ts-morph';
+import {OpenAPIV3_1} from 'openapi-types';
+import {JSDocStructure, Node, SourceFile, StructureKind} from 'ts-morph';
 
 export const TempFileName = '_$temp-File.ts';
 
@@ -18,6 +20,16 @@ export function bindAst<T extends Node = Node, N = Node>(obj: Omit<T, '$ast'>, a
 			}
 		});
 	return obj as (T & { readonly $ast: N });
+}
+
+export function bindNext<T extends Node = Node, N = Node>(obj: Omit<T, '$next'>, next: N): (T & { readonly $next: N }) {
+	if (obj && (!obj.hasOwnProperty('$next')))
+		Object.defineProperty(obj, '$next', {
+			get() {
+				return next;
+			}
+		});
+	return obj as (T & { readonly $next: N });
 }
 
 /**
@@ -66,6 +78,44 @@ export function makeFakeIdentifier(): string {
 	let match = /([^a-z]*)(.+)/ig.exec(id);
 	id = id.slice(match[1].length) + match[0];
 	return id;
+}
+
+export function makeJsDoc<T extends OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.TagObject | OpenAPIV3_1.OperationObject | OpenAPIV3_1.ParameterBaseObject = OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.TagObject | OpenAPIV3_1.OperationObject | OpenAPIV3_1.ParameterBaseObject>(oae: T) {
+	let txt: string;
+	if (oae.description) {
+		if ('title' in oae && oae.title && oae.description.toLowerCase().startsWith(oae.title.toLowerCase()))
+			txt = oae.description;
+		else if ('title' in oae && oae.title)
+			txt = oae.title + os.EOL + oae.description;
+		else
+			txt = oae.description;
+	}
+	else if ('title' in oae && oae.title)
+		txt = oae.title;
+	let docs = <JSDocStructure>{
+		kind: StructureKind.JSDoc,
+		description: txt?.trim()
+	};
+	if ('externalDocs' in oae && oae.externalDocs) {
+		txt = undefined;
+		if (oae.externalDocs.url) {
+			if (oae.externalDocs.description)
+				txt = oae.externalDocs.url + '\t' + oae.externalDocs.description;
+			else
+				txt = oae.externalDocs.url;
+		}
+		else if (oae.externalDocs.description)
+			txt = oae.externalDocs.description;
+		if (txt)
+			docs.tags = [{
+				kind: StructureKind.JSDocTag,
+				tagName: 'link',
+				text: txt.trim()
+			}];
+	}
+	if (docs.description || docs.tags?.length > 0)
+		return docs;
+	return undefined;
 }
 
 export class CannotGenerateError extends Error {

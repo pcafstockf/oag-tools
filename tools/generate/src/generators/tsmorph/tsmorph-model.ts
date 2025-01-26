@@ -3,7 +3,6 @@
 import {Inject, Injectable} from 'async-injection';
 import {stringify as json5Stringify} from 'json5';
 import {template as lodashTemplate} from 'lodash';
-import os from 'node:os';
 import path from 'node:path';
 import {Model} from 'oag-shared/lang-neutral';
 import {BaseArrayModel, BasePrimitiveModel, BaseRecordModel, BaseSettingsToken, BaseSettingsType, BaseTypedModel, BaseUnionModel, CodeGenAst} from 'oag-shared/lang-neutral/base';
@@ -15,7 +14,7 @@ import * as nameUtils from 'oag-shared/utils/name-utils';
 import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
 import {ClassDeclaration, EnumDeclaration, ExportableNode, ExpressionWithTypeArguments, Identifier, InterfaceDeclaration, JSDocableNode, JSDocStructure, Node, ObjectLiteralElement, Project, ScriptTarget, SourceFile, StructureKind, ts, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeReferenceNode, VariableDeclarationKind, VariableStatement} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
-import {bindAst, CannotGenerateError, importIfNotSameFile, makeFakeIdentifier, TempFileName} from './oag-tsmorph';
+import {bindAst, CannotGenerateError, importIfNotSameFile, makeFakeIdentifier, makeJsDoc, TempFileName} from './oag-tsmorph';
 
 /**
  * All methods of this interface MUST be idempotent.
@@ -238,44 +237,8 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 		}
 
 		makeJsDoc() {
-			if (isSchemaModel(this)) {
-				const oae = this.oae;
-				let txt: string;
-				if (oae.description) {
-					if (oae.title && oae.description.toLowerCase().startsWith(oae.title.toLowerCase()))
-						txt = oae.description;
-					else if (oae.title)
-						txt = oae.title + os.EOL + oae.description;
-					else
-						txt = oae.description;
-				}
-				else if (oae.title)
-					txt = oae.title;
-				let docs = <JSDocStructure>{
-					kind: StructureKind.JSDoc,
-					description: txt?.trim()
-				};
-				if (oae.externalDocs) {
-					txt = undefined;
-					if (oae.externalDocs.url) {
-						if (oae.externalDocs.description)
-							txt = oae.externalDocs.url + '\t' + oae.externalDocs.description;
-						else
-							txt = oae.externalDocs.url;
-					}
-					else if (oae.externalDocs.description)
-						txt = oae.externalDocs.description;
-					if (txt)
-						docs.tags.push({
-							kind: StructureKind.JSDocTag,
-							tagName: 'link',
-							text: txt.trim()
-						});
-				}
-				if (docs.description || docs.tags?.length > 0)
-					return docs;
-
-			}
+			if (isSchemaModel(this))
+				return makeJsDoc(this.oae);
 			return undefined;
 		}
 

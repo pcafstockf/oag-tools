@@ -4,19 +4,15 @@ import {OpenApiResponse} from 'oag-shared/lang-neutral/response';
 import {ReturnTypedNode} from 'ts-morph';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
 import {bindAst} from './oag-tsmorph';
-import {TsmorphMethod} from './tsmorph-method';
-import {TsmorphModel} from './tsmorph-model';
+import {MethodMethodDeclaration, MethodMethodSignature} from './tsmorph-method';
+import {isTsmorphModel, TsmorphModel} from './tsmorph-model';
 
 export interface TsmorphResponse extends OpenApiResponse {
-	getLangNode(type: 'intf'): ResponseReturnTypedNode;
+	getLangNode(alnType: LangNeutralApiTypes): ResponseReturnTypedNode;
 
-	getLangNode(type: 'impl'): ResponseReturnTypedNode;
+	generate(alnType: 'intf', meth: MethodMethodSignature, code: string): Promise<void>;
 
-	getLangNode(type: 'hndl'): ResponseReturnTypedNode;
-
-	getLangNode(type: 'mock'): ResponseReturnTypedNode;
-
-	generate(method: TsmorphMethod, code: string): Promise<void>;
+	generate(alnType: 'impl' | 'hndl' | 'mock', meth: MethodMethodDeclaration, code: string): Promise<void>;
 }
 
 export abstract class BaseTsmorphResponse extends BaseOpenApiResponse {
@@ -33,31 +29,33 @@ export abstract class BaseTsmorphResponse extends BaseOpenApiResponse {
 	};
 
 	getLangNode(type: 'intf'): ResponseReturnTypedNode;
-	getLangNode(type: 'impl'): ResponseReturnTypedNode;
-	getLangNode(type: 'hndl'): ResponseReturnTypedNode;
-	getLangNode(type: 'mock'): ResponseReturnTypedNode;
+	getLangNode(type: 'impl' | 'hndl' | 'mock'): ResponseReturnTypedNode;
+	getLangNode(type: LangNeutralApiTypes): ResponseReturnTypedNode;
 	override getLangNode(type: LangNeutralApiTypes): ResponseReturnTypedNode {
 		return this.#tsTypes[type];
 	}
 
 	bind(alnType: 'intf', ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
-	bind(alnType: 'impl', ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
-	bind(alnType: 'hndl', ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
-	bind(alnType: 'mock', ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
+	bind(alnType: 'impl' | 'hndl' | 'mock', ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
+	bind(alnType: LangNeutralApiTypes, ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
 	bind(alnType: LangNeutralApiTypes, ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode {
 		this.#tsTypes[alnType] = bindAst(ast as any, this) as any;
 		return this.#tsTypes[alnType];
 	}
 
-	async generate(method: TsmorphMethod, code: string): Promise<void> {
-		const sf = method.getLangNode('intf').getSourceFile();
-		await (this.model as TsmorphModel).generate(sf);
-		let intf = method.getLangNode('intf');
-		if (intf && (!this.getLangNode('intf'))) {
-			const txt = (this.model as TsmorphModel).getTypeNode().getText();
-			intf.setReturnType(txt);
-			(this.model as TsmorphModel).importInto(sf);
+	generate(alnType: 'intf', meth: MethodMethodSignature, code: string): Promise<void>;
+	generate(alnType: 'impl' | 'hndl' | 'mock', meth: MethodMethodDeclaration, code: string): Promise<void>;
+	async generate(alnType: LangNeutralApiTypes, meth: MethodMethodSignature | MethodMethodDeclaration, code: string): Promise<void> {
+		if (!this.getLangNode(alnType)) {
+			const model = meth.$ast.responses.get(code).model;
+			if (isTsmorphModel(model))
+				this.createTsResponse(alnType, meth, code, model);
 		}
+	}
+
+	protected createTsResponse(alnType: LangNeutralApiTypes, owner: MethodMethodSignature | MethodMethodDeclaration, code: string, model: TsmorphModel) {
+		const txt = model.getTypeNode().getText();
+		owner.setReturnType(txt);
 	}
 }
 

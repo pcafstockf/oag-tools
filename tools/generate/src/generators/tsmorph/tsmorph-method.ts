@@ -1,9 +1,11 @@
 import {LangNeutralApiTypes} from 'oag-shared/lang-neutral/api';
 import {BaseMethod, BaseSettingsType, Method} from 'oag-shared/lang-neutral/base';
+import {isOpenApiLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
+import {OpenAPIV3_1} from 'openapi-types';
 import {Identifier, MethodDeclaration, MethodSignature} from 'ts-morph';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {bindAst} from './oag-tsmorph';
-import {ApiInterfaceDeclaration, TsmorphApi} from './tsmorph-api';
+import {bindAst, makeJsDoc} from './oag-tsmorph';
+import {ApiClassDeclaration, ApiInterfaceDeclaration} from './tsmorph-api';
 import {TsmorphModel} from './tsmorph-model';
 import {isTsmorphParameter} from './tsmorph-parameter';
 import {isTsmorphResponse} from './tsmorph-response';
@@ -11,15 +13,13 @@ import {isTsmorphResponse} from './tsmorph-response';
 export interface TsmorphMethod extends Method {
 	getLangNode(type: 'intf'): MethodMethodSignature;
 
-	getLangNode(type: 'impl'): MethodMethodDeclaration;
-
-	getLangNode(type: 'hndl'): MethodMethodDeclaration;
-
-	getLangNode(type: 'mock'): MethodMethodDeclaration;
+	getLangNode(type: 'impl' | 'hndl' | 'mock'): MethodMethodDeclaration;
 
 	getTypeNode(ln?: Readonly<MethodMethodSignature | MethodMethodDeclaration>): Identifier & { readonly $ast: TsmorphModel };
 
-	generate(api: TsmorphApi): Promise<void>;
+	generate(alnType: 'intf', api: ApiInterfaceDeclaration): Promise<MethodMethodSignature[]>;
+
+	generate(alnType: 'impl' | 'hndl' | 'mock', api: ApiClassDeclaration): Promise<(MethodMethodSignature | MethodMethodDeclaration)[]>;
 }
 
 export abstract class BaseTsmorphMethod extends BaseMethod implements TsmorphMethod {
@@ -40,17 +40,15 @@ export abstract class BaseTsmorphMethod extends BaseMethod implements TsmorphMet
 	}
 
 	getLangNode(type: 'intf'): MethodMethodSignature;
-	getLangNode(type: 'impl'): MethodMethodDeclaration;
-	getLangNode(type: 'hndl'): MethodMethodDeclaration;
-	getLangNode(type: 'mock'): MethodMethodDeclaration;
-	getLangNode(type: LangNeutralApiTypes): MethodMethodSignature | MethodMethodDeclaration {
+	getLangNode(type: 'impl' | 'hndl' | 'mock'): MethodMethodDeclaration;
+	getLangNode(type: LangNeutralApiTypes): MethodMethodSignature | MethodMethodDeclaration;
+	override getLangNode(type: LangNeutralApiTypes): MethodMethodSignature | MethodMethodDeclaration {
 		return this.#tsTypes[type];
 	}
 
 	bind(alnType: 'intf', ast: Omit<MethodMethodSignature, '$ast'>): MethodMethodSignature;
-	bind(alnType: 'impl', ast: Omit<MethodMethodDeclaration, '$ast'>): MethodMethodDeclaration;
-	bind(alnType: 'hndl', ast: Omit<MethodMethodDeclaration, '$ast'>): MethodMethodDeclaration;
-	bind(alnType: 'mock', ast: Omit<MethodMethodDeclaration, '$ast'>): MethodMethodDeclaration;
+	bind(alnType: 'impl' | 'hndl' | 'mock', ast: Omit<MethodMethodDeclaration, '$ast'>): MethodMethodDeclaration;
+	bind(alnType: LangNeutralApiTypes, ast: Omit<MethodMethodSignature, '$ast'> | Omit<MethodMethodDeclaration, '$ast'>): MethodMethodSignature | MethodMethodDeclaration;
 	bind(alnType: LangNeutralApiTypes, ast: Omit<MethodMethodSignature, '$ast'> | Omit<MethodMethodDeclaration, '$ast'>): MethodMethodSignature | MethodMethodDeclaration {
 		this.#tsTypes[alnType] = bindAst(ast as any, this) as any;
 		return this.#tsTypes[alnType];
@@ -88,31 +86,48 @@ export abstract class BaseTsmorphMethod extends BaseMethod implements TsmorphMet
 		}
 	}
 
-
-	async generate(api: TsmorphApi): Promise<void> {
-		let apiDecl = api.getLangNode('intf');
-		if (apiDecl && !this.getLangNode('intf')) {
-			const id = this.ensureIdentifier('intf');
-			let retVal: MethodMethodSignature = apiDecl.getMethod(id);
-			if (!retVal) {
-				this.bind('intf', this.createMethodSignature(apiDecl, id));
+	async generate(alnType: 'intf', api: ApiInterfaceDeclaration): Promise<MethodMethodSignature[]>;
+	async generate(alnType: 'impl' | 'hndl' | 'mock', api: ApiClassDeclaration): Promise<(MethodMethodSignature | MethodMethodDeclaration)[]>;
+	async generate(alnType: LangNeutralApiTypes, api: ApiInterfaceDeclaration | ApiClassDeclaration): Promise<(MethodMethodSignature | MethodMethodDeclaration)[]> {
+		if (!this.getLangNode(alnType)) {
+			const id = this.ensureIdentifier(alnType);
+			let meth = api.getMethod(id) as MethodMethodSignature | MethodMethodDeclaration;
+			if (!meth) {
+				meth = this.createTsMethod(alnType, api, id);
+				if (this.baseSettings.emitDescriptions) {
+					if (alnType === 'intf' && isOpenApiLangNeutral<OpenAPIV3_1.OperationObject, Method>(this)) {
+						const docs = makeJsDoc(this.oae);
+						if (docs)
+							meth.addJsDoc(docs);
+					}
+				}
 			}
-			else if (!retVal.$ast)
-				this.bind('intf', retVal);
+			if (meth && !meth.$ast)
+				meth = this.bind(alnType, meth);
+			for (let p of this.parameters)
+				if (isTsmorphParameter(p)) {
+					if (alnType === 'intf')
+						await p.generate(alnType, meth as MethodMethodSignature);
+					else
+						await p.generate(alnType, meth as MethodMethodDeclaration);
+				}
+			for (let [code, rsp] of this.responses)
+				if (isTsmorphResponse(rsp)) {
+					if (alnType === 'intf')
+						await rsp.generate(alnType, meth as MethodMethodSignature, code);
+					else
+						await rsp.generate(alnType, meth as MethodMethodDeclaration, code);
+				}
+			return [meth];
 		}
-		for (let p of this.parameters)
-			if (isTsmorphParameter(p))
-				await p.generate(this);
-		for (let [code, rsp] of this.responses)
-			if (isTsmorphResponse(rsp))
-				await rsp.generate(this, code);
+		return [];
 	}
 
-	protected createMethodSignature(owner: ApiInterfaceDeclaration, id: string) {
+	protected createTsMethod(alnType: LangNeutralApiTypes, owner: ApiInterfaceDeclaration | ApiClassDeclaration, id: string) {
 		let retVal = owner.addMethod({
 			name: id
 		});
-		return retVal;
+		return this.bind(alnType, retVal);
 	}
 }
 
@@ -123,10 +138,11 @@ export function isTsmorphMethod(obj: any): obj is TsmorphMethod {
 	return false;
 }
 
-interface MethodMethodSignature extends MethodSignature {
+export interface MethodMethodSignature extends MethodSignature {
 	readonly $ast?: BaseTsmorphMethod;
+	readonly $next?: MethodMethodSignature | MethodMethodDeclaration;
 }
 
-interface MethodMethodDeclaration extends MethodDeclaration {
+export interface MethodMethodDeclaration extends MethodDeclaration {
 	readonly $ast?: BaseTsmorphMethod;
 }

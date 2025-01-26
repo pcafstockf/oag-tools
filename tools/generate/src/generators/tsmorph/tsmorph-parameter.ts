@@ -1,23 +1,21 @@
 import {Parameter} from 'oag-shared/lang-neutral';
 import {LangNeutralApiTypes} from 'oag-shared/lang-neutral/api';
 import {BaseBodyParameter, BaseNamedParameter, BaseSettingsType} from 'oag-shared/lang-neutral/base';
+import {isOpenApiLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
 import {ParameterKind} from 'oag-shared/lang-neutral/parameter';
+import {OpenAPIV3_1} from 'openapi-types';
 import {MethodSignature, ParameterDeclaration} from 'ts-morph';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {bindAst} from './oag-tsmorph';
-import {TsmorphMethod} from './tsmorph-method';
+import {bindAst, makeJsDoc} from './oag-tsmorph';
+import {MethodMethodDeclaration, MethodMethodSignature} from './tsmorph-method';
 import {TsmorphModel} from './tsmorph-model';
 
 export interface TsMorphParameter<KIND extends ParameterKind = ParameterKind> extends Parameter<KIND> {
-	getLangNode(type: 'intf'): OagParameterDeclaration;
+	getLangNode(alnType: LangNeutralApiTypes): OagParameterDeclaration;
 
-	getLangNode(type: 'impl'): OagParameterDeclaration;
+	generate(alnType: 'intf', meth: MethodMethodSignature): Promise<void>;
 
-	getLangNode(type: 'hndl'): OagParameterDeclaration;
-
-	getLangNode(type: 'mock'): OagParameterDeclaration;
-
-	generate(method: TsmorphMethod): Promise<void>;
+	generate(alnType: 'impl' | 'hndl' | 'mock', meth: MethodMethodDeclaration): Promise<void>;
 }
 
 function MixTsMorphParameter(base: any) {
@@ -35,45 +33,44 @@ function MixTsMorphParameter(base: any) {
 			mock: OagParameterDeclaration
 		};
 
-		getLangNode(type: 'intf'): OagParameterDeclaration;
-		getLangNode(type: 'impl'): OagParameterDeclaration;
-		getLangNode(type: 'hndl'): OagParameterDeclaration;
-		getLangNode(type: 'mock'): OagParameterDeclaration;
 		getLangNode(type: LangNeutralApiTypes): OagParameterDeclaration {
 			return this.#tsTypes[type];
 		}
 
-		bind(alnType: 'intf', ast: Omit<OagParameterDeclaration, '$ast'>): OagParameterDeclaration;
-		bind(alnType: 'impl', ast: Omit<OagParameterDeclaration, '$ast'>): OagParameterDeclaration;
-		bind(alnType: 'hndl', ast: Omit<OagParameterDeclaration, '$ast'>): OagParameterDeclaration;
-		bind(alnType: 'mock', ast: Omit<OagParameterDeclaration, '$ast'>): OagParameterDeclaration;
 		bind(alnType: LangNeutralApiTypes, ast: Omit<OagParameterDeclaration, '$ast'>): OagParameterDeclaration {
 			this.#tsTypes[alnType] = bindAst(ast as any, this) as any;
 			return this.#tsTypes[alnType];
 		}
 
-		async generate(method: TsmorphMethod): Promise<void> {
-			const sf = method.getLangNode('intf').getSourceFile();
-			await this.model.generate(sf);
-			let intf = method.getLangNode('intf');
-			if (intf && (!this.getLangNode('intf'))) {
-				const id = this.getIdentifier('intf');
-				let param: OagParameterDeclaration = intf.getParameter(id);
-				if (!param)
-					this.bind('intf', this.createParameter(intf, id, this.model));
-				else if (!param.$ast)
-					this.bind('intf', param);
-				this.model.importInto(sf);
+		generate(alnType: 'intf', meth: MethodMethodSignature): Promise<void>;
+		generate(alnType: 'impl' | 'hndl' | 'mock', meth: MethodMethodDeclaration): Promise<void>;
+		generate(alnType: LangNeutralApiTypes, meth: MethodMethodSignature | MethodMethodDeclaration): Promise<void>;
+		async generate(alnType: LangNeutralApiTypes, meth: MethodMethodSignature | MethodMethodDeclaration): Promise<void> {
+			if (!this.getLangNode(alnType)) {
+				const id = this.getIdentifier(alnType);
+				let param: OagParameterDeclaration = meth.getParameter(id);
+				if (!param) {
+					param = this.createTsParameter(alnType, meth, id, this.model);
+					if (this.baseSettings.emitDescriptions) {
+						if (alnType === 'intf' && isOpenApiLangNeutral<OpenAPIV3_1.ParameterBaseObject, Parameter>(this)) {
+							const docs = makeJsDoc(this.oae);
+							if (docs)
+								console.log('ADD JSDOC');
+						}
+					}
+				}
+				if (param && !param.$ast)
+					this.bind(alnType, param);
 			}
 		}
 
-		protected createParameter(owner: MethodSignature, id: string, model: TsmorphModel) {
+		protected createTsParameter(alnType: LangNeutralApiTypes, owner: MethodSignature | MethodMethodDeclaration, id: string, model: TsmorphModel) {
 			const retVal = owner.addParameter({
 				name: id,
 				hasQuestionToken: !this.required,
 				type: model.getTypeNode().getText()
 			});
-			return retVal;
+			return this.bind(alnType, retVal);
 		}
 	};
 	return derived as new (baseSettings: BaseSettingsType, tsMorphSettings: TsMorphSettingsType) => typeof derived.prototype & TsMorphParameter;
