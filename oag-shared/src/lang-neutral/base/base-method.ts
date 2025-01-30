@@ -1,5 +1,6 @@
 import os from 'node:os';
 import {OpenAPIV3_1} from 'openapi-types';
+import {ReadonlyDeep} from 'type-fest';
 import * as nameUtils from '../../utils/name-utils';
 import {LangNeutralApiTypes} from '../api';
 import {Method} from '../method';
@@ -14,18 +15,24 @@ export abstract class BaseMethod extends MixOpenApiLangNeutral<OpenAPIV3_1.Opera
 		super(baseSettings);
 	}
 
-	init(_doc: OpenAPIV3_1.Document, jsonPath: string, operation: OpenAPIV3_1.OperationObject, pathItem: OpenAPIV3_1.PathItemObject): void {
+	init(doc: OpenAPIV3_1.Document, jsonPath: string, operation: OpenAPIV3_1.OperationObject, pathItem: OpenAPIV3_1.PathItemObject): void {
 		this.setOae(operation);
 		const lastSep = jsonPath.lastIndexOf('/');
 		this.#httpMethod = jsonPath.substring(lastSep + 1);
 		const secondLastSep = jsonPath.lastIndexOf('/', lastSep - 1);
 		this.#pathPattern = jsonPath.substring(secondLastSep + 1, lastSep);
 		this.#pathItem = pathItem;
+		this.#document = doc;
 	}
 
 	#pathPattern: string;
 	#httpMethod: string;
 	#pathItem: OpenAPIV3_1.PathItemObject;
+	#document: OpenAPIV3_1.Document;
+
+	get document(): ReadonlyDeep<OpenAPIV3_1.Document> {
+		return this.#document;
+	}
 
 	/**
 	 * This will be in the form of a uri template friendly path (not a json pointer format).

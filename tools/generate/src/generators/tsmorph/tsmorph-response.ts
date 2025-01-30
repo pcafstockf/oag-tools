@@ -3,16 +3,9 @@ import {BaseOpenApiResponse, BaseSettingsType} from 'oag-shared/lang-neutral/bas
 import {OpenApiResponse} from 'oag-shared/lang-neutral/response';
 import {ReturnTypedNode} from 'ts-morph';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
-import {bindAst} from './oag-tsmorph';
-import {MethodMethodDeclaration, MethodMethodSignature} from './tsmorph-method';
-import {isTsmorphModel, TsmorphModel} from './tsmorph-model';
 
 export interface TsmorphResponse extends OpenApiResponse {
 	getLangNode(alnType: LangNeutralApiTypes): ResponseReturnTypedNode;
-
-	generate(alnType: 'intf', meth: MethodMethodSignature, code: string): Promise<void>;
-
-	generate(alnType: 'impl' | 'hndl' | 'mock', meth: MethodMethodDeclaration, code: string): Promise<void>;
 }
 
 export abstract class BaseTsmorphResponse extends BaseOpenApiResponse {
@@ -35,28 +28,43 @@ export abstract class BaseTsmorphResponse extends BaseOpenApiResponse {
 		return this.#tsTypes[type];
 	}
 
-	bind(alnType: 'intf', ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
-	bind(alnType: 'impl' | 'hndl' | 'mock', ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
-	bind(alnType: LangNeutralApiTypes, ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode;
-	bind(alnType: LangNeutralApiTypes, ast: Omit<ResponseReturnTypedNode, '$ast'>): ResponseReturnTypedNode {
-		this.#tsTypes[alnType] = bindAst(ast as any, this) as any;
-		return this.#tsTypes[alnType];
+	/**
+	 * Client side helper to find the 2xx response types from the server.
+	 * WARNING:
+	 *  Due to nesting of media types within response codes, there is *not* a one to one correlation between the supplied 'accept' headers and the returned types.
+	getAcceptableTypes(): TsmorphModel[] {
+		const accept = this.getAcceptable(true);
+		const schemas: TypeSchema[] = [];
+		let hasAny = false;
+		let hasVoid = accept.length === 0;
+		const codes = this.preferredResponses.map(r => r.code);
+		codes.forEach(rspCode => {
+			const rsp = resolveIfRef<TargetOpenAPI.ResponseObject>(this.oae[rspCode]).obj;
+			if (rsp.content) {
+				Object.keys(rsp.content).forEach((mediaType) => {
+					if (mediaType === '* /*')
+						hasAny = true;
+					else if (accept.indexOf(mediaType) >= 0) {
+						const mtObj = resolveIfRef<TargetOpenAPI.MediaTypeObject>(rsp.content[mediaType]).obj;
+						if (!mtObj.schema)
+							hasVoid = true;
+						else {
+							const cs = (mtObj.schema as OpenAPISchemaObject).$ast;
+							const match = schemas.find(s => s.matches(cs));
+							if (!match)
+								schemas.push(cs);
+						}
+					}
+				});
+			}
+		});
+		if (hasAny)
+			schemas.push(null);
+		if (hasVoid)
+			schemas.push(undefined);
+		return schemas;
 	}
-
-	generate(alnType: 'intf', meth: MethodMethodSignature, code: string): Promise<void>;
-	generate(alnType: 'impl' | 'hndl' | 'mock', meth: MethodMethodDeclaration, code: string): Promise<void>;
-	async generate(alnType: LangNeutralApiTypes, meth: MethodMethodSignature | MethodMethodDeclaration, code: string): Promise<void> {
-		if (!this.getLangNode(alnType)) {
-			const model = meth.$ast.responses.get(code).model;
-			if (isTsmorphModel(model))
-				this.createTsResponse(alnType, meth, code, model);
-		}
-	}
-
-	protected createTsResponse(alnType: LangNeutralApiTypes, owner: MethodMethodSignature | MethodMethodDeclaration, code: string, model: TsmorphModel) {
-		const txt = model.getTypeNode().getText();
-		owner.setReturnType(txt);
-	}
+	 */
 }
 
 export function isTsmorphResponse(obj: any): obj is TsmorphResponse {

@@ -17,12 +17,11 @@ export async function beginTsMorphSetup(dic: Container, path: string[], obj: obj
 				case 'null':
 				case 'any':
 				case 'object':
-					return dic.get(CodeGenPrimitiveModelToken);
 				case 'int32':
 				case 'int64':
 				case 'double':
 				case 'float':
-					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('number');
+					return dic.get(CodeGenPrimitiveModelToken);
 				case 'binary':
 					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('Blob');
 				case 'date':

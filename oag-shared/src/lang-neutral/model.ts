@@ -4,7 +4,9 @@ import {isOpenApiLangNeutral, LangNeutral, LangNeutralType, OpenApiLangNeutral, 
 
 export type LangNeutralModelTypes = Extract<LangNeutralType, 'intf' | 'impl' | 'json'>;
 
-export interface Model extends LangNeutral {
+export interface Model extends Omit<LangNeutral, 'getLangNode'> {
+	getLangNode(type: LangNeutralModelTypes): unknown;
+
 	readonly name?: string;
 
 	/**

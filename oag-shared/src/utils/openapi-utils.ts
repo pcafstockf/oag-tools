@@ -1,8 +1,9 @@
 import {OpenAPIV3_1} from 'openapi-types';
 
+export type OpenApiParameterStyle = 'matrix' | 'label' | 'form' | 'simple' | 'spaceDelimited' | 'pipeDelimited' | 'deepObject';
+
 interface JsdConstraints {
 	format?: string;
-
 	[key: string]: string | number | boolean;
 }
 export function SchemaJsdConstraints(oae: OpenAPIV3_1.SchemaObject) {

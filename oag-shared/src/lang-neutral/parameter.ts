@@ -1,6 +1,6 @@
 import {InjectionToken} from 'async-injection';
 import {OpenAPIV3_1} from 'openapi-types';
-import {IdentifiedLangNeutral, LangNeutral, OpenApiLangNeutral} from './lang-neutral';
+import {IdentifiedLangNeutral, OpenApiLangNeutral} from './lang-neutral';
 import {Model} from './model';
 
 export type ParameterKind = 'named' | 'body';
@@ -8,7 +8,7 @@ export type ParameterKind = 'named' | 'body';
 /**
  * From a CodeGenAst viewpoint, everything passed to a @see Method is just a 'Parameter'.
  */
-export interface Parameter<KIND extends ParameterKind = ParameterKind> extends LangNeutral, IdentifiedLangNeutral {
+export interface Parameter<KIND extends ParameterKind = ParameterKind> extends IdentifiedLangNeutral {
 	readonly kind: KIND;
 	readonly name: string;
 	readonly required?: boolean;
@@ -19,6 +19,13 @@ export interface Parameter<KIND extends ParameterKind = ParameterKind> extends L
  * Technically, all 'Parameter' have a name, but when based on OpenAPIV3_1.ParameterObject, the name is in the specification.
  */
 export interface NamedParameter extends Parameter<'named'>, OpenApiLangNeutral<OpenAPIV3_1.ParameterObject, Parameter> {
+	/**
+	 * An oag-tools specific key for a table of OpenAPi Parameter encoding algorithms.
+	 * e.g. style = matrix, simple, form, spaceDelimited, etc.
+	 * some styles can be combined with an exploded encoding.
+	 * See the OpenApi spec for all the way OpenAPIV3_1.ParameterObject can be transported.
+	 */
+	readonly serializerKey: string;
 }
 
 export const CodeGenNamedParameterToken = new InjectionToken<NamedParameter>('codegen-named-parameter');

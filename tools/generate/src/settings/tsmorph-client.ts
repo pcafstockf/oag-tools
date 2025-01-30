@@ -7,7 +7,7 @@ export const TsMorphClientSettings = {
 	httplib: undefined as unknown as string,
 	support: {
 		// Full (parent) path name to the files to be copied into the target support directory
-		srcDirName: `${__dirname}/../typescript/client/support`,
+		srcDirName: `${__dirname}/../generators/tsmorph/client/support`,
 		// Always specified relative to apiIntfDir
 		dstDirName: '../internal',
 		// Source files to be copied into the internal support directory.

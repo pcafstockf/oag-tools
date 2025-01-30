@@ -22,14 +22,14 @@ export function bindAst<T extends Node = Node, N = Node>(obj: Omit<T, '$ast'>, a
 	return obj as (T & { readonly $ast: N });
 }
 
-export function bindNext<T extends Node = Node, N = Node>(obj: Omit<T, '$next'>, next: N): (T & { readonly $next: N }) {
+export function bindNext<T extends Node = Node, N extends Node = Node>(obj: Omit<T, '$next' | '$ast'>, next: N): (Omit<T, '$ast'> & { readonly $next?: N }) {
 	if (obj && (!obj.hasOwnProperty('$next')))
 		Object.defineProperty(obj, '$next', {
 			get() {
 				return next;
 			}
 		});
-	return obj as (T & { readonly $next: N });
+	return obj as (Omit<T, '$ast'> & { readonly $next: N });
 }
 
 /**
@@ -80,18 +80,21 @@ export function makeFakeIdentifier(): string {
 	return id;
 }
 
-export function makeJsDoc<T extends OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.TagObject | OpenAPIV3_1.OperationObject | OpenAPIV3_1.ParameterBaseObject = OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.TagObject | OpenAPIV3_1.OperationObject | OpenAPIV3_1.ParameterBaseObject>(oae: T) {
-	let txt: string;
-	if (oae.description) {
-		if ('title' in oae && oae.title && oae.description.toLowerCase().startsWith(oae.title.toLowerCase()))
-			txt = oae.description;
-		else if ('title' in oae && oae.title)
-			txt = oae.title + os.EOL + oae.description;
-		else
-			txt = oae.description;
+export function makeJsDocTxt(short: string | undefined, long: string | undefined): string {
+	if (long) {
+		if (short && long.toLowerCase().startsWith(short.toLowerCase()))
+			return long;
+		else if (short)
+			return short + os.EOL + long;
+		return long;
 	}
-	else if ('title' in oae && oae.title)
-		txt = oae.title;
+	else if (short)
+		return short;
+	return '';
+}
+
+export function makeJsDoc<T extends OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.TagObject | OpenAPIV3_1.OperationObject | OpenAPIV3_1.ParameterBaseObject = OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.TagObject | OpenAPIV3_1.OperationObject | OpenAPIV3_1.ParameterBaseObject>(oae: T, cb?: (docs: JSDocStructure) => void) {
+	let txt = makeJsDocTxt('title' in oae ? oae.title : undefined, oae.description);
 	let docs = <JSDocStructure>{
 		kind: StructureKind.JSDoc,
 		description: txt?.trim()
@@ -113,6 +116,8 @@ export function makeJsDoc<T extends OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.T
 				text: txt.trim()
 			}];
 	}
+	if (cb)
+		cb(docs);
 	if (docs.description || docs.tags?.length > 0)
 		return docs;
 	return undefined;

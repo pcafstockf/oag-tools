@@ -1,6 +1,7 @@
 // noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
 
 import {OpenAPIV3_1} from 'openapi-types';
+import {OpenApiParameterStyle} from '../../utils/openapi-utils';
 import {LangNeutralApiTypes} from '../api';
 import {Model} from '../model';
 import {BodyParameter, NamedParameter, Parameter, ParameterKind} from '../parameter';
@@ -39,8 +40,11 @@ export abstract class BaseNamedParameter extends MixOpenApiLangNeutral<OpenAPIV3
 		super(baseSettings, 'named');
 	}
 
-	init(_doc: OpenAPIV3_1.Document, _jsonPath: string, oae: OpenAPIV3_1.ParameterObject, model: Model): this {
+	jsonPath: string;
+
+	init(_doc: OpenAPIV3_1.Document, jsonPath: string, oae: OpenAPIV3_1.ParameterObject, model: Model): this {
 		this.setOae(oae);
+		this.jsonPath = jsonPath;
 		this.setModel(model);
 		return this;
 	}
@@ -53,6 +57,48 @@ export abstract class BaseNamedParameter extends MixOpenApiLangNeutral<OpenAPIV3
 	get required(): boolean {
 		const oae = this.oae;
 		return oae.required;
+	}
+
+	get serializerKey() {
+		const oae = this.oae;
+		let s = oae.style as OpenApiParameterStyle;
+		let e = oae.explode;
+		if (!s) {
+			switch (oae.in) {
+				case 'query':
+				case 'cookie':
+					s = 'form';
+					if (typeof e === 'undefined')
+						e = true;
+					break;
+				case 'header':
+				case 'path':
+					s = 'simple';
+					if (typeof e === 'undefined')
+						e = false;
+					break;
+			}
+		}
+		switch (s) {
+			case 'matrix':
+				return `m${e ? 'e' : ''}`;
+			case 'label':
+				return `l${e ? 'e' : ''}`;
+			case 'form':
+				return `f${e ? 'e' : ''}`;
+			case 'simple':
+				return `s${e ? 'e' : ''}`;
+			case 'spaceDelimited':
+				return `sd${e ? 'e' : ''}`;
+			case 'pipeDelimited':
+				return `pd${e ? 'e' : ''}`;
+			case 'deepObject':
+				if (typeof e === 'undefined' || e)
+					return `do`;    // Can only be true (defaults to true).
+				return undefined;
+			default:
+				return undefined;
+		}
 	}
 }
 

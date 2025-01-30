@@ -1,10 +1,10 @@
 import {InjectionToken} from 'async-injection';
 import {OpenAPIV3_1} from 'openapi-types';
-import {IdentifiedLangNeutral, LangNeutral, OpenApiLangNeutral} from './lang-neutral';
+import {IdentifiedLangNeutral, OpenApiLangNeutral} from './lang-neutral';
 import {Parameter} from './parameter';
 import {Response} from './response';
 
-interface MethodT extends LangNeutral, IdentifiedLangNeutral {
+interface MethodT extends IdentifiedLangNeutral {
 	/**
 	 * The URI path component for this method.
 	 */

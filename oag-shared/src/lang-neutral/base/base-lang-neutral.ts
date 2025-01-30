@@ -1,16 +1,14 @@
 import {interpolateBashStyle} from '../../utils/misc-utils';
 import * as nameUtils from '../../utils/name-utils';
-import {CodeGenAst, LangNeutral, LangNeutralType, MixinConstructor, OpenApiLangNeutral, OpenApiLangNeutralBackRef} from '../lang-neutral';
+import {CodeGenAst, MixinConstructor, OpenApiLangNeutral, OpenApiLangNeutralBackRef} from '../lang-neutral';
 import {BaseSettingsType} from '../settings';
 
 export type BaseLangNeutralConstructor<T extends BaseLangNeutral = BaseLangNeutral> = new (baseSettings: BaseSettingsType) => T;
 
-export abstract class BaseLangNeutral implements LangNeutral {
+export abstract class BaseLangNeutral {
 	// noinspection TypeScriptAbstractClassConstructorCanBeMadeProtected
 	constructor(protected baseSettings: BaseSettingsType) {
 	}
-
-	abstract getLangNode<T = unknown>(type: LangNeutralType): T;
 
 	protected toIntfName(name: string, type: 'api' | 'model'): string {
 		let templ = this.baseSettings.intfName_Tmpl;

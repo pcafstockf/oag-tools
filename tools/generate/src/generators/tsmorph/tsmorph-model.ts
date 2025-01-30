@@ -19,17 +19,14 @@ import {bindAst, CannotGenerateError, importIfNotSameFile, makeFakeIdentifier, m
 /**
  * All methods of this interface MUST be idempotent.
  */
-export interface TsmorphModel<I extends Node = Node, C extends Node | void = Node> extends Model {
+export interface TsmorphModel<I extends Node = Node, C extends Node | void = Node> extends Omit<Model, 'getLangNode'> {
 	getLangNode(mlnType: 'intf'): Readonly<I>;
-
 	getLangNode(mlnType: 'impl'): Readonly<C>;
-
 	getLangNode(mlnType: 'json'): Readonly<ModelVariableStatement>;
 
 	importInto(sf: SourceFile, mlnType?: LangNeutralModelTypes): void;
 
 	getTypeNode(ln?: Readonly<I | C>): BoundTypeNode;
-
 	getJsonNode(): BoundJsonNode;
 
 	generate(sf: SourceFile): Promise<void>;
@@ -384,7 +381,7 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, M
 
 	override getTypeNode(ln?: ModelNamedDeclaration | ModelClassDeclaration): BoundTypeNode {
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
-		const n: InterfaceDeclaration | ClassDeclaration | TypeAliasDeclaration = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
+		const n: InterfaceDeclaration | ClassDeclaration | TypeAliasDeclaration = ln ?? this.getLangNode(mlnType as any) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
 			const proxyGetTextFn = (r: ExpressionWithTypeArguments | TypeNode, cb: (t: string) => string) => new Proxy(r, {
 				get(target, prop) {
@@ -597,7 +594,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 
 	override getTypeNode(ln?: ModelTypeAliasDeclaration | ModelClassDeclaration): BoundTypeNode {
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
-		const n = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
+		const n = ln ?? this.getLangNode(mlnType as any) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
 			if (isIdentifiedLangNeutral(this) && Node.isExportable(n) && n.isExported())
 				return bindAst(n.getNameNode(), this);
@@ -712,7 +709,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 
 	override getTypeNode(ln?: ModelInterfaceDeclaration | ModelClassDeclaration): BoundTypeNode {
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
-		const n = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
+		const n = ln ?? this.getLangNode(mlnType as any) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
 			if (isIdentifiedLangNeutral(this) && Node.isExportable(n) && n.isExported())
 				return bindAst(n.getNameNode(), this);
@@ -1121,7 +1118,7 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel, ModelType
 
 	getTypeNode(ln?: ModelTypeAliasDeclaration): BoundTypeNode {
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
-		const n = ln ?? this.getLangNode(mlnType) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
+		const n = ln ?? this.getLangNode(mlnType as any) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
 			if (Node.isTypeAliasDeclaration(n)) {
 				if (isIdentifiedLangNeutral(this))

@@ -123,150 +123,153 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 	}
 
 	visitSchema(schema: OpenAPIV3_1.SchemaObject, parent?: OpenAPIV3_1.SchemaObject): boolean | void {
-		if (this.seenSchema.has(schema))
-			return;
-		this.seenSchema.add(schema);
-
+		let created = false;
 		let model: BaseSchemaModel;
-		let schemaType = schema.type;
-		if (!schemaType) {
-			if (typeof (schema as OpenAPIV3_1.ArraySchemaObject).items !== 'undefined')
-				schemaType = 'array';
-			else if (typeof schema.properties !== 'undefined' || typeof schema.additionalProperties !== 'undefined' || typeof schema.discriminator !== 'undefined')
-				schemaType = 'object';
-			else if (Array.isArray(schema.enum)) {
-				switch (typeof schema.enum[0]) {
-					case 'string':
-						schemaType = 'string';
+		if (!this.seenSchema.has(schema)) {
+			let schemaType = schema.type;
+			if (!schemaType) {
+				if (typeof (schema as OpenAPIV3_1.ArraySchemaObject).items !== 'undefined')
+					schemaType = 'array';
+				else if (typeof schema.properties !== 'undefined' || typeof schema.additionalProperties !== 'undefined' || typeof schema.discriminator !== 'undefined')
+					schemaType = 'object';
+				else if (Array.isArray(schema.enum)) {
+					switch (typeof schema.enum[0]) {
+						case 'string':
+							schemaType = 'string';
+							break;
+						case 'number':
+							schemaType = schema.enum.every(e => Number.isInteger(e)) ? 'integer' : 'number';
+							break;
+						case 'boolean':
+							schemaType = 'boolean';
+							break;
+					}
+				}
+			}
+
+			// allOf (aka &) is by definition a record/object.
+			if (Array.isArray(schema.allOf)) {
+				model = this.container.get<BaseRecordModel>(CodeGenRecordModelToken);
+				model.init(this.activeDoc, this.activeJsonPath, schema);
+				// We will pick up the rest of the initialization after our super method has done its thing.
+			}
+			// an array of types is by definition anyOf (aka |).  However given our approach to null, anyOf may reduce to a simple "nullable" primitive.
+			else if (schemaType && Array.isArray(schemaType)) {
+				// OpenAPI will not allow "ambiguous" mixed types.
+				// Meaning...
+				// ['object', 'string', 'number', 'null'] would be legal.
+				// ['object', 'array', 'boolean'] would also be legal, BUT *only* if no 'items' *or* 'properties' defined in the schema.
+				// [what-ever-single-thing, 'null'] is always legal.
+				const nullCount = schemaType.includes('null') ? 1 : 0;
+				const hasObj = schemaType.includes('object');
+				const hasArray = schemaType.includes('array');
+				if (hasObj && (!hasArray)) {
+					if (schemaType.length === 1 + nullCount) {
+						model = this.container.get<BaseSchemaModel>(CodeGenRecordModelToken);
+						model.init(this.activeDoc, this.activeJsonPath, schema);
+					}
+				}
+				else if (hasArray && (!hasObj)) {
+					if (schemaType.length === 1 + nullCount) {
+						model = this.container.get<BaseSchemaModel>(CodeGenArrayModelToken);
+						model.init(this.activeDoc, this.activeJsonPath, schema);
+					}
+				}
+				else if (schemaType.length === 1 + nullCount) {
+					const nonNullType = schemaType.find(s => s !== 'null');
+					model = this.container.get(CodeGenCommonModelsToken)(nonNullType) as BaseSchemaModel;
+					model.init(this.activeDoc, this.activeJsonPath, schema);
+				}
+				if (!model) {
+					model = this.container.get<BaseUnionModel>(CodeGenUnionModelToken);
+					model.init(this.activeDoc, this.activeJsonPath, schema);
+					const unions = schemaType.filter(v => v !== 'null').map(v => this.container.get(CodeGenCommonModelsToken)(v as CommonModelTypes));
+					unions.forEach(u => (u as BaseUnionModel).addUnion(u));
+				}
+			}
+			else {
+				let key: string;
+				let constraints: Record<string, string | number | boolean>;
+				const asUnion = (Array.isArray(schema.anyOf) && schema.anyOf.length > 0) || (Array.isArray(schema.oneOf) && schema.oneOf.length > 0);
+				switch (schemaType) {
+					case 'object':
+						if (!asUnion && !schema.additionalProperties && Object.keys(schema.properties ?? {}).length == 0)
+							model = this.container.get(CodeGenCommonModelsToken)(schemaType) as BaseSchemaModel;
+						else
+							model = this.container.get<BaseSchemaModel>(CodeGenRecordModelToken);
 						break;
-					case 'number':
-						schemaType = schema.enum.every(e => Number.isInteger(e)) ? 'integer' : 'number';
+					case 'array':
+						model = this.container.get<BaseSchemaModel>(CodeGenArrayModelToken);
 						break;
 					case 'boolean':
-						schemaType = 'boolean';
+						key = schema.type as string;
+						break;
+					case 'number':
+						key = schema.type as string;
+						constraints = SchemaJsdConstraints(schema);
+						switch (constraints.format) {
+							case 'float':
+							case 'double':
+								key = constraints.format;
+								break;
+						}
+						break;
+					case 'string':
+						key = schema.type as string;
+						constraints = SchemaJsdConstraints(schema);
+						switch (constraints.format) {
+							case 'binary':
+							case 'byte':
+							case 'date':
+							case 'date-time':
+							case 'uri':
+							case 'regex':
+								key = constraints.format;
+								break;
+						}
+						break;
+					case 'integer':
+						key = schema.type as string;
+						constraints = SchemaJsdConstraints(schema);
+						switch (constraints.format) {
+							case 'int32':
+							case 'int64':
+								key = constraints.format;
+								break;
+						}
+						break;
+					case 'null':
+						key = schema.type as string;
+						break;
+					default:
+						if (asUnion)
+							model = this.container.get<BaseUnionModel>(CodeGenUnionModelToken);
+						else
+							key = 'any';    // The absence of a type means it can be anything.
 						break;
 				}
-			}
-		}
-
-		// allOf (aka &) is by definition a record/object.
-		if (Array.isArray(schema.allOf)) {
-			model = this.container.get<BaseRecordModel>(CodeGenRecordModelToken);
-			model.init(this.activeDoc, this.activeJsonPath, schema);
-			// We will pick up the rest of the initialization after our super method has done its thing.
-		}
-		// an array of types is by definition anyOf (aka |).  However given our approach to null, anyOf may reduce to a simple "nullable" primitive.
-		else if (schemaType && Array.isArray(schemaType)) {
-			// OpenAPI will not allow "ambiguous" mixed types.
-			// Meaning...
-			// ['object', 'string', 'number', 'null'] would be legal.
-			// ['object', 'array', 'boolean'] would also be legal, BUT *only* if no 'items' *or* 'properties' defined in the schema.
-			// [what-ever-single-thing, 'null'] is always legal.
-			const nullCount = schemaType.includes('null') ? 1 : 0;
-			const hasObj = schemaType.includes('object');
-			const hasArray = schemaType.includes('array');
-			if (hasObj && (!hasArray)) {
-				if (schemaType.length === 1 + nullCount) {
-					model = this.container.get<BaseSchemaModel>(CodeGenRecordModelToken);
-					model.init(this.activeDoc, this.activeJsonPath, schema);
+				if (key) {
+					model = this.container.get(CodeGenCommonModelsToken)(key as CommonModelTypes) as BaseSchemaModel;
+					if (asUnion) {
+						// will init the union model below
+						model.init(this.activeDoc, this.activeJsonPath, schema);
+						const u = this.container.get<BaseUnionModel>(CodeGenUnionModelToken);
+						u.addUnion(model);
+						model = u;
+					}
 				}
-			}
-			else if (hasArray && (!hasObj)) {
-				if (schemaType.length === 1 + nullCount) {
-					model = this.container.get<BaseSchemaModel>(CodeGenArrayModelToken);
-					model.init(this.activeDoc, this.activeJsonPath, schema);
-				}
-			}
-			else if (schemaType.length === 1 + nullCount) {
-				const nonNullType = schemaType.find(s => s !== 'null');
-				model = this.container.get(CodeGenCommonModelsToken)(nonNullType) as BaseSchemaModel;
 				model.init(this.activeDoc, this.activeJsonPath, schema);
 			}
-			if (!model) {
-				model = this.container.get<BaseUnionModel>(CodeGenUnionModelToken);
-				model.init(this.activeDoc, this.activeJsonPath, schema);
-				const unions = schemaType.filter(v => v !== 'null').map(v => this.container.get(CodeGenCommonModelsToken)(v as CommonModelTypes));
-				unions.forEach(u => (u as BaseUnionModel).addUnion(u));
-			}
+			if (!model)
+				throw new Error('NOT IMPLEMENTED');
+			if (model.getIdentifier('intf'))
+				this.models.push(model);
+			(schema as any)[CodeGenAst] = model;
+			created = true;
+			this.seenSchema.add(schema);
 		}
-		else {
-			let key: string;
-			let constraints: Record<string, string | number | boolean>;
-			const asUnion = (Array.isArray(schema.anyOf) && schema.anyOf.length > 0) || (Array.isArray(schema.oneOf) && schema.oneOf.length > 0);
-			switch (schemaType) {
-				case 'object':
-					if (!asUnion && !schema.additionalProperties && Object.keys(schema.properties ?? {}).length == 0)
-						model = this.container.get(CodeGenCommonModelsToken)(schemaType) as BaseSchemaModel;
-					else
-						model = this.container.get<BaseSchemaModel>(CodeGenRecordModelToken);
-					break;
-				case 'array':
-					model = this.container.get<BaseSchemaModel>(CodeGenArrayModelToken);
-					break;
-				case 'boolean':
-					key = schema.type as string;
-					break;
-				case 'number':
-					key = schema.type as string;
-					constraints = SchemaJsdConstraints(schema);
-					switch (constraints.format) {
-						case 'float':
-						case 'double':
-							key = constraints.format;
-							break;
-					}
-					break;
-				case 'string':
-					key = schema.type as string;
-					constraints = SchemaJsdConstraints(schema);
-					switch (constraints.format) {
-						case 'binary':
-						case 'byte':
-						case 'date':
-						case 'date-time':
-						case 'uri':
-						case 'regex':
-							key = constraints.format;
-							break;
-					}
-					break;
-				case 'integer':
-					key = schema.type as string;
-					constraints = SchemaJsdConstraints(schema);
-					switch (constraints.format) {
-						case 'int32':
-						case 'int64':
-							key = constraints.format;
-							break;
-					}
-					break;
-				case 'null':
-					key = schema.type as string;
-					break;
-				default:
-					if (asUnion)
-						model = this.container.get<BaseUnionModel>(CodeGenUnionModelToken);
-					else
-						key = 'any';    // The absence of a type means it can be anything.
-					break;
-			}
-			if (key) {
-				model = this.container.get(CodeGenCommonModelsToken)(key as CommonModelTypes) as BaseSchemaModel;
-				if (asUnion) {
-					// will init the union model below
-					model.init(this.activeDoc, this.activeJsonPath, schema);
-					const u = this.container.get<BaseUnionModel>(CodeGenUnionModelToken);
-					u.addUnion(model);
-					model = u;
-				}
-			}
-			model.init(this.activeDoc, this.activeJsonPath, schema);
-		}
-		if (!model)
-			throw new Error('NOT IMPLEMENTED');
-		if (model.getIdentifier('intf'))
-			this.models.push(model);
-		(schema as any)[CodeGenAst] = model;
+		else if ((schema as any)[CodeGenAst])
+			model = (schema as any)[CodeGenAst];
 
 		if (!parent) {
 			let activeParams: ParamSchemaModel[];
@@ -301,7 +304,8 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 				activeParams.at(-1).model = model;
 			}
 		}
-		return super.visitSchema(schema, parent);
+		if (created)
+			return super.visitSchema(schema, parent);
 	}
 
 	/**
