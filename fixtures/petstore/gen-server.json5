@@ -1,6 +1,17 @@
 {
-	i: './fixtures/petstore.bundle.json',
-	o: './test-out/server/petstore/src',
+	i: './fixtures/petstore/petstore.bundle.json',
+	o: './test-out/petstore/server/petstore/src',
 	d: 'all',
-	r: 'server'
+	r: 'server',
+	p: [
+		//			'base.modelIntfDir=""',
+		//		'base.implSuffix="DTO"',
+		//		'base.implFileSuffix="dto"',
+		//		'base.modelImplDir="dto"',
+		//		'base.implFileBasename_Tmpl="#{name}.#{implFileSuffix}"',
+		//		'base.jsonSuffix="Schema"',
+		//		'base.jsonFileSuffix="schema"',
+		//		'base.modelJsonDir="schema"',
+		//		'base.jsonFileBasename_Tmpl="#{name}.#{jsonFileSuffix}"'
+	]
 }
