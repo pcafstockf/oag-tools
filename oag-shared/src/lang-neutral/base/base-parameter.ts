@@ -8,9 +8,9 @@ import {BodyParameter, NamedParameter, Parameter, ParameterKind} from '../parame
 import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, MixOpenApiLangNeutral} from './base-lang-neutral';
 
-class BaseParameter<KIND extends ParameterKind = ParameterKind> extends BaseLangNeutral implements Parameter<KIND> {
-	readonly name: string;
-	readonly required?: boolean;
+abstract class BaseParameter<KIND extends ParameterKind = ParameterKind> extends BaseLangNeutral implements Parameter<KIND> {
+	abstract readonly name: string;
+	abstract readonly required?: boolean;
 
 	constructor(baseSettings: BaseSettingsType, readonly kind: KIND) {
 		super(baseSettings);
@@ -33,7 +33,7 @@ class BaseParameter<KIND extends ParameterKind = ParameterKind> extends BaseLang
 
 type BaseParameterConstructor<KIND extends ParameterKind = ParameterKind> = new (baseSettings: BaseSettingsType, kind: KIND) => BaseParameter<KIND>;
 
-export class BaseNamedParameter extends MixOpenApiLangNeutral<OpenAPIV3_1.ParameterObject, NamedParameter, BaseParameterConstructor<'named'>>(BaseParameter) implements NamedParameter {
+export class BaseNamedParameter extends MixOpenApiLangNeutral<OpenAPIV3_1.ParameterObject, NamedParameter, BaseParameterConstructor<'named'>>(BaseParameter as BaseParameterConstructor<'named'>) implements NamedParameter {
 	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings, 'named');
 	}

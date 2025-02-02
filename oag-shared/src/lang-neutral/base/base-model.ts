@@ -82,7 +82,7 @@ export abstract class BaseModel extends BaseLangNeutral implements Model, FileBa
 
 export type BaseModelConstructor<T extends BaseModel = BaseModel> = new (baseSettings: BaseSettingsType) => T;
 
-export abstract class BaseSchemaModel extends MixOpenApiLangNeutral<OpenAPIV3_1.SchemaObject, SchemaModel, BaseModelConstructor>(BaseModel) implements SchemaModel {
+export abstract class BaseSchemaModel extends MixOpenApiLangNeutral<OpenAPIV3_1.SchemaObject, SchemaModel, BaseModelConstructor>(BaseModel as BaseModelConstructor) implements SchemaModel {
 	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}

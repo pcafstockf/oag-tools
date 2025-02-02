@@ -1,6 +1,7 @@
 import {parse as json5Parse} from 'json5';
 import lodash from 'lodash';
 import {lstatSync, mkdirSync, readFileSync, Stats} from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {safeLStatSync} from 'oag-shared/utils/misc-utils';
 import unquotedValidator from 'unquoted-property-validator';
@@ -103,12 +104,15 @@ export function checkCliArgs(args: CLIOptionsType, update: boolean): boolean | C
 
 	if (!config.o)
 		throw new Error('Output directory must be provided');
-	stat = safeLStatSync(config.o);
+	const o = config.o.startsWith('~') ? path.resolve(path.join(os.homedir(), config.o.slice(1))) : path.resolve(config.o);
+	stat = safeLStatSync(o);
 	if (!stat && update) {
-		mkdirSync(config.o, {recursive: true});
-		stat = lstatSync(config.o);
+		mkdirSync(o, {recursive: true});
+		stat = lstatSync(o);
 		delete config.d;   // Don't delete twice if we just created it.
 	}
+	config.o = o;
+
 	if (stat && (!stat?.isDirectory())) {
 		throw new Error('Invalid output directory: ' + config.o);
 	}
