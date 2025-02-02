@@ -1,5 +1,4 @@
 import os from 'node:os';
-import {LangNeutralApiTypes} from 'oag-shared/lang-neutral/api';
 import {BaseMethod, BaseSettingsType, Method, Model, Parameter} from 'oag-shared/lang-neutral/base';
 import {isIdentifiedLangNeutral, isOpenApiLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
 import {isArrayModel} from 'oag-shared/lang-neutral/model';
@@ -11,47 +10,25 @@ import {ApiClassDeclaration, ApiInterfaceDeclaration} from './tsmorph-api';
 import {isTsmorphParameter, TsMorphParameter} from './tsmorph-parameter';
 import {isTsmorphResponse, TsmorphResponse} from './tsmorph-response';
 
-export interface TsmorphMethod extends Method {
-	generate(alnType: 'intf', api: ApiInterfaceDeclaration): Promise<MethodMethodSignature>;
+export interface TsmorphMethod<
+	AINTF extends ApiInterfaceDeclaration | ApiClassDeclaration,
+	AIMPL extends ApiClassDeclaration,
+	MINTF extends MethodMethodSignature | MethodMethodDeclaration,
+	MIMPL extends MethodMethodDeclaration
+> extends Method {
+	generate(alnType: 'intf', api: AINTF): Promise<MINTF>;
 
-	generate(alnType: 'impl' | 'hndl' | 'mock', api: ApiClassDeclaration): Promise<MethodMethodDeclaration>;
+	generate(alnType: 'impl', api: AIMPL): Promise<MIMPL>;
 }
 
-export abstract class BaseTsmorphMethod extends BaseMethod implements TsmorphMethod {
+export abstract class BaseTsmorphMethod<
+	AINTF extends ApiInterfaceDeclaration | ApiClassDeclaration,
+	AIMPL extends ApiClassDeclaration,
+	MINTF extends MethodMethodSignature | MethodMethodDeclaration,
+	MIMPL extends MethodMethodDeclaration
+> extends BaseMethod implements TsmorphMethod<AINTF, AIMPL, MINTF, MIMPL> {
 	protected constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType) {
 		super(baseSettings);
-	}
-
-	protected ensureIdentifier(type: LangNeutralApiTypes) {
-		let identifier = this.getIdentifier(type);
-		if (identifier) {
-			// If we are not generating for this type, then by definition, the identifier is fake.
-			switch (type) {
-				case 'intf':
-					if (isTsmorphMethod(this))
-						if (this.baseSettings.apiIntfDir)
-							return identifier;
-					break;
-				case 'impl':
-					if (isTsmorphMethod(this))
-						if (this.baseSettings.apiImplDir)
-							return identifier;
-					break;
-				case 'hndl':
-					if (isTsmorphMethod(this))
-						if (this.baseSettings.apiHndlDir)
-							return identifier;
-					break;
-				case 'mock':
-					if (isTsmorphMethod(this))
-						if (this.baseSettings.apiMockDir)
-							return identifier;
-					break;
-				default:
-					break;
-			}
-			return undefined;
-		}
 	}
 
 	protected makeJsDoc(params: TsMorphParameter[], responses: Map<string, TsmorphResponse>) {
@@ -132,11 +109,11 @@ export abstract class BaseTsmorphMethod extends BaseMethod implements TsmorphMet
 		return undefined;
 	}
 
-	async generate(alnType: 'intf', api: ApiInterfaceDeclaration): Promise<MethodMethodSignature>;
-	async generate(alnType: 'impl' | 'hndl' | 'mock', api: ApiClassDeclaration): Promise<MethodMethodDeclaration>;
-	async generate(alnType: LangNeutralApiTypes, api: ApiInterfaceDeclaration | ApiClassDeclaration): Promise<MethodMethodSignature | MethodMethodDeclaration> {
-		const id = this.ensureIdentifier(alnType);
-		let meth = api.getMethod(id) as MethodMethodSignature | MethodMethodDeclaration;
+	generate(alnType: 'intf', api: AINTF): Promise<MINTF>;
+	generate(alnType: 'impl', api: AIMPL): Promise<MIMPL>;
+	async generate(alnType: 'intf' | 'impl', api: AINTF | AIMPL): Promise<MINTF | MIMPL> {
+		const id = this.getIdentifier(alnType);
+		let meth = (api as AINTF | AIMPL).getMethod(id) as MINTF | MIMPL;
 		if (!meth) {
 			const params = this.parameters.filter(p => isTsmorphParameter(p)) as TsMorphParameter[];
 			const responses = Array.from(this.responses.keys()).reduce((p, key) => {
@@ -163,14 +140,12 @@ export abstract class BaseTsmorphMethod extends BaseMethod implements TsmorphMet
 	 * Subclasses should override.
 	 * They may generate anything they like, but the returned method will be the one the JSDoc is attached to.
 	 */
-	protected async createTsMethod(alnType: LangNeutralApiTypes, owner: ApiInterfaceDeclaration | ApiClassDeclaration, id: string, params: TsMorphParameter[], responses: Map<string, TsmorphResponse>): Promise<MethodMethodSignature | MethodMethodDeclaration> {
-		return owner.addMethod({
-			name: id
-		});
+	protected async createTsMethod(alnType: 'intf' | 'impl', owner: AINTF | AIMPL, id: string, params: TsMorphParameter[], responses: Map<string, TsmorphResponse>): Promise<MINTF | MIMPL> {
+		throw new Error('Not Implemented');
 	}
 }
 
-export function isTsmorphMethod(obj: any): obj is TsmorphMethod {
+export function isTsmorphMethod(obj: any): obj is TsmorphMethod<any, any, any, any> {
 	if (obj)
 		if (obj instanceof BaseTsmorphMethod)
 			return true;
@@ -178,10 +153,10 @@ export function isTsmorphMethod(obj: any): obj is TsmorphMethod {
 }
 
 export interface MethodMethodSignature extends MethodSignature {
-	readonly $ast?: BaseTsmorphMethod;
+	readonly $ast?: TsmorphMethod<any, any, any, any>;
 	readonly $next?: MethodMethodSignature | MethodMethodDeclaration;
 }
 
 export interface MethodMethodDeclaration extends MethodDeclaration {
-	readonly $ast?: BaseTsmorphMethod;
+	readonly $ast?: TsmorphMethod<any, any, any, any>;
 }

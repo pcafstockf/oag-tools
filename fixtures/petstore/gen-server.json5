@@ -4,6 +4,7 @@
 	d: 'all',
 	r: 'server',
 	p: [
+		'tsmorph.server.framework="fastify-openapi-glue"'
 		//			'base.modelIntfDir=""',
 		//		'base.implSuffix="DTO"',
 		//		'base.implFileSuffix="dto"',

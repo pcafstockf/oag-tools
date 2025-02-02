@@ -12,85 +12,30 @@ import {isTsmorphModel, TsmorphModel} from './tsmorph-model';
 import {isTsmorphParameter} from './tsmorph-parameter';
 import {isTsmorphResponse} from './tsmorph-response';
 
-type BoundTypeNode = Identifier & { readonly $ast: TsmorphApi };
+type BoundTypeNode<INTF extends ApiInterfaceDeclaration | ApiClassDeclaration, IMPL extends ApiClassDeclaration> = Identifier & { readonly $ast: TsmorphApi<INTF, IMPL> };
 
-export interface TsmorphApi extends Api {
-	getLangNode(type: 'intf'): ApiInterfaceDeclaration;
+export interface TsmorphApi<INTF extends ApiInterfaceDeclaration | ApiClassDeclaration, IMPL extends ApiClassDeclaration> extends Api {
+	getLangNode(type: 'intf'): INTF;
 
-	getLangNode(type: 'impl' | 'hndl' | 'mock'): ApiClassDeclaration;
+	getLangNode(type: 'impl'): IMPL;
 
-	getTypeNode(ln?: Readonly<ApiInterfaceDeclaration | ApiClassDeclaration>): BoundTypeNode;
+	getTypeNode(ln?: Readonly<INTF | IMPL>): BoundTypeNode<INTF, IMPL>;
 
 	importInto(sf: SourceFile, alnType?: LangNeutralApiTypes): void;
 
 	generate(sf: SourceFile): Promise<void>;
 }
 
-export class BaseTsmorphApi extends BaseApi implements TsmorphApi {
+export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiClassDeclaration, IMPL extends ApiClassDeclaration> extends BaseApi implements TsmorphApi<INTF, IMPL> {
 	protected constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType) {
 		super(baseSettings);
 		this.#tsTypes = {} as any;
 		this.#dependencies = [];
 	}
-
 	readonly #tsTypes: {
-		intf: ApiInterfaceDeclaration,
-		impl: ApiClassDeclaration,
-		hndl: ApiClassDeclaration
-		mock: ApiClassDeclaration
+		intf: INTF,
+		impl: IMPL
 	};
-	readonly #dependencies: TsmorphModel[];
-
-	get dependencies(): ReadonlyArray<TsmorphModel> {
-		return this.#dependencies;
-	}
-
-	getTypeNode(ln?: Readonly<ApiInterfaceDeclaration | ApiClassDeclaration>): BoundTypeNode {
-		if (!ln)
-			ln = this.getLangNode('intf');
-		return bindAst(ln.getNameNode() as any, this);
-	}
-
-	getLangNode(type: 'intf'): ApiInterfaceDeclaration;
-	getLangNode(type: 'impl'): ApiClassDeclaration;
-	getLangNode(type: 'hndl'): ApiClassDeclaration;
-	getLangNode(type: 'mock'): ApiClassDeclaration;
-	getLangNode(type: LangNeutralApiTypes): ApiInterfaceDeclaration | ApiClassDeclaration {
-		return this.#tsTypes[type];
-	}
-
-	bind(alnType: 'intf', ast: Omit<ApiInterfaceDeclaration, '$ast'>): ApiInterfaceDeclaration;
-	bind(alnType: 'impl', ast: Omit<ApiClassDeclaration, '$ast'>): ApiClassDeclaration;
-	bind(alnType: 'hndl', ast: Omit<ApiClassDeclaration, '$ast'>): ApiClassDeclaration;
-	bind(alnType: 'mock', ast: Omit<ApiClassDeclaration, '$ast'>): ApiClassDeclaration;
-	bind(alnType: LangNeutralApiTypes, ast: Omit<ApiInterfaceDeclaration, '$ast'> | Omit<ApiClassDeclaration, '$ast'>): ApiInterfaceDeclaration | ApiClassDeclaration {
-		this.#tsTypes[alnType] = bindAst(ast as any, this) as any;
-		return this.#tsTypes[alnType];
-	}
-
-	importInto(sf: SourceFile, alnType?: LangNeutralApiTypes): void {
-		const t = this.getTypeNode(this.getLangNode(alnType || 'intf' as any));
-		if (t)
-			importIfNotSameFile(sf, t, t.getText());
-	}
-
-	protected async getSrcFile(alnType: LangNeutralApiTypes, proj: Project, sf?: SourceFile): Promise<SourceFile> {
-		if (alnType && isFileBasedLangNeutral(this)) {
-			const fp = this.getFilepath(alnType);
-			if (fp) {
-				const fullPath = path.join(proj.getCompilerOptions().outDir, fp) + '.ts';
-				// Can be configured to only generate api-impl if non-existent
-				if (alnType === 'impl' && this.baseSettings.role === 'server' && safeLStatSync(fp))
-					return Promise.resolve(null);
-				sf = proj.getSourceFile(fullPath);
-				if (!sf)
-					sf = proj.createSourceFile(fullPath, '', {overwrite: false});
-			}
-			if (sf)
-				return sf;
-		}
-		return undefined;
-	}
 
 	protected ensureIdentifier(type: LangNeutralApiTypes) {
 		let identifier = this.getIdentifier(type);
@@ -124,6 +69,12 @@ export class BaseTsmorphApi extends BaseApi implements TsmorphApi {
 		}
 	}
 
+	get dependencies(): ReadonlyArray<TsmorphModel> {
+		return this.#dependencies;
+	}
+
+	readonly #dependencies: TsmorphModel[];
+
 	protected addDependency(dependent: TsmorphModel): void {
 		const t = dependent.getTypeNode();
 		if (t && Node.isExportable(t.getParent()) && (t.getParent() as unknown as ExportableNode).isExported()) {
@@ -137,6 +88,48 @@ export class BaseTsmorphApi extends BaseApi implements TsmorphApi {
 					this.#dependencies.push(dependent);
 			});
 		}
+	}
+
+	protected async getSrcFile(alnType: LangNeutralApiTypes, proj: Project, sf?: SourceFile): Promise<SourceFile> {
+		if (alnType && isFileBasedLangNeutral(this)) {
+			const fp = this.getFilepath(alnType);
+			if (fp) {
+				const fullPath = path.join(proj.getCompilerOptions().outDir, fp) + '.ts';
+				// Can be configured to only generate api-impl if non-existent
+				if (alnType === 'impl' && this.baseSettings.role === 'server' && safeLStatSync(fp))
+					return Promise.resolve(null);
+				sf = proj.getSourceFile(fullPath);
+				if (!sf)
+					sf = proj.createSourceFile(fullPath, '', {overwrite: false});
+			}
+			if (sf)
+				return sf;
+		}
+		return undefined;
+	}
+
+	importInto(sf: SourceFile, alnType?: LangNeutralApiTypes): void {
+		const t = this.getTypeNode(this.getLangNode(alnType || 'intf' as any));
+		if (t)
+			importIfNotSameFile(sf, t, t.getText());
+	}
+
+	getTypeNode(ln?: Readonly<INTF | IMPL>): BoundTypeNode<INTF, IMPL> {
+		if (!ln)
+			ln = this.getLangNode('intf');
+		return bindAst(ln.getNameNode() as any, this);
+	}
+
+	getLangNode(alnType: 'intf'): INTF;
+	getLangNode(alnType: 'impl'): IMPL;
+	getLangNode(alnType: 'intf' | 'impl'): INTF | IMPL {
+		return this.#tsTypes[alnType];
+	}
+
+	bind(alnType: 'intf', ast: Omit<INTF, '$ast'>): INTF;
+	bind(alnType: 'impl', ast: Omit<IMPL, '$ast'>): IMPL;
+	bind(alnType: 'intf' | 'impl', ast: Omit<INTF, '$ast'> | Omit<IMPL, '$ast'>): INTF | IMPL {
+		return this.#tsTypes[alnType] = bindAst(ast as any, this);
 	}
 
 	async generate(sf: SourceFile): Promise<void> {
@@ -163,76 +156,67 @@ export class BaseTsmorphApi extends BaseApi implements TsmorphApi {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
 				const id = this.ensureIdentifier('intf');
-				let intf: ApiInterfaceDeclaration = sf.getInterface(id);
-				if (!intf)
+				let intf = this.findIntf(sf, id) as INTF;
+				if (!intf) {
 					intf = this.bind('intf', this.createIntf(sf, id));
-				else if (!intf.$ast)
-					intf = this.bind('intf', intf);
-				if (this.baseSettings.emitDescriptions) {
-					if (isOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api>(this)) {
-						const docs = makeJsDoc(this.oae);
-						if (docs)
-							intf.addJsDoc(docs);
+					if (this.baseSettings.emitDescriptions) {
+						if (isOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api>(this)) {
+							const docs = makeJsDoc(this.oae);
+							if (docs)
+								intf.addJsDoc(docs);
+						}
+					}
+					this.dependencies.forEach(d => d.importInto(sf, 'intf'));
+
+					for (let m of this.methods) {
+						if (isTsmorphMethod(m))
+							await m.generate('intf', intf);
 					}
 				}
-				this.dependencies.forEach(d => d.importInto(sf, 'intf'));
-
-				for (let m of this.methods) {
-					if (isTsmorphMethod(m))
-						await m.generate('intf', intf);
-				}
+				if (intf && !intf.$ast)
+					this.bind('intf', intf);
 			}
 		}
 		if (!this.getLangNode('impl')) {
 			sf = await this.getSrcFile('impl', sf.getProject(), sf);
 			if (sf) {
 				const id = this.ensureIdentifier('impl');
-				let impl: ApiClassDeclaration = sf.getClass(id);
-				if (!impl)
+				let impl = this.findImpl(sf, id) as IMPL;
+				if (!impl) {
 					impl = this.bind('impl', this.createImpl(sf, id));
-				else if (!impl.$ast)
-					impl = this.bind('impl', impl);
-				if (this.baseSettings.emitDescriptions) {
-					impl.addJsDoc(<JSDocStructure>{
-						kind: StructureKind.JSDoc,
-						tags: [{
-							kind: StructureKind.JSDocTag,
-							tagName: 'inheritDoc'
-						}]
-					});
-				}
-				this.importInto(sf, 'intf');
-				this.dependencies.forEach(d => d.importInto(sf, 'intf'));
+					if (this.baseSettings.emitDescriptions) {
+						impl.addJsDoc(<JSDocStructure>{
+							kind: StructureKind.JSDoc,
+							tags: [{
+								kind: StructureKind.JSDocTag,
+								tagName: 'inheritDoc'
+							}]
+						});
+					}
+					this.importInto(sf, 'intf');
+					this.dependencies.forEach(d => d.importInto(sf, 'intf'));
 
-				for (let m of this.methods) {
-					if (isTsmorphMethod(m))
-						await m.generate('impl', impl);
+					for (let m of this.methods) {
+						if (isTsmorphMethod(m))
+							await m.generate('impl', impl);
+					}
 				}
+				if (impl && !impl.$ast)
+					this.bind('impl', impl);
 			}
 		}
 	}
 
-	protected createIntf(sf: SourceFile, id: string): InterfaceDeclaration {
-		let retVal = sf.addInterface({
-			name: id,
-			isExported: true
-		});
-		return retVal;
-	}
+	protected abstract findIntf(sf: SourceFile, id: string): Omit<INTF, '$ast'>;
 
-	protected createImpl(sf: SourceFile, id: string): ClassDeclaration {
-		const intf = this.getLangNode('intf');
-		let retVal = sf.addClass({
-			name: id,
-			isExported: true,
-			implements: [intf.getName()]
-		});
-		this.importInto(sf, 'intf');
-		return retVal;
-	}
+	protected abstract createIntf(sf: SourceFile, id: string): INTF;
+
+	protected abstract findImpl(sf: SourceFile, id: string): Omit<IMPL, '$ast'>;
+
+	protected abstract createImpl(sf: SourceFile, id: string): IMPL;
 }
 
-export function isTsmorphApi(obj: any): obj is TsmorphApi {
+export function isTsmorphApi(obj: any): obj is TsmorphApi<any, any> {
 	if (obj)
 		if (obj instanceof BaseTsmorphApi)
 			return true;
@@ -241,9 +225,10 @@ export function isTsmorphApi(obj: any): obj is TsmorphApi {
 
 
 export interface ApiInterfaceDeclaration extends InterfaceDeclaration {
-	readonly $ast?: TsmorphApi;
+	readonly $ast?: TsmorphApi<ApiInterfaceDeclaration, ApiClassDeclaration>;
 }
 
 export interface ApiClassDeclaration extends ClassDeclaration {
-	readonly $ast?: TsmorphApi;
+	readonly $ast?: TsmorphApi<ApiInterfaceDeclaration | ApiClassDeclaration, ApiClassDeclaration>;
 }
+

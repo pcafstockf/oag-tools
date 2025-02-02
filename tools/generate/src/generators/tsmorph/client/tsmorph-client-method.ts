@@ -9,13 +9,23 @@ import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmor
 import {TsMorphClientSettingsToken, TsMorphClientSettingsType} from '../../../settings/tsmorph-client';
 import {bindAst, bindNext} from '../oag-tsmorph';
 import {ApiClassDeclaration, ApiInterfaceDeclaration} from '../tsmorph-api';
-import {BaseTsmorphMethod, MethodMethodDeclaration, MethodMethodSignature} from '../tsmorph-method';
+import {BaseTsmorphMethod, MethodMethodDeclaration, MethodMethodSignature, TsmorphMethod} from '../tsmorph-method';
 import {isTsmorphModel, TsmorphModel} from '../tsmorph-model';
 import {TsMorphParameter} from '../tsmorph-parameter';
 import {TsmorphResponse} from '../tsmorph-response';
 
+export interface TsmorphClientMethodType extends TsmorphMethod<ApiInterfaceDeclaration, ApiClassDeclaration, MethodMethodSignature, MethodMethodDeclaration> {
+	generate(alnType: 'intf', api: ApiInterfaceDeclaration): Promise<MethodMethodSignature>;
+
+	generate(alnType: 'impl', api: ApiClassDeclaration): Promise<MethodMethodDeclaration>;
+
+	generate(alnType: 'mock', api: ApiClassDeclaration): Promise<MethodMethodDeclaration>;
+}
+
 @Injectable()
-export class TsmorphClientMethod extends BaseTsmorphMethod {
+export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclaration, ApiClassDeclaration, MethodMethodSignature, MethodMethodDeclaration> implements TsmorphClientMethodType {
+	private static DefinedHdrsName = 'hdrs';
+
 	constructor(
 		@Inject(BaseSettingsToken)
 			baseSettings: BaseSettingsType,
@@ -27,7 +37,19 @@ export class TsmorphClientMethod extends BaseTsmorphMethod {
 		super(baseSettings, tsMorphSettings);
 	}
 
-	private static DefinedHdrsName = 'hdrs';
+	generate(alnType: 'intf', api: ApiInterfaceDeclaration): Promise<MethodMethodSignature>;
+	generate(alnType: 'impl', api: ApiClassDeclaration): Promise<MethodMethodDeclaration>;
+	generate(alnType: 'mock', api: ApiClassDeclaration): Promise<MethodMethodDeclaration>;
+	async generate(alnType: 'intf' | 'impl' | 'mock', api: ApiInterfaceDeclaration | ApiClassDeclaration): Promise<MethodMethodSignature | MethodMethodDeclaration> {
+		switch (alnType) {
+			case 'intf':
+				return super.generate(alnType, api as ApiInterfaceDeclaration);
+			case 'impl':
+				return super.generate(alnType, api as ApiClassDeclaration);
+			case 'mock':
+				break;
+		}
+	}
 
 	/**
 	 * @inheritDoc

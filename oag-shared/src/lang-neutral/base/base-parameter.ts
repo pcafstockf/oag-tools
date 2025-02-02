@@ -8,9 +8,9 @@ import {BodyParameter, NamedParameter, Parameter, ParameterKind} from '../parame
 import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, MixOpenApiLangNeutral} from './base-lang-neutral';
 
-export abstract class BaseParameter<KIND extends ParameterKind = ParameterKind> extends BaseLangNeutral implements Parameter<KIND> {
-	abstract readonly name: string;
-	abstract readonly required?: boolean;
+class BaseParameter<KIND extends ParameterKind = ParameterKind> extends BaseLangNeutral implements Parameter<KIND> {
+	readonly name: string;
+	readonly required?: boolean;
 
 	constructor(baseSettings: BaseSettingsType, readonly kind: KIND) {
 		super(baseSettings);
@@ -19,9 +19,7 @@ export abstract class BaseParameter<KIND extends ParameterKind = ParameterKind> 
 	get model(): Model {
 		return this.#model;
 	}
-
 	#model: Model;
-
 	protected setModel(model: Model): void {
 		if (this.#model)
 			throw new Error('Parameter model already set');
@@ -35,7 +33,7 @@ export abstract class BaseParameter<KIND extends ParameterKind = ParameterKind> 
 
 type BaseParameterConstructor<KIND extends ParameterKind = ParameterKind> = new (baseSettings: BaseSettingsType, kind: KIND) => BaseParameter<KIND>;
 
-export abstract class BaseNamedParameter extends MixOpenApiLangNeutral<OpenAPIV3_1.ParameterObject, NamedParameter, BaseParameterConstructor<'named'>>(BaseParameter as BaseParameterConstructor<'named'>) implements NamedParameter {
+export class BaseNamedParameter extends MixOpenApiLangNeutral<OpenAPIV3_1.ParameterObject, NamedParameter, BaseParameterConstructor<'named'>>(BaseParameter) implements NamedParameter {
 	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings, 'named');
 	}
@@ -102,7 +100,7 @@ export abstract class BaseNamedParameter extends MixOpenApiLangNeutral<OpenAPIV3
 	}
 }
 
-export abstract class BaseBodyParameter extends MixOpenApiLangNeutral<OpenAPIV3_1.RequestBodyObject, BodyParameter, BaseParameterConstructor<'body'>>(BaseParameter as BaseParameterConstructor<'body'>) implements BodyParameter {
+export class BaseBodyParameter extends MixOpenApiLangNeutral<OpenAPIV3_1.RequestBodyObject, BodyParameter, BaseParameterConstructor<'body'>>(BaseParameter as BaseParameterConstructor<'body'>) implements BodyParameter {
 	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings, 'body');
 	}

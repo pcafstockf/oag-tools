@@ -12,13 +12,13 @@ export interface Parameter<KIND extends ParameterKind = ParameterKind> extends I
 	readonly kind: KIND;
 	readonly name: string;
 	readonly required?: boolean;
-	readonly model: Model;
+	readonly model: Readonly<Model>;
 }
 
 /**
  * Technically, all 'Parameter' have a name, but when based on OpenAPIV3_1.ParameterObject, the name is in the specification.
  */
-export interface NamedParameter extends Parameter<'named'>, OpenApiLangNeutral<OpenAPIV3_1.ParameterObject, Parameter> {
+export interface NamedParameter extends Parameter<'named'>, OpenApiLangNeutral<OpenAPIV3_1.ParameterObject, Parameter<'named'>> {
 	/**
 	 * An oag-tools specific key for a table of OpenAPi Parameter encoding algorithms.
 	 * e.g. style = matrix, simple, form, spaceDelimited, etc.
@@ -33,7 +33,7 @@ export const CodeGenNamedParameterToken = new InjectionToken<NamedParameter>('co
 /**
  * OpenAPIV3_1.RequestBodyObject requires a much different internal approach to being a 'Parameter'.
  */
-export interface BodyParameter extends Parameter<'body'>, OpenApiLangNeutral<OpenAPIV3_1.RequestBodyObject, Parameter> {
+export interface BodyParameter extends Parameter<'body'>, OpenApiLangNeutral<OpenAPIV3_1.RequestBodyObject, Parameter<'body'>> {
 	/**
 	 * This is only defined when code is being generated for a client.
 	 * It is an ordered list of the preferred content encoding for the request (most to least).

@@ -33,6 +33,7 @@ export const TsMorphServerSettings = {
 				header: 'ctx.request.headers.#{name}',
 				cookie: `ctx.request.cookies['#{name}']`
 			},
+			operationId: undefined as string,
 			body: `(ctx: Context<#{body}, #{path}, #{query}, #{header}, #{cookie}>, _: Request, res: Response, next: NextFunction) => {
 						\tconst result = #{apiInvocation};
 						\treturn processApiResult(ctx as unknown as Context, result, res, next);
@@ -64,6 +65,7 @@ export const TsMorphServerSettings = {
 				header: 'req.headers.#{name} as #{type}',
 				cookie: `req.cookies['#{name}']`   // This presumes the presence of @fastify/cookie
 			},
+			operationId: undefined as string,
 			body: `(req: FastifyRequest<{Body: #{body}, Params: #{path}, Querystring: #{query}, Headers: #{header}, Reply: #{reply}}>, rsp: FastifyReply) => {
 						\tconst ctx = {request: req, response: rsp};
 						\tconst result = #{apiInvocation};
@@ -107,7 +109,7 @@ export const TsMorphServerSettings = {
 	},
 	support: {
 		// Full (parent) path name to the files to be copied into the target support directory
-		srcDirName: `${__dirname}/../typescript/server/support`,
+		srcDirName: `${__dirname}/../generators/tsmorph/server/support`,
 		// Always specified relative to apiIntfDir
 		dstDirName: '../internal',
 		// Source files to be copied into the internal support directory.

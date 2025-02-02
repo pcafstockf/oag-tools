@@ -50,7 +50,7 @@ export class TsmorphBodyParameter extends MixTsMorphParameter<BaseBodyParameter>
 	}
 }
 
-export function isTsmorphParameter(obj: any): obj is TsMorphParameter {
+export function isTsmorphParameter(obj: any): obj is TsmorphNamedParameter | TsmorphBodyParameter {
 	if (obj)
 		if (obj instanceof TsmorphNamedParameter || obj instanceof TsmorphBodyParameter)
 			return true;

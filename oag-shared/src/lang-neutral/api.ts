@@ -5,10 +5,11 @@ import {Method} from './method';
 
 export type LangNeutralApiTypes = Extract<LangNeutralType, 'intf' | 'impl' | 'hndl' | 'mock'>;
 
-interface ApiT extends LangNeutral, IdentifiedLangNeutral, FileBasedLangNeutral {
+interface ApiT extends Omit<LangNeutral, 'getLangNode'>, IdentifiedLangNeutral, FileBasedLangNeutral {
 	readonly name: string;
-
 	readonly methods: Method[];
+
+	getLangNode(type: LangNeutralApiTypes): unknown;
 }
 
 export interface Api extends ApiT, OpenApiLangNeutral<OpenAPIV3_1.TagObject, ApiT> {

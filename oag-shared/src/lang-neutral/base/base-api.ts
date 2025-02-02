@@ -6,7 +6,7 @@ import {Method} from '../method';
 import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, BaseLangNeutralConstructor, MixOpenApiLangNeutral} from './base-lang-neutral';
 
-export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api, BaseLangNeutralConstructor>(BaseLangNeutral as BaseLangNeutralConstructor) implements Api {
+export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api, BaseLangNeutralConstructor>(BaseLangNeutral) implements Api {
 	protected constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
@@ -38,6 +38,8 @@ export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObjec
 				return this.toMockName(name);
 		}
 	}
+
+	abstract getLangNode(type: LangNeutralApiTypes): unknown;
 
 	getFilepath(type: LangNeutralApiTypes): string {
 		const name = this.name;
