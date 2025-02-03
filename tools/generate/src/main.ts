@@ -57,7 +57,7 @@ import {TsMorphServerSettings} from './settings/tsmorph-server';
 		}
 	});
 	const config = await makeConfig(settings, {
-			evalCb: (key: symbol, obj: object, path: string[]) => {
+			evalCb: (key: symbol, obj: object, _path: string[]) => {
 				container.bindConstant(key, obj);
 			},
 			ctx: container

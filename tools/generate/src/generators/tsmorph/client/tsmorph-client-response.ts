@@ -8,9 +8,9 @@ import {BaseTsmorphResponse} from '../tsmorph-response';
 export class TsmorphClientResponse extends BaseTsmorphResponse {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsMorphClientSettings: TsMorphClientSettingsType
 	) {

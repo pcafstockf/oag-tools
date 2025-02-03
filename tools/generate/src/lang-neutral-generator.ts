@@ -153,7 +153,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 				model.init(this.activeDoc, this.activeJsonPath, schema);
 				// We will pick up the rest of the initialization after our super method has done its thing.
 			}
-			// an array of types is by definition anyOf (aka |).  However given our approach to null, anyOf may reduce to a simple "nullable" primitive.
+			// an array of types is by definition anyOf (aka |).  However, given our approach to null, anyOf may reduce to a simple "nullable" primitive.
 			else if (schemaType && Array.isArray(schemaType)) {
 				// OpenAPI will not allow "ambiguous" mixed types.
 				// Meaning...
@@ -311,7 +311,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 	/**
 	 * We never return a skip (false) or abort (true) from our schema visitations, so we will always get resolved schema (no refs).
 	 */
-	override processSchemaJoins(schema: OpenAPIV3_1.SchemaObject, allOf?: OpenAPIV3_1.SchemaObject[], oneOf?: OpenAPIV3_1.SchemaObject[], anyOf?: OpenAPIV3_1.SchemaObject[], notSchema?: OpenAPIV3_1.SchemaObject) {
+	override processSchemaJoins(schema: OpenAPIV3_1.SchemaObject, allOf?: OpenAPIV3_1.SchemaObject[], oneOf?: OpenAPIV3_1.SchemaObject[], anyOf?: OpenAPIV3_1.SchemaObject[], _notSchema?: OpenAPIV3_1.SchemaObject) {
 		const model = (schema as any)[CodeGenAst] as (BaseUnionModel | BaseRecordModel);
 		if (Array.isArray(allOf)) {
 			const brm = model as BaseRecordModel;

@@ -32,9 +32,9 @@ type LangNeutralServerApiTypes = Extract<LangNeutralApiTypes, 'intf' | 'impl' | 
 export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration, ApiClassDeclaration> implements TsmorphServerApiType {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphServerSettingsToken)
 		protected tsMorphServerSettings: TsMorphServerSettingsType
 	) {

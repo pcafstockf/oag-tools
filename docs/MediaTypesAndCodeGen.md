@@ -31,7 +31,7 @@ Note that you could allow arrays, but application/json might be better.
 
 If all properties of schema are (! (object || array)) && (reqMediaTypeSupported):  
 Declare type of object | FormData, emit code to covert to FormData and send as multipart/form-data
-Note that if env is node, the generator will need to ensure f FormData library (e.g. config.libs['form-data']).
+Note that if env is node, the generator will need to ensure a FormData library (e.g. config.libs['form-data']).
 
 #### application/octet-stream || (config.recognizedBinaryTypes)
 

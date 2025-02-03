@@ -25,7 +25,7 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 		super(baseSettings, tsmorphSettings);
 	}
 
-	protected async preGenerate(ast: CodeGenAst): Promise<void> {
+	protected async preGenerate(_ast: CodeGenAst): Promise<void> {
 		let srcTxt: string;
 		let dstPath: string;
 		const internalDir = path.normalize(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir, this.tsmorphClientSettings.support.dstDirName));

@@ -28,9 +28,9 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsmorphClientSettings: TsMorphClientSettingsType
 	) {
@@ -171,7 +171,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 			return false;
 		}) as VariableStatement;
 		const value = definedHdrsStatement?.getDeclarations().find(decl => decl.getName() === TsmorphClientMethod.DefinedHdrsName)?.getStructure()?.initializer;
-		const pdHdrs = value ? JSON.parse(value as string) : {};  // A method with no body returning void will probably not have any predefined headers.
+		const pdHdrs = value ? JSON.parse(value as string) : {};  // A method with no body which returns void will probably not have any predefined headers.
 		const bodyMimeType = pdHdrs['content-type'];
 		delete pdHdrs['content-type'];
 		impl.setBodyText((writer) => {

@@ -72,7 +72,7 @@ export async function isFileSystemPath(inputPath: string) {
 		const parsedUrl = new URL(inputPath);
 		if (parsedUrl.protocol === 'file:')
 			return true;
-		// If it has a protocol and it's not file, it's not a filesystem path
+		// If it has a protocol, and it's not file, it's not a filesystem path
 		if (parsedUrl.protocol)
 			return false;
 	}

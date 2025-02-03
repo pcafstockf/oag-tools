@@ -13,7 +13,7 @@ const customMerger = (o, s) => {
  * the 'spec_dir' that is passed in as the first argument to this function.
  * The return value may be assigned to module.exports if you are using the jasmine.js
  * approach, or written to a json file.
- * Arguments 1..n may be either a string path to a jasmine configuration file, or an
+ * Arguments 1...n may be either a string path to a jasmine configuration file, or an
  * actual jasmine configuration object.
  * Regardless of what is any all other files, the returned object will have its 'spec_dir'
  * property set to the first argument that was passed to this function, as that should
@@ -26,11 +26,11 @@ module.exports = (spec_dir, ...inputs) => {
 	try {
 		JSONParse = require('json5').parse;
 	} catch (e) {
-		// Its' okay if we cannot load json5
+		// It is okay if we cannot load json5
 	}
 	let result = {};
 	if (Array.isArray(inputs))
-		result = inputs.reduce((p, fp, idx) => {
+		result = inputs.reduce((p, fp) => {
 			let f;
 			let localAnchor;
 			if (typeof fp === 'string') {

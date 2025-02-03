@@ -8,9 +8,9 @@ import {TsmorphBodyParameter, TsmorphNamedParameter} from '../tsmorph-parameter'
 export class TsmorphClinetNamedParameter extends TsmorphNamedParameter {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsMorphClientSettings: TsMorphClientSettingsType
 	) {
@@ -22,9 +22,9 @@ export class TsmorphClinetNamedParameter extends TsmorphNamedParameter {
 export class TsmorphClientBodyParameter extends TsmorphBodyParameter {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsMorphClientSettings: TsMorphClientSettingsType
 	) {

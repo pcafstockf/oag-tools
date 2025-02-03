@@ -62,11 +62,11 @@ export class TsmorphGenerator implements SourceGenerator {
 	protected project: Project;
 	protected tempFile: SourceFile;
 
-	protected async preGenerate(ast: CodeGenAst): Promise<void> {
+	protected async preGenerate(_ast: CodeGenAst): Promise<void> {
 
 	}
 
-	protected async postGenerate(ast: CodeGenAst): Promise<void> {
+	protected async postGenerate(_ast: CodeGenAst): Promise<void> {
 
 	}
 }

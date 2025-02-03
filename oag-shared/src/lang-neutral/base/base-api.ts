@@ -6,7 +6,7 @@ import {Method} from '../method';
 import {BaseSettingsType} from '../settings';
 import {BaseLangNeutral, BaseLangNeutralConstructor, MixOpenApiLangNeutral} from './base-lang-neutral';
 
-export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api, BaseLangNeutralConstructor>(BaseLangNeutral) implements Api {
+export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObject, Api, BaseLangNeutralConstructor>(BaseLangNeutral as BaseLangNeutralConstructor) implements Api {
 	protected constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
 	}
@@ -54,19 +54,26 @@ export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObjec
 				base = this.toIntfFileBasename(name, 'api');
 				if (this.baseSettings.apiIntfDir && base)
 					return path.join(this.baseSettings.apiIntfDir, base);
+				break;
 			case 'impl':
 				base = this.toImplFileBasename(name, 'api');
 				if (this.baseSettings.apiImplDir && base)
 					return path.join(this.baseSettings.apiImplDir, base);
+				break;
 			case 'hndl':
 				base = this.toHndlFileBasename(name);
 				if (this.baseSettings.apiHndlDir && base)
 					return path.join(this.baseSettings.apiHndlDir, base);
+				break;
 			case 'mock':
 				base = this.toMockFileBasename(name);
 				if (this.baseSettings.apiMockDir && base)
 					return path.join(this.baseSettings.apiMockDir, base);
+				break;
+			default:
+				break;
 		}
+		return undefined;
 	}
 
 	get methods(): Method[] {

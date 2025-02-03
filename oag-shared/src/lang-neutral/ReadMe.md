@@ -1,7 +1,7 @@
 # Code Generator Ast
 
 OpenApi is basically an Abstract Syntax Tree describing a json centric Domain Specific Language.   
-This module transforms the OpenApi DSL into a code generation DSL for for producing object-oriented remote API services.  
+This module transforms the OpenApi DSL into a code generation DSL for producing object-oriented remote API services.  
 The code generation Ast contains 3 primary nodes:
 
 * A `Model` (aka OpenApi ObjectSchema)
@@ -17,25 +17,23 @@ We will refer to these code generation Ast interfaces as the "`CodeGenAst`"
 
 ## Language Neutral `Model` kinds
 
-These are denoted by the `kind` property of a `Model`
+`CodeGenAst` `Model` has a few "kinds".
 
-* `<<empty-string>>`: aka no-kind:
-    * The no-kind model has any/all the properties of `Model`. It is essentially a "base" kind.
-* `primitive`: is what most languages call a "primitive":
-    * `integer`, `number`, `string`, `enum` | `boolean`, `null`
-    * A pseudo primitive `any` is also possible
+* What most languages call a "primitive":
+    * `integer`, `number`, `string`, `boolean`, `null`
+    * Pseudo primitives `any`, `object`, `enum` are also possible
 * `array`: modelsMatch the OpenApi schema type 'array'
 * `record`: modelsMatch the OpenApi schema type 'object'
     * Calling it an 'object' is ambiguous (is it a type/interface/record, or instance), so we go with record.
     * Complex records will also contain one or more of the OpenApi `anyOf`, `allOf`, `oneOf` specifiers.
-    * `not`, is unsupported by the code generator. While it is provable by a validator, it is not really a type (none of the supported languages support "any **except**", types).
-* `synthetic`: has `anyOf`, `allOf`, `oneOf` (like a Complex `record`) but is not a `record` \ object and is not based on OpenApi.
-    * Created by the generator to represent combinations of other models as needed.
-* `typed`: similar to `<<empty-string>>` but has an explicit textual type string that the target language is assumed to understand.
-    * (e.g `Date` in JavaScript, or a `Container` type globally imported from a 3rd party library).
+        * `not`, is unsupported by the code generator. While it is provable by a validator, it is not really a type (none of the supported languages support "any **except**", types).
+* `union`: has `anyOf`, `oneOf` (like a Complex `record`) but is not a `record` \ object.
+    * May be OpenApi based or synthetically created by the generator to represent combinations of other models as needed.
+* `typed`: An explicit textual type string that the target language is assumed to understand.
+    * (e.g. `Date` in JavaScript, or a `Container` type globally imported from a 3rd party library).
       Note:  
       The transformer from OpenApi DSL -> `CodeGen` DSL is responsible for building an appropriate `Model` to represent the OpenApi intent.  
-      This include for example when the `type` property is missing from an OpenApi schema object, but it has a `properties` property, `CodeGen` will create the schema as `kind = record`.
+      This includes for example when the `type` property is missing from an OpenApi schema object, but it has a `properties` property, `CodeGen` will create the schema as `kind = record`.
 
 `CodeGen` maps TypeScript to OpenApi roughly as:
 
@@ -143,6 +141,6 @@ type Values = Array | boolean | string | number;
 ## Language Neutral `Method` properties
 
 * `parameter` Zero or more named elements each of which has a single associated `Model`. Matches the OpenApi Parameter element.
-* `request` A single argument which will be an artificially created `union` (to represent possible content types). Matches the OpenApi RequestBody element.
+* `request` A single argument which may be an artificially created `union` (to represent possible content types). Matches the OpenApi RequestBody element.
     * The constituent `Model`s of the `union` will be arranged in order of preference (some content types are more desirable than others).
-* `return` An ordered map of artificially created `union`s where map keys represent return codes. Matches the OpenApi Responses element.
+* `return` An ordered map of created `union`s where map keys represent return codes. Matches the OpenApi Responses element.

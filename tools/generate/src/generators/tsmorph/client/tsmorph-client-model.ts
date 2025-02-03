@@ -8,9 +8,9 @@ import {TsmorphArrayModel, TsmorphPrimitiveModel, TsmorphRecordModel, TsmorphUni
 export class TsmorphPrimitiveClientModel extends TsmorphPrimitiveModel {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsMorphClientSettings: TsMorphClientSettingsType
 	) {
@@ -22,9 +22,9 @@ export class TsmorphPrimitiveClientModel extends TsmorphPrimitiveModel {
 export class TsmorphArrayClientModel extends TsmorphArrayModel {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsMorphClientSettings: TsMorphClientSettingsType
 	) {
@@ -36,9 +36,9 @@ export class TsmorphArrayClientModel extends TsmorphArrayModel {
 export class TsmorphRecordClientModel extends TsmorphRecordModel {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsMorphClientSettings: TsMorphClientSettingsType
 	) {
@@ -50,9 +50,9 @@ export class TsmorphRecordClientModel extends TsmorphRecordModel {
 export class TsmorphUnionClientModel extends TsmorphUnionModel {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsMorphClientSettings: TsMorphClientSettingsType
 	) {

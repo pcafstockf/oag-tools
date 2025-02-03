@@ -1,6 +1,5 @@
 /**
  * Common functionality for OpenAPI endpoint handlers.
- * Please read the <b>critical</b> documentation for {@link AbsHandler#processResult}
  */
 import {NextFunction, Response} from 'express';
 import {Context} from 'openapi-backend';
@@ -32,7 +31,7 @@ export function processApiResult<T>(ctx: Context, result: Promise<HttpResponse<T
 				else
 					return res.send(r.data);
 			}
-			// else, remember that undefined means its been handled and we should do nothing.
+			// else, remember that undefined means it has been handled and we should do nothing.
 		}).catch(err => {
 			if (!err)
 				next();

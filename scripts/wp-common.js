@@ -1,3 +1,4 @@
+// noinspection NpmUsedModulesInstalled
 const webpack = require('webpack');
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 
@@ -6,7 +7,7 @@ const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
  * @param tsconfigFilePath  This must be a valid path to the tsconfig.json file you wish ts-loader to use.
  * @param preDefines    A Record<string,string object to be passed to the webpack.DefinePlugin (defaults to undefined).
  * @param tsnodeExclude Controls which files are *not* processed by TypeScript before being passed to webpack. (defaults to /node_modules/).
- * 			If you target is es5, you probably need to change this property from it's default value.
+ * 			If your target is es5, you probably need to change this property from its default value.
  * 			If any of the packages you depend on (aka node_modules) are es6+, they need to be down-leveled to es5.
  * 			This is historically done with Babel, but since all valid JavaScript is also valid TypeScript, we can simply run es6+ code through TypeScript to downlevel it.
  * 			This is inspired by the combination of:
@@ -59,7 +60,9 @@ module.exports = (tsconfigFilePath, preDefines, tsnodeExclude) => {
 		}
 	}
 
-	if (preDefines && Object.keys(preDefines).length > 0)
+	if (preDefines && Object.keys(preDefines).length > 0) {
+		// noinspection JSUnresolvedReference
 		retVal.plugins.unshift(new webpack.DefinePlugin(preDefines));
+	}
 	return retVal;
 }

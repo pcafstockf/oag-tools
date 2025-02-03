@@ -25,7 +25,7 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 		super(baseSettings, tsmorphSettings);
 	}
 
-	protected async preGenerate(ast: CodeGenAst): Promise<void> {
+	protected async preGenerate(_ast: CodeGenAst): Promise<void> {
 		let dstPath: string;
 		let srcFilePath: string;
 		let srcTxt: string;

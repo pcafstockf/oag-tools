@@ -43,7 +43,7 @@ export abstract class BaseMethod extends MixOpenApiLangNeutral<OpenAPIV3_1.Opera
 	}
 
 	/**
-	 * GET, PUT, etc (always upper case).
+	 * GET, PUT, etc. (always upper case).
 	 */
 	get httpMethod(): string {
 		return this.#httpMethod.toUpperCase();

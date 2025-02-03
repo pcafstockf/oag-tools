@@ -119,6 +119,7 @@ export function MixOpenApiLangNeutral<OAE, AST, T extends MixinConstructor = Mix
 		constructor(...args: any[]) {
 			super(...args);
 		}
+
 		get oae(): OAE & OpenApiLangNeutralBackRef<AST> {
 			return this.#oae;
 		}

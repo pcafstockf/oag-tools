@@ -335,8 +335,7 @@ export class DocumentVisitor<
 		return this.resolve(header, (hdr) => this.visitHeader(hdr));
 	}
 
-	visitHeader(header: HEADER): boolean | void {
-
+	visitHeader(_header: HEADER): boolean | void {
 	}
 
 	inspectParameter(parameter: PARAMETER | REFERENCE): boolean | void {
@@ -557,7 +556,7 @@ export class DocumentVisitor<
 		return retVal;
 	}
 
-	visitSchema(schema: SCHEMA, parent?: SCHEMA): boolean | void {
+	visitSchema(schema: SCHEMA, _parent?: SCHEMA): boolean | void {
 		if (Array.isArray(schema.type)) {
 			this.docPath.push('type');
 			try {
@@ -747,14 +746,14 @@ export class DocumentVisitor<
 	 * Subclass extension point.
 	 * A header is mostly a header, so this just turns around and calls visitHeader.
 	 */
-	visitEncodingHeader(header: HEADER, schema?: SCHEMA) {
+	visitEncodingHeader(header: HEADER, _schema?: SCHEMA) {
 		return this.visitHeader(header);
 	}
 
 	/**
 	 * These have all be visited, this is just a hook to perform union/intersection/negation operations.
 	 */
-	processSchemaJoins(parent: SCHEMA, allOf?: (SCHEMA | REFERENCE)[], oneOf?: (SCHEMA | REFERENCE)[], anyOf?: (SCHEMA | REFERENCE)[], notSchema?: SCHEMA | REFERENCE) {
+	processSchemaJoins(_parent: SCHEMA, _allOf?: (SCHEMA | REFERENCE)[], _oneOf?: (SCHEMA | REFERENCE)[], _anyOf?: (SCHEMA | REFERENCE)[], _notSchema?: SCHEMA | REFERENCE) {
 	}
 }
 

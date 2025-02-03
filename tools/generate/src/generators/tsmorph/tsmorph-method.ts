@@ -140,7 +140,7 @@ export abstract class BaseTsmorphMethod<
 	 * Subclasses should override.
 	 * They may generate anything they like, but the returned method will be the one the JSDoc is attached to.
 	 */
-	protected async createTsMethod(alnType: 'intf' | 'impl', owner: AINTF | AIMPL, id: string, params: TsMorphParameter[], responses: Map<string, TsmorphResponse>): Promise<MINTF | MIMPL> {
+	protected async createTsMethod(_alnType: 'intf' | 'impl', _owner: AINTF | AIMPL, _id: string, _params: TsMorphParameter[], _responses: Map<string, TsmorphResponse>): Promise<MINTF | MIMPL> {
 		throw new Error('Not Implemented');
 	}
 }

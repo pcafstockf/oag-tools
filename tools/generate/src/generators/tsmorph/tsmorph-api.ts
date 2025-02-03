@@ -32,6 +32,7 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 		this.#tsTypes = {} as any;
 		this.#dependencies = [];
 	}
+
 	readonly #tsTypes: {
 		intf: INTF,
 		impl: IMPL

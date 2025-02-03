@@ -29,7 +29,7 @@ export interface CLIOptionsBase<CONFIG, IN, OUT, VERBOSE, PROP, ROLE, DELETE, SE
 	 */
 	p: PROP,
 	/**
-	 * Are we generating code for a server or a client.
+	 * Are we generating code for a server or a client?
 	 */
 	r: ROLE,
 	/**

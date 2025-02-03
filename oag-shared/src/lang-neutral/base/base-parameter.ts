@@ -19,7 +19,9 @@ abstract class BaseParameter<KIND extends ParameterKind = ParameterKind> extends
 	get model(): Model {
 		return this.#model;
 	}
+
 	#model: Model;
+
 	protected setModel(model: Model): void {
 		if (this.#model)
 			throw new Error('Parameter model already set');

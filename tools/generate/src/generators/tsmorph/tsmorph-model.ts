@@ -21,12 +21,15 @@ import {bindAst, CannotGenerateError, importIfNotSameFile, makeFakeIdentifier, m
  */
 export interface TsmorphModel<I extends Node = Node, C extends Node | void = Node> extends Omit<Model, 'getLangNode'> {
 	getLangNode(mlnType: 'intf'): Readonly<I>;
+
 	getLangNode(mlnType: 'impl'): Readonly<C>;
+
 	getLangNode(mlnType: 'json'): Readonly<ModelVariableStatement>;
 
 	importInto(sf: SourceFile, mlnType?: LangNeutralModelTypes): void;
 
 	getTypeNode(ln?: Readonly<I | C>): BoundTypeNode;
+
 	getJsonNode(): BoundJsonNode;
 
 	generate(sf: SourceFile): Promise<void>;
@@ -112,7 +115,7 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			return this.#tsTypes[mlnType];
 		}
 
-		getTypeNode(ln?: I | C): BoundTypeNode {
+		getTypeNode(_ln?: I | C): BoundTypeNode {
 			throw new Error('Bad internal logic');
 		}
 
@@ -372,9 +375,9 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, ModelNamedDeclaration, ModelClassDeclaration>(BasePrimitiveModel as any) {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 	) {
 		super(baseSettings, tsMorphSettings);
 	}
@@ -471,7 +474,7 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, M
 						case 'enum':
 							if (!fake)
 								throw new CannotGenerateError(`Cannot instantiate a '${jsdType}'`);
-							retVal = this.bind('impl', await this.createDecl(sf, id, true) as TypeAliasDeclaration);   // Its a fake enum.
+							retVal = this.bind('impl', await this.createDecl(sf, id, true) as TypeAliasDeclaration);   // It is a fake enum.
 							break;
 						default:
 							throw new CannotGenerateError(`Cannot instantiate a '${jsdType}'`);
@@ -585,9 +588,9 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, M
 export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelTypeAliasDeclaration, ModelClassDeclaration>(BaseArrayModel as any) {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 	) {
 		super(baseSettings, tsMorphSettings);
 	}
@@ -600,7 +603,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 				return bindAst(n.getNameNode(), this);
 			else if (Node.isClassDeclaration(n)) {
 				// Remember, we are an array.  So if this *class* is not named, we need to treat it as a literal type.
-				let retVal: TypeNode = mlnType === 'impl' ? n.getExtends() : undefined ?? n.getFirstDescendantByKind(ts.SyntaxKind.TypeLiteral);
+				let retVal: TypeNode = (mlnType === 'impl' ? n.getExtends() : undefined) ?? n.getFirstDescendantByKind(ts.SyntaxKind.TypeLiteral);
 				if (!retVal)
 					retVal = n.getFirstDescendantByKind(ts.SyntaxKind.TypeReference);
 				return bindAst(retVal, this);
@@ -700,9 +703,9 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelInterfaceDeclaration, ModelClassDeclaration>(BaseRecordModel as any) {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 	) {
 		super(baseSettings, tsMorphSettings);
 	}
@@ -796,7 +799,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				But if some (or all) were classes, it gets even more complicated.
 				We might for instance define Person as having race and implementing Contacts and Addresses (with type-guards),
 				but then we would have to mixin NameAge and Origin (assuming they were classes).
-				The combinations of all these becomes overwhelming.
+				The combinations of all these are overwhelming.
 			*/
 			const {id, fake} = this.ensureIdentifier('impl');
 			if (!fake) {
@@ -957,7 +960,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			}
 		}
 
-		// Now work on optimizing the implements statement.
+		// Now work on optimizing the 'implements' statement.
 		const implTxts = [] as string[];
 		if (intf)
 			implTxts.push(intf.getName());
@@ -975,7 +978,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			}
 		}
 
-		// If we have found a base class, pull it in and get it's name.
+		// If we have found a base class, pull it in and get its name.
 		if (singleExt) {
 			singleExt.importInto(sf, 'impl');
 			extTxt = singleExt.getTypeNode(singleExt.getLangNode('impl')).getText();
@@ -1109,9 +1112,9 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel, ModelTypeAliasDeclaration, ModelTypeAliasDeclaration>(BaseTypedModel as any) {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 	) {
 		super(baseSettings, tsMorphSettings);
 	}

@@ -9,7 +9,7 @@ import {OpenAPIV3, OpenAPIV3_1} from 'openapi-types';
 const HttpVerbs = Object.keys(OpenAPIV3.HttpMethods) as string[];
 
 // noinspection JSUnusedGlobalSymbols
-export default async function consolidateQueryParams(doc: OpenAPIV3.Document | OpenAPIV3_1.Document, cmdArgs: Record<string, any>): Promise<void> {
+export default async function consolidateQueryParams(doc: OpenAPIV3.Document | OpenAPIV3_1.Document, _cmdArgs: Record<string, any>): Promise<void> {
 	const docParser = new SwaggerParser();
 	const refs = await docParser.resolve(doc);
 	for (let upath in doc.paths) {

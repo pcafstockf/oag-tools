@@ -31,9 +31,9 @@ export interface MethodObjectLiteralExpression extends ObjectLiteralExpression {
 export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, ApiClassDeclaration, MethodMethodDeclaration, MethodMethodDeclaration> implements TsmorphServerMethodType {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphServerSettingsToken)
 		protected tsMorphServerSettings: TsMorphServerSettingsType
 	) {

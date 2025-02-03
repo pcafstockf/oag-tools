@@ -75,6 +75,7 @@ export interface TypedModel extends Model {
 export function isModel(obj: Readonly<Object>): obj is Model {
 	return typeof (obj as Model)?.getLangNode === 'function' && typeof (obj as Model)?.modelsMatch === 'function';
 }
+
 export function isSchemaModel(obj: Readonly<Object>): obj is SchemaModel {
 	return isModel(obj) && isOpenApiLangNeutral(obj) && typeof (obj as SchemaModel).nullable === 'boolean';
 }

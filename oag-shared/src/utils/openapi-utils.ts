@@ -4,8 +4,10 @@ export type OpenApiParameterStyle = 'matrix' | 'label' | 'form' | 'simple' | 'sp
 
 interface JsdConstraints {
 	format?: string;
+
 	[key: string]: string | number | boolean;
 }
+
 export function SchemaJsdConstraints(oae: OpenAPIV3_1.SchemaObject) {
 	const s: Record<string, string | number | boolean> = oae as any;
 	return [

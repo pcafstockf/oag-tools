@@ -6,7 +6,7 @@ let tsAny: TsmorphTypedModel;
 let tsVoid: TsmorphTypedModel;
 let tsUnknown: TsmorphTypedModel;
 
-export async function beginTsMorphSetup(dic: Container, path: string[], obj: object): Promise<void> {
+export async function beginTsMorphSetup(dic: Container, _path: string[], _obj: object): Promise<void> {
 	if (!dic.isIdKnown(CodeGenCommonModelsToken))
 		dic.bindConstant(CodeGenCommonModelsToken, (key: CommonModelTypes) => {
 			switch (key) {
@@ -45,7 +45,7 @@ export async function beginTsMorphSetup(dic: Container, path: string[], obj: obj
 		});
 }
 
-export async function finishTsMorphSetup(dic: Container, path: string[], obj: object): Promise<void> {
+export async function finishTsMorphSetup(dic: Container, _path: string[], _obj: object): Promise<void> {
 	if (!dic.isIdKnown(CodeGenTypedModelToken))
 		dic.bindClass(CodeGenTypedModelToken, TsmorphTypedModel);
 }

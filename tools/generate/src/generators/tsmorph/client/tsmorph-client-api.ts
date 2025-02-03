@@ -26,9 +26,9 @@ type BoundTypeNode = Identifier & { readonly $ast: TsmorphClientApiType };
 export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration, ApiClassDeclaration> implements TsmorphClientApiType {
 	constructor(
 		@Inject(BaseSettingsToken)
-			baseSettings: BaseSettingsType,
+		baseSettings: BaseSettingsType,
 		@Inject(TsMorphSettingsToken)
-			tsMorphSettings: TsMorphSettingsType,
+		tsMorphSettings: TsMorphSettingsType,
 		@Inject(TsMorphClientSettingsToken)
 		protected tsmorphClientSettings: TsMorphClientSettingsType
 	) {
@@ -84,6 +84,7 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration, Ap
 	protected findIntf(sf: SourceFile, id: string): InterfaceDeclaration {
 		return sf.getInterface(id);
 	}
+
 	protected createIntf(sf: SourceFile, id: string): InterfaceDeclaration {
 		let retVal = sf.addInterface({
 			name: id,
@@ -114,6 +115,7 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration, Ap
 	protected findImpl(sf: SourceFile, id: string): ClassDeclaration {
 		return sf.getClass(id);
 	}
+
 	protected createImpl(sf: SourceFile, id: string): ClassDeclaration {
 		const intf = this.getLangNode('intf');
 		let retVal = sf.addClass({

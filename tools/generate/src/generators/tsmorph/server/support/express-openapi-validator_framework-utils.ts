@@ -15,7 +15,7 @@ export interface Context {
  * This is directly lifted out of the most excellent openapi-backend package (which FYI, also has Fastify support).
  * In fact the whole idea of returning a mock based on the response schema (using mock-json-schema), comes from openapi-backend.
  */
-function findDefaultStatusCodeMatch(obj: object) {
+function findDefaultStatusCodeMatch(obj: Record<string | number, any>) {
 	// 1. check for a 20X response
 	for (const ok of [200, 201, 202, 203, 204]) {
 		if (obj[ok]) {
@@ -50,7 +50,7 @@ function findDefaultStatusCodeMatch(obj: object) {
 /**
  * Copied and abbreviated from openapi-backend.
  */
-function exampleOrMock(content: object) {
+function exampleOrMock(content: Record<string, any>) {
 	// resolve media type
 	const mediaType = 'application/json';
 	const mediaResponse = content[mediaType] || content[Object.keys(content)[0]];
@@ -97,7 +97,7 @@ export function processApiResult<T>(req: Request, result: Promise<HttpResponse<T
 				else
 					return res.send(r.data);
 			}
-			// else, remember that undefined means its been handled and we should do nothing.
+			// else, remember that undefined means it has been handled and we should do nothing.
 		}).catch(err => {
 			if (!err)
 				next();

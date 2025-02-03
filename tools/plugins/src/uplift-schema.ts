@@ -36,7 +36,7 @@ function generateDistanceMatrix(wordLists: string[][]): number[][] {
 function agglomerativeClustering(distanceMatrix: number[][]): number[] {
 	const n = distanceMatrix.length;
 	const clusters: number[][] = Array.from({length: n}, (_, i) => [i]);
-	// Find closest clusters
+	// Find the closest clusters
 	while (clusters.length > 1) {
 		let minDistance = Infinity;
 		let clusterA = -1, clusterB = -1;

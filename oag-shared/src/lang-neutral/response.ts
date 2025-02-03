@@ -18,9 +18,4 @@ export interface Response {
 export interface OpenApiResponse extends Response, OpenApiLangNeutral<OpenAPIV3_1.ResponseObject, Response> {
 }
 
-export function isOpenApiResponse(obj: Response): obj is OpenApiResponse {
-	return typeof (obj as unknown as OpenApiResponse).oae !== 'undefined';
-}
-
 export const CodeGenOpenApiResponseToken = new InjectionToken<OpenApiResponse>('codegen-openapi-response');
-export const CodeGenAltResponseToken = new InjectionToken<(model: Model, ...args: any[]) => Response>('codegen-alt-response');

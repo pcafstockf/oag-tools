@@ -6,7 +6,7 @@
  * 	array -> ["blue","black","brown"]<br/>
  * 	object -> { "R": 100, "G": 200, "B": 150 }<br/>
  * </p>
- * Remember that the usage of 'name' as a prefix depends somewhat on 'in' (query vs cookie vs path, etc).
+ * Remember that the usage of 'name' as a prefix depends somewhat on 'in' (query vs cookie vs path, etc.).
  * Callers of these routines should pass undefined for 'name' if the context does not call for the name prefix
  */
 export const ParamSerializers = Object.freeze({

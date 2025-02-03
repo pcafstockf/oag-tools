@@ -8,6 +8,7 @@ import {TsmorphModel} from './tsmorph-model';
 
 export interface TsMorphParameter<KIND extends ParameterKind = ParameterKind> extends Parameter<KIND> {
 	model: TsmorphModel;
+
 	getLangNode(alnType: LangNeutralApiTypes): OagParameterDeclaration;
 }
 
