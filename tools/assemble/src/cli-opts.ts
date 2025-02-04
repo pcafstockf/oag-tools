@@ -1,6 +1,7 @@
 import {parse as json5Parse} from 'json5';
 import lodash from 'lodash';
 import {lstatSync, mkdirSync, readFileSync, Stats} from 'node:fs';
+import * as os from 'node:os';
 import path from 'node:path';
 import {safeLStatSync} from 'oag-shared/utils/misc-utils';
 import unquotedValidator from 'unquoted-property-validator';
@@ -123,9 +124,10 @@ export function checkCliArgs(args: CLIOptionsType, update: boolean): boolean | C
 
 	if (!config.o)
 		throw new Error('Output file must be provided');
-	let stat = safeLStatSync(path.dirname(config.o));
-	if (!stat && update)
-		mkdirSync(path.dirname(config.o), {recursive: true});
+	const o = config.o.startsWith('~') ? path.resolve(path.join(os.homedir(), config.o.slice(1))) : path.resolve(config.o);
+	if (!safeLStatSync(path.dirname(o)) && update)
+		mkdirSync(path.dirname(o), {recursive: true});
+	config.o = o;
 	// pre-upgrade plugins
 	let plugins = config.f;
 	if (plugins && typeof plugins === 'string')
