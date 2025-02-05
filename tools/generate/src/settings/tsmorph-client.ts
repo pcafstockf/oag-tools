@@ -4,7 +4,7 @@ import {InitializeMarker, InitializerFn, RegisterConfigMarker} from 'dyflex-conf
 // @ts-ignore
 export const TsMorphClientSettings = {
 	[RegisterConfigMarker]: 'CODE_GEN_TSMORPH_CLIENT',
-	httplib: undefined as unknown as string,
+	httpsup: 'fetch' as 'fetch' | 'axios' | 'node' | 'angular' | undefined,
 	support: {
 		// Full (parent) path name to the files to be copied into the target support directory
 		srcDirName: `${__dirname}/../generators/tsmorph/client/support`,
@@ -17,7 +17,9 @@ export const TsMorphClientSettings = {
 			{'client-request.ts': `client-request#{target}.ts`},
 			`client-config.ts`,
 			`param-serializers.ts`,
+			{'body-serializer.ts': `body-serializer#{httpsup}.ts`},
 			`http-client.ts`,
+			{'http-client-svc.ts': `http-client#{httpsup}.ts`},
 			`index.ts`,
 		]
 	},

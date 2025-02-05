@@ -1,10 +1,11 @@
 {
 	i: './fixtures/petstore/petstore.bundle.json',
-	o: '~/oag-tools-projects/petstore/client-app/src/client',
+	o: '~/oag-tools-projects/petstore-client/src/client',
 	d: 'all',
 	r: 'client',
 	p: [
-		'tsmorph.client.httplib="node"'
+		'base.target="node"',
+		'tsmorph.client.httpsup="fetch"'
 		//			'base.modelIntfDir=""',
 		//		'base.implSuffix="DTO"',
 		//		'base.implFileSuffix="dto"',

@@ -1,7 +1,7 @@
 // This configuration bundles a swagger v2 spec into the codegen required v3.1 bundle.
 {
 	i: "../../fixtures/petstore/swagger-petstore.json",
-	o: "../../test-out/petstore/client/petstore.bundle.json",
+	o: "../../fixtures/petstore/petstore.bundle.json",
 	b: true,
 	u: true
 }

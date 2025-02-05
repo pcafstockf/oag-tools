@@ -1,6 +1,6 @@
 {
 	i: './fixtures/petstore/petstore.bundle.json',
-	o: '~/oag-tools-projects/petstore/server-app/src/server',
+	o: '~/oag-tools-projects/petstore-server/src/server',
 	d: 'all',
 	r: 'server',
 	p: [

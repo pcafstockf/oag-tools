@@ -1,3 +1,6 @@
+/**
+ * NOTE: This implementation is typically less preferable than the fetch implementation which can be used on both browser and node.
+ */
 import {ClientRequest} from 'http';
 import constants from 'node:constants';
 import * as http from 'node:http';
@@ -40,7 +43,7 @@ export async function processHttpContent(opts: HttpContentOptsType, data: Buffer
 			let semi = ct.indexOf(';');
 			if (semi > 0) {
 				params = ct.substring(semi + 1).split(';').map(p => p.trim().split('=')).reduce((r, a) => {
-					r[a[0].trim()] = a[1].trim();
+					(r as any)[a[0].trim()] = a[1].trim();
 					return r;
 				}, {});
 				ct = ct.substring(0, semi);
@@ -109,6 +112,9 @@ export class NodeHttpClient implements HttpClient {
 				const err: NodeJS.ErrnoException = new Error(res.statusMessage);
 				err.errno = res.statusCode;
 				err.code = res.statusMessage;
+				Object.assign(err, <HttpResponse>{
+					status: res.statusCode
+				});
 				reject(err);
 			}
 		});

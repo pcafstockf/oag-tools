@@ -1,16 +1,10 @@
 {
-	//TODO: Currently we generate invalid PersonDto:
-	//  the dto-only scenario extends NameAgeDto because it has the most properties, but does not detect that Addresses extends Array, so semantic fix tries to implement all Array methods.
-	//  the dto+models scenario tries to implement Person, but since Person is declared as an alias which includes unions, it is actually not possible to "implement".
 	i: "./fixtures/edge-cases/edge-cases.bundle.json",
-	o: './test-out/edge-cases/models-only',
+	o: '~/oag-tools-projects/edge-cases/src/oag',
 	d: 'all',
 	r: 'client',
 	p: [
-		'base.apiSuffix=""',
-		// Already appends 'Api' to tags
-		'tsmorph.client.httplib="node"'
-		// This is a node based client.
+		'base.apiSuffix=""'
 //			'base.modelIntfDir=""',
 		//		'base.implSuffix="DTO"',
 		//		'base.implFileSuffix="dto"',

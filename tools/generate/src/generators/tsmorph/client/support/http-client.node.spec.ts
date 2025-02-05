@@ -1,11 +1,13 @@
 // noinspection HttpUrlsUsage
 
 import FormData from 'form-data';
-import * as http from 'http';
-import * as https from 'https';
-import * as util from 'util';
+import assert from 'node:assert';
+import * as http from 'node:http';
+import * as https from 'node:https';
+import {beforeEach, describe, it} from 'node:test';
+import * as util from 'node:util';
 import {gunzip, gzip} from 'zlib';
-import {HttpClient} from './http-client';
+import {HttpClient, HttpResponse} from './http-client';
 import {makeNodeHttpClient} from './http-client.node';
 
 const asyncGzip = util.promisify(gzip);
@@ -16,15 +18,8 @@ const asyncGunzip = util.promisify(gunzip);
  *  Described here: https://stackoverflow.com/questions/5725430/http-test-server-accepting-get-post-requests
  */
 describe('Http Client', () => {
-	const originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
 	let client: HttpClient;
 
-	beforeAll(() => {
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
-	});
-	afterAll(async () => {
-		jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
-	});
 	beforeEach(async () => {
 		client = makeNodeHttpClient({
 			agent: new http.Agent()
@@ -33,31 +28,31 @@ describe('Http Client', () => {
 	it('head w/ 200', async () => {
 		const url = 'http://httpbin.org/ip';
 		const rsp = await client.head(url);
-		expect(rsp.status).toEqual(200);
-		expect(rsp.headers!['content-type']).toEqual('application/json');
-		expect(parseInt(rsp.headers!['content-length'] as string, 10)).toBeGreaterThan(15);    // The get response for the url would be {"origin": "x.x.x.x"}
-		expect((!(rsp as any).data) || Object.keys((rsp as any).data).length === 0).toBe(true);
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.headers!['content-type'], 'application/json');
+		assert(parseInt(rsp.headers!['content-length'] as string, 10) > 15);    // The get response for the url would be {"origin": "x.x.x.x"}
+		assert((!(rsp as any).data) || Object.keys((rsp as any).data).length === 0);
 	});
 	it('get w/ 200', async () => {
 		const url = 'http://httpbin.org/get';
 		const rsp = await client.get(url, {
 			headers: {'accept': 'application/json'}
 		});
-		expect(rsp.status).toEqual(200);
-		expect(rsp.headers!['content-type']).toEqual('application/json');
-		expect(rsp.data).toBeTruthy();
-		expect(rsp.data.headers.Accept).toContain('application/json'); // Test what we *requested (what comes back from this url is always json).
-		expect(rsp.data.url).toEqual(url);
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.headers!['content-type'], 'application/json');
+		assert(rsp.data);
+		assert(rsp.data.headers.Accept.indexOf('application/json') >= 0); // Test what we *requested (what comes back from this url is always json).
+		assert.strictEqual(rsp.data.url, url);
 	});
 	it('post w/ 200', async () => {
 		const url = 'http://httpbin.org/post';
 		let fd = new FormData({writable: true});
 		fd.append('greeting', '42');
 		const rsp = await client.post(url, fd);
-		expect(rsp.status).toEqual(200);
-		expect(rsp.headers!['content-type']).toEqual('application/json');
-		expect(rsp.data).toBeTruthy();
-		expect(rsp.data.form).toEqual({greeting: '42'});
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.headers!['content-type'], 'application/json');
+		assert(rsp.data);
+		assert.deepStrictEqual(rsp.data.form, {greeting: '42'});
 	});
 	it('post binary compressed data w/ 200', async () => {
 		const url = 'http://httpbin.org/post';
@@ -71,20 +66,20 @@ describe('Http Client', () => {
 				'Content-Encoding': 'gzip'
 			}
 		});
-		expect(rsp.status).toEqual(200);
-		expect(rsp.headers!['content-type']).toEqual('application/json');
-		expect(rsp.data).toBeTruthy();
-		expect(rsp.data.headers['Content-Type']).toEqual('text/plain');
-		expect(rsp.data.headers['Content-Encoding']).toEqual('gzip');
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.headers!['content-type'], 'application/json');
+		assert(rsp.data);
+		assert.strictEqual(rsp.data.headers['Content-Type'], 'text/plain');
+		assert.strictEqual(rsp.data.headers['Content-Encoding'], 'gzip');
 		// The rest is an elaborate effort to ensure that we sent the server a properly encoded message.
-		expect(rsp.data.data.startsWith('data:application/octet-stream')).toBe(true);
+		assert(rsp.data.data.startsWith('data:application/octet-stream'));
 		let m = /data:(.+?)(;(base64))?,(.+)$/i.exec(rsp.data.data);
-		expect(m).toBeTruthy();
-		expect(m![1]).toEqual('application/octet-stream');
-		expect(m![3]).toEqual('base64');
+		assert(m);
+		assert.strictEqual(m![1], 'application/octet-stream');
+		assert.strictEqual(m![3], 'base64');
 		let bin = Buffer.from(m![4], 'base64');
 		let txt = await asyncGunzip(bin);
-		expect(txt.toString('utf8')).toEqual(content);
+		assert.strictEqual(txt.toString('utf8'), content);
 	});
 	it('put text w/ 200', async () => {
 		const url = 'http://httpbin.org/put';
@@ -94,12 +89,12 @@ describe('Http Client', () => {
 				'accept': 'text/*'
 			}
 		});
-		expect(rsp.status).toEqual(200);
-		expect(rsp.headers!['content-type']).toEqual('application/json');
-		expect(rsp.data).toBeTruthy();
-		expect(rsp.data.headers.Accept).toContain('text/*');   // Test what we *requested (what comes back from this url is always json).
-		expect(rsp.data.headers['Content-Type']).toContain('text/plain');   // Test what we *requested (what comes back from this url is always json).
-		expect(rsp.data.data).toEqual('Greetings!');
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.headers!['content-type'], 'application/json');
+		assert(rsp.data);
+		assert(rsp.data.headers.Accept.indexOf('text/*') >= 0);   // Test what we *requested (what comes back from this url is always json).
+		assert(rsp.data.headers['Content-Type'].indexOf('text/plain') >= 0);   // Test what we *requested (what comes back from this url is always json).
+		assert.strictEqual(rsp.data.data, 'Greetings!');
 	});
 	it('put obj as json w/ 200', async () => {
 		const url = 'http://httpbin.org/put';
@@ -108,10 +103,10 @@ describe('Http Client', () => {
 				'accept': 'application/json'
 			}
 		});
-		expect(rsp.status).toEqual(200);
-		expect(rsp.headers!['content-type']).toEqual('application/json');
-		expect(rsp.data).toBeTruthy();
-		expect(rsp.data.json.a.b).toEqual(42);
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.headers!['content-type'], 'application/json');
+		assert(rsp.data);
+		assert.strictEqual(rsp.data.json.a.b, 42);
 	});
 	it('patch w/ 200', async () => {
 		const url = 'http://httpbin.org/patch';
@@ -120,43 +115,43 @@ describe('Http Client', () => {
 				'accept': 'application/json'
 			}
 		});
-		expect(rsp.status).toEqual(200);
-		expect(rsp.headers!['content-type']).toEqual('application/json');
-		expect(rsp.data).toBeTruthy();
-		expect(rsp.data.headers.Accept).toContain('application/json'); // Test what we *requested (what comes back from this url is always json).
-		expect(rsp.data.url).toEqual(url);
-		expect(rsp.data.json.a.b).toEqual(42);
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.headers!['content-type'], 'application/json');
+		assert(rsp.data);
+		assert(rsp.data.headers.Accept.indexOf('application/json') >= 0); // Test what we *requested (what comes back from this url is always json).
+		assert.strictEqual(rsp.data.url, url);
+		assert.strictEqual(rsp.data.json.a.b, 42);
 	});
 	it('delete w/ 200', async () => {
 		const url = 'http://httpbin.org/delete';
 		const rsp = await client.delete(url);
-		expect(rsp.status).toEqual(200);
+		assert.strictEqual(rsp.status, 200);
 	});
-	xit('can follow redirects', async () => {
+	it('can follow redirects', {skip: true}, async () => {
 		const url = 'http://httpbin.org/redirect/2';
 		const rsp = await client.get(url, {
 			headers: {
 				'accept': 'application/json'
 			}
 		});
-		expect(rsp.status).toEqual(200);
-		expect(rsp.data.url).toEqual('http://httpbin.org/get'); // It redirects to its main url
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.data.url, 'http://httpbin.org/get'); // It redirects to its main url
 	});
 	it('can decode binary data', async () => {
 		const url = 'http://httpbin.org/gzip';
 		const rsp = await client.get(url);
-		expect(rsp.status).toEqual(200);
-		expect(rsp.data.gzipped).toBeTrue(); // The URL promises to deliver gzip content, so if we can decode this into a json string, then given that the content-encoding check above was gzip, then we know we decoded the compressed data correctly.
+		assert.strictEqual(rsp.status, 200);
+		assert(rsp.data.gzipped); // The URL promises to deliver gzip content, so if we can decode this into a json string, then given that the content-encoding check above was gzip, then we know we decoded the compressed data correctly.
 	});
 	it('can handle http error status codes', async () => {
 		const url = 'http://httpbin.org/hidden-basic-auth/foo/bar';
 		try {
 			await client.get(url);
-			fail('HttpClient did not throw on >= 400');
+			assert.fail('HttpClient did not throw on >= 400');
 		}
 		catch (e) {
-			expect(e).toBeInstanceOf(Error);
-			// expect((e as NodeJS.ErrnoException).errno).toEqual(404);
+			assert(e instanceof Error);
+			assert.strictEqual((e as unknown as HttpResponse).status, 404);
 		}
 	});
 	it('can make https requests', async () => {
@@ -165,6 +160,6 @@ describe('Http Client', () => {
 		});
 		const url = 'https://www.amerisave.com';
 		const rsp = await client.get(url);
-		expect(rsp.status).toEqual(200);
+		assert.strictEqual(rsp.status, 200);
 	});
 });

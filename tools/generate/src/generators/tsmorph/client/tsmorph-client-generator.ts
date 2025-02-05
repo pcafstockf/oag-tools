@@ -33,7 +33,9 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 		this.tsmorphClientSettings.support.files.forEach(fp => {
 			let dstBase: string;
 			const opts = {
-				target: this.baseSettings.target ? `.${this.baseSettings.target}` : ''
+				role: this.baseSettings.role ? `.${this.baseSettings.role}` : '',
+				target: this.baseSettings.target ? `.${this.baseSettings.target}` : '',
+				httpsup: this.tsmorphClientSettings.httpsup ? `.${this.tsmorphClientSettings.httpsup}` : '',
 			};
 			if (typeof fp === 'object') {
 				const key = Object.keys(fp)[0];
@@ -45,10 +47,12 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 				dstBase = path.basename(fp);
 			}
 			const srcFilePath = path.normalize(path.join(this.tsmorphClientSettings.support.srcDirName, fp));
-			dstPath = path.join(internalDir, dstBase);
-			if (!safeLStatSync(dstPath)) {
-				srcTxt = readFileSync(srcFilePath, 'utf-8');
-				writeFileSync(dstPath, srcTxt);
+			if (safeLStatSync(srcFilePath)) {
+				dstPath = path.join(internalDir, dstBase);
+				if (!safeLStatSync(dstPath)) {
+					srcTxt = readFileSync(srcFilePath, 'utf-8');
+					writeFileSync(dstPath, srcTxt);
+				}
 			}
 		});
 	}
