@@ -81,6 +81,8 @@ export function makeFakeIdentifier(): string {
 }
 
 export function makeJsDocTxt(short: string | undefined, long: string | undefined): string {
+	long = long?.trim();
+	short = short?.trim();
 	if (long) {
 		if (short && long.toLowerCase().startsWith(short.toLowerCase()))
 			return long;
@@ -94,7 +96,7 @@ export function makeJsDocTxt(short: string | undefined, long: string | undefined
 }
 
 export function makeJsDoc<T extends OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.TagObject | OpenAPIV3_1.OperationObject | OpenAPIV3_1.ParameterBaseObject = OpenAPIV3_1.BaseSchemaObject | OpenAPIV3_1.TagObject | OpenAPIV3_1.OperationObject | OpenAPIV3_1.ParameterBaseObject>(oae: T, cb?: (docs: JSDocStructure) => void) {
-	let txt = makeJsDocTxt('title' in oae ? oae.title : undefined, oae.description);
+	let txt = makeJsDocTxt('title' in oae ? oae.title : ('summary' in oae ? oae.summary : undefined), oae.description);
 	let docs = <JSDocStructure>{
 		kind: StructureKind.JSDoc,
 		description: txt?.trim()

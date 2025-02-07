@@ -21,8 +21,9 @@ export interface OpenApiLangNeutral<OAE, AST> {
 }
 
 export function isOpenApiLangNeutral<OAE, LN>(obj: unknown): obj is OpenApiLangNeutral<OAE, LN> {
-	if ((obj as any).oae && typeof (obj as any).oae === 'object')
-		if (((obj as any).oae)[CodeGenAst] === obj)
+	const oae = (obj as any).oae;
+	if (oae && typeof oae === 'object')
+		if (oae[CodeGenAst] && typeof oae[CodeGenAst] === 'object')
 			return true;
 	return false;
 }
