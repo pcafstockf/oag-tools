@@ -1,10 +1,10 @@
 {
 	i: './fixtures/petstore/petstore.bundle.json',
-	o: '~/oag-tools-projects/petstore-server/src/server',
+	o: '~/oag-tools-projects/petstore-server-oab/src/server',
 	d: 'all',
 	r: 'server',
 	p: [
-		'tsmorph.server.framework="fastify-openapi-glue"'
+		'tsmorph.server.framework="openapi-backend"'
 		//			'base.modelIntfDir=""',
 		//		'base.implSuffix="DTO"',
 		//		'base.implFileSuffix="dto"',

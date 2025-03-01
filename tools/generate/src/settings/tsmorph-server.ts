@@ -37,7 +37,7 @@ export const TsMorphServerSettings = {
 			body: `(ctx: Context<#{body}, #{path}, #{query}, #{header}, #{cookie}>, _: Request, res: Response, next: NextFunction) => {
 						\tapi.storage.run(ctx, () => {
 						\t\tconst result = #{apiInvocation};
-						\t\treturn utils.processApiResult(ctx as unknown as Context, result, res, next);
+						\t\treturn utils.processApiResult(ctx, result, res, next);
 						\t});
 						}`,
 			cast: '{[operationId: string]: Handler;}'
@@ -105,7 +105,7 @@ export const TsMorphServerSettings = {
 			body: `(req: Request<#{path}, #{reply}, #{body}, #{query}>, res: Response<#{reply}>, next: NextFunction) => {
 						\tapi.storage.run({request: req, response: res}, () => {
 						\t\tconst result = #{apiInvocation};
-						\t\treturn utils.processApiResult(req as unknown as Request, result, res as unknown as Response, next);
+						\t\treturn utils.processApiResult(req as unknown as Request, result, res, next);
 						\t});
 						}`,
 			cast: 'Record<string, RequestHandler>'

@@ -81,6 +81,37 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration, Ap
 		}
 	}
 
+	async generate(sf: SourceFile): Promise<void> {
+		await super.generate(sf);
+
+		// if (!this.getLangNode('mock')) {
+		// 	sf = await this.getSrcFile('mock', sf.getProject(), sf);
+		// 	if (sf) {
+		// 		const id = this.ensureIdentifier('mock');
+		// 		let mock = this.findMock(sf, id);
+		// 		if (!mock) {
+		// 			mock = this.bind('mock', this.createMock(sf, id));
+		// 			this.importInto(sf, 'intf');
+		// 			this.dependencies.forEach(d => d.importInto(sf, 'intf'));
+		//
+		// 			for (let m of this.methods) {
+		// 				if (isTsmorphMethod(m))
+		// 					await (m as TsmorphServerMethodType).generate('mock', mock);
+		// 			}
+		// 		}
+		// 		if (mock && !mock.$ast)
+		// 			this.bind('mock', mock);
+		// 	}
+		// }
+	}
+
+	// protected findMock(sf: SourceFile, id: string): FunctionDeclaration {
+	// 	return sf.getFunction(id);
+	// }
+	// protected createMock(sf: SourceFile, id: string): FunctionDeclaration {
+	//
+	// }
+
 	protected findIntf(sf: SourceFile, id: string): InterfaceDeclaration {
 		return sf.getInterface(id);
 	}

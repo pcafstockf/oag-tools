@@ -14,6 +14,10 @@ export interface Context {
 	response: FastifyReply;
 }
 
+/**
+ * @inheritDoc
+ * Additional support functions specific to fastify-openapi-glue.
+ */
 export class FrameworkUtils extends DefaultMockDataGenerator {
 	constructor(mockGenFn?: (s: { type: string }) => any, preferExamples?: boolean) {
 		super(mockGenFn, preferExamples);

@@ -1,8 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="petstore-gen-server" type="NodeJSConfigurationType" application-parameters="-v -c fixtures/petstore/gen-server.json5" node-parameters="--require ts-node/register/transpile-only  --require tsconfig-paths/register" path-to-js-file="tools/generate/src/main.ts" working-dir="$PROJECT_DIR$">
-    <envs>
-      <env name="TS_NODE_PROJECT" value="tools/generate/tsconfig.json" />
-    </envs>
-    <method v="2" />
-  </configuration>
-</component>

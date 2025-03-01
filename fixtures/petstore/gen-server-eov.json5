@@ -1,0 +1,18 @@
+{
+	i: './fixtures/petstore/petstore.bundle.json',
+	o: '~/oag-tools-projects/petstore-server-eov/src/server',
+	d: 'all',
+	r: 'server',
+	p: [
+		'tsmorph.server.framework="express-openapi-validator"'
+		//			'base.modelIntfDir=""',
+		//		'base.implSuffix="DTO"',
+		//		'base.implFileSuffix="dto"',
+		//		'base.modelImplDir="dto"',
+		//		'base.implFileBasename_Tmpl="#{name}.#{implFileSuffix}"',
+		//		'base.jsonSuffix="Schema"',
+		//		'base.jsonFileSuffix="schema"',
+		//		'base.modelJsonDir="schema"',
+		//		'base.jsonFileBasename_Tmpl="#{name}.#{jsonFileSuffix}"'
+	]
+}
