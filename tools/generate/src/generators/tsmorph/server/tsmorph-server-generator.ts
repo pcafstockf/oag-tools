@@ -7,6 +7,7 @@ import path from 'node:path';
 import {FileBasedLangNeutral, isFileBasedLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
 import {BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/settings';
 import {interpolateBashStyle, safeLStatSync} from 'oag-shared/utils/misc-utils';
+import {VariableDeclarationKind} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmorph';
 import {TsMorphServerSettingsToken, TsMorphServerSettingsType} from '../../../settings/tsmorph-server';
 import {CodeGenAst} from '../../source-generator';
@@ -26,6 +27,8 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 	}
 
 	protected async preGenerate(_ast: CodeGenAst): Promise<void> {
+		await super.preGenerate(_ast);
+
 		this.tsmorphServerSettings.support.forEach(entry => {
 			let dstPath: string;
 			let srcFilePath: string;
@@ -54,6 +57,8 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 	}
 
 	protected async postGenerate(ast: CodeGenAst): Promise<void> {
+		await super.postGenerate(ast);
+
 		// Generate the handler index.ts file.
 		const hndlIndexTs = ast.apis.filter(a => isTsmorphApi(a) && isFileBasedLangNeutral(a)).reduce((p, a) => {
 			const filePath = path.basename(a.getFilepath('hndl'));
@@ -96,6 +101,23 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 					intfTokensExt.forEach(ext => intfImport.addNamedImport(intf.getName() + ext));
 					importIfNotSameFile(diSetupSf, impl, impl.getName());
 				}
+			});
+			// Add an injection token for the MockDataGenerator.
+			const supportDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir), this.tsmorphServerSettings.internalDirName);
+			const dmSf = this.project.addSourceFileAtPath(path.join(supportDir, 'data-mocking.ts'));
+			const mdgIntf = dmSf.getInterface('MockDataGenerator');
+			di.intfImport?.forEach(i => dmSf.addImportDeclaration(i));
+			di.apiIntfTokens?.forEach(tok => {
+				let varName = interpolateBashStyle(tok.name_Tmpl, {intfName: mdgIntf.getName()});
+				let varInitializer = interpolateBashStyle(tok.initializer_Tmpl || '', {intfName: mdgIntf.getName(), intfLabel: mdgIntf.getName(), varName: varName});
+				dmSf.addVariableStatement({
+					declarationKind: VariableDeclarationKind.Const,
+					isExported: true,
+					declarations: [{
+						name: varName,
+						initializer: varInitializer ? varInitializer : undefined
+					}]
+				});
 			});
 		}
 	}
