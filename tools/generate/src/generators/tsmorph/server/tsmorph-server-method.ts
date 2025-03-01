@@ -90,10 +90,6 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 				this.populateMethodBody(meth);
 				break;
 		}
-		meth.addParameter({
-			name: 'ctx',
-			type: this.tsMorphServerSettings[this.tsMorphServerSettings.framework].context.type
-		});
 		params.forEach(param => {
 			const p = meth.addParameter({
 				name: param.getIdentifier(alnType),
@@ -122,7 +118,7 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 
 		importIfNotSameFile(hndl, intf, intf.getName());
 		const intfDir = path.relative(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiHndlDir), path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir));
-		const intDir = path.relative(intfDir, this.tsMorphServerSettings.support.dstDirName);
+		const intDir = path.relative(intfDir, this.tsMorphServerSettings.internalDirName);
 		const framework = this.tsMorphServerSettings[this.tsMorphServerSettings.framework];
 		framework.hndl.imphorts.map(i => {
 			return {
@@ -150,7 +146,7 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 		const framework = this.tsMorphServerSettings[this.tsMorphServerSettings.framework];
 		const genericParams = {body: 'never', path: [], query: [], header: [], cookie: [], reply: 'never', oaVers: this.document.openapi, apiInvocation: undefined} as any;
 		const resolver = framework.hndl.lookup as { [key: keyof typeof genericParams]: string };
-		genericParams.apiInvocation = this.parameters.reduce((s, p) => {
+		genericParams.apiInvocation = this.parameters.reduce((s, p, idx) => {
 			let ref: string;
 			if (isTsmorphParameter(p) && isTsmorphModel(p.model)) {
 				p.model.importInto(adapter.getSourceFile());
@@ -174,9 +170,9 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 				}
 			}
 			if (ref)
-				s += ', ' + ref;
+				s += (idx > 0 ? ',' : '') + ' ' + ref;
 			return s;
-		}, `api.${this.getIdentifier('intf')}(ctx as unknown as ${framework.context.type}`) + ')';
+		}, `api.${this.getIdentifier('intf')}(`) + ')';
 		Object.keys(genericParams).forEach(key => {
 			if (Array.isArray(genericParams[key])) {
 				if (genericParams[key].length === 0)

@@ -35,8 +35,10 @@ export const TsMorphServerSettings = {
 			},
 			operationId: undefined as string,
 			body: `(ctx: Context<#{body}, #{path}, #{query}, #{header}, #{cookie}>, _: Request, res: Response, next: NextFunction) => {
-						\tconst result = #{apiInvocation};
-						\treturn processApiResult(ctx as unknown as Context, result, res, next);
+						\tapi.storage.run(ctx, () => {
+						\t\tconst result = #{apiInvocation};
+						\t\treturn utils.processApiResult(ctx as unknown as Context, result, res, next);
+						\t});
 						}`,
 			cast: '{[operationId: string]: Handler;}'
 		}
@@ -67,9 +69,10 @@ export const TsMorphServerSettings = {
 			},
 			operationId: undefined as string,
 			body: `(req: FastifyRequest<{Body: #{body}, Params: #{path}, Querystring: #{query}, Headers: #{header}, Reply: #{reply}}>, rsp: FastifyReply) => {
-						\tconst ctx = {request: req, response: rsp};
-						\tconst result = #{apiInvocation};
-						\treturn processApiResult(req, result, rsp);
+						\tapi.storage.run({request: req, response: rsp}, () => {
+						\t\tconst result = #{apiInvocation};
+						\t\treturn utils.processApiResult(req, result, rsp);
+						\t});
 						}`,
 			cast: undefined as unknown as string
 		}
@@ -100,18 +103,27 @@ export const TsMorphServerSettings = {
 			},
 			operationId: '"$#{pattern}!#{method}"',
 			body: `(req: Request<#{path}, #{reply}, #{body}, #{query}>, res: Response<#{reply}>, next: NextFunction) => {
-						\tconst ctx = {request: req, response: res};
-						\tconst result = #{apiInvocation};
-						\treturn processApiResult(req as unknown as Request, result, res as unknown as Response, next);
+						\tapi.storage.run({request: req, response: res}, () => {
+						\t\tconst result = #{apiInvocation};
+						\t\treturn utils.processApiResult(req as unknown as Request, result, res as unknown as Response, next);
+						\t});
 						}`,
 			cast: 'Record<string, RequestHandler>'
 		}
 	},
-	support: {
+	// Always specified relative to apiIntfDir
+	internalDirName: '../internal',
+	support: [{
+		// Full (parent) path name to the files to be copied into the target support directory
+		srcDirName: `${__dirname}/../generators/tsmorph/support`,
+		// Source files to be copied into the internal support directory.
+		// Path should be relative to 'srcDirName'
+		files: [
+			`data-mocking.ts`
+		]
+	}, {
 		// Full (parent) path name to the files to be copied into the target support directory
 		srcDirName: `${__dirname}/../generators/tsmorph/server/support`,
-		// Always specified relative to apiIntfDir
-		dstDirName: '../internal',
 		// Source files to be copied into the internal support directory.
 		// Path should be relative to 'srcDirName'
 		files: [
@@ -120,7 +132,7 @@ export const TsMorphServerSettings = {
 			// This file is to complex to generate the code; Copy an appropriate framework template.
 			{'framework-utils.ts': `#{framework}_framework-utils.ts`}
 		]
-	},
+	}],
 	dependencyInjection: 'async-injection' as unknown as ('async-injection'),
 	di: {
 		'async-injection': {

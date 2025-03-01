@@ -13,11 +13,9 @@ export const BaseSettings = {
 	// Fine-grained control over *BOTH* where things are stored *AND* what gets generated!
 	modelIntfDir: 'models',  // if truthy, generate model interfaces
 	modelImplDir: null as string,  // if truthy, generate model classes
-	modelPrivDir: null as string,  // if falsy, modelImplDir will be used when/if needed.
 	modelJsonDir: null as string,  // if truthy, json schema (for 3.x specs will be written to this directory).
 	apiIntfDir: 'apis',  // if truthy, generate api interfaces
 	apiImplDir: 'services',  // if truthy, generate api classes
-	apiPrivDir: null as string, // if falsy, apiImplDir will be used when/if needed.
 	apiMockDir: null as string,  // if truthy, generate mock api classes; Ignored if the role is not 'client'.
 	apiHndlDir: 'handlers', // Ignored if the role is not 'server'.
 
@@ -93,14 +91,10 @@ export async function cleanOutDir(del: boolean | string, outDir: string, setting
 			rimrafSync(path.join(outDir, settings.modelIntfDir), {recursive: true, force: true});
 		if (settings.modelImplDir)
 			rimrafSync(path.join(outDir, settings.modelImplDir), {recursive: true, force: true});
-		if (settings.modelPrivDir)
-			rimrafSync(path.join(outDir, settings.modelPrivDir), {recursive: true, force: true});
 		if (settings.apiIntfDir)
 			rimrafSync(path.join(outDir, settings.apiIntfDir), {recursive: true, force: true});
 		if (settings.role !== 'server' && settings.apiImplDir)
 			rimrafSync(path.join(outDir, settings.apiImplDir), {recursive: true, force: true});
-		if (settings.apiPrivDir)
-			rimrafSync(path.join(outDir, settings.apiPrivDir), {recursive: true, force: true});
 		if (settings.apiHndlDir)
 			rimrafSync(path.join(outDir, settings.apiHndlDir), {recursive: true, force: true});
 	}

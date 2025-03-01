@@ -49,11 +49,11 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration, ApiCla
 	protected ensureInternalDirImport(decl: InterfaceDeclaration | ClassDeclaration) {
 		const sf = decl.getSourceFile();
 		sf.addImportDeclaration({
-			moduleSpecifier: this.tsMorphServerSettings.support.dstDirName,
+			moduleSpecifier: this.tsMorphServerSettings.internalDirName,
 			namedImports: ['HttpResponse']
 		});
 		const intfDir = path.relative(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiImplDir), path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir));
-		const intDir = path.relative(intfDir, this.tsMorphServerSettings.support.dstDirName);
+		const intDir = path.relative(intfDir, this.tsMorphServerSettings.internalDirName);
 		const framework = this.tsMorphServerSettings[this.tsMorphServerSettings.framework];
 		framework.context.imphorts.map(i => {
 			return {
@@ -129,6 +129,7 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration, ApiCla
 			default: 'Record<string, any>'
 		});
 		this.ensureInternalDirImport(retVal);
+		this.makeIntfConstructor(retVal);
 		const di = this.tsMorphServerSettings.dependencyInjection ? this.tsMorphServerSettings.di[this.tsMorphServerSettings.dependencyInjection] : undefined;
 		if (di) {
 			di.intfImport?.forEach(i => sf.addImportDeclaration(i));
@@ -145,14 +146,29 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration, ApiCla
 				});
 			});
 		}
-		this.makeIntfConstructor(retVal);
 		return retVal;
 	}
 
 	protected makeIntfConstructor(c: ClassDeclaration) {
-		c.addConstructor({
-			scope: Scope.Protected
+		c.getSourceFile().addImportDeclaration({
+			moduleSpecifier: 'node:async_hooks',
+			namedImports: ['AsyncLocalStorage']
 		});
+		const i = c.addConstructor({
+			scope: Scope.Protected,
+		});
+		i.setBodyText(`this.storage = new AsyncLocalStorage<CTX>()`);
+		c.addProperty({
+			name: 'storage',
+			isReadonly: true,
+			type: 'AsyncLocalStorage<CTX>'
+		});
+		const g = c.addGetAccessor({
+			scope: Scope.Protected,
+			name: 'ctx',
+			returnType: 'CTX',
+		});
+		g.setBodyText('return this.storage.getStore();');
 	}
 
 	protected findImpl(sf: SourceFile, id: string): ClassDeclaration {
@@ -202,12 +218,19 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration, ApiCla
 	protected createHndl(sf: SourceFile, id: string): FunctionDeclaration {
 		const framework = this.tsMorphServerSettings[this.tsMorphServerSettings.framework];
 		const intf = this.getLangNode('intf');
+		sf.addImportDeclaration({
+			moduleSpecifier: this.tsMorphServerSettings.internalDirName,
+			namedImports: ['FrameworkUtils']
+		});
 		const fn = sf.addFunction({
 			name: id,
 			isExported: true,
 			parameters: [{
+				name: 'utils',
+				type: 'FrameworkUtils',
+			}, {
 				name: 'api',
-				type: intf.getName() + `<${framework.context.type}>`,
+				type: intf.getName(),
 			}]
 		});
 		const cast = framework.hndl.cast ? ` as unknown as ${framework.hndl.cast}` : '';

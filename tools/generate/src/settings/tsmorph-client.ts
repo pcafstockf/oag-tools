@@ -62,11 +62,10 @@ export const TsMorphClientSettings = {
 						export function setup(di: Container, httpClient: ApiHttpClient, defaultConfig?: ApiClientConfig): void {
 							if (!di.isIdKnown(ApiHttpClientToken)) 
 								di.bindConstant(ApiHttpClientToken, httpClient);<% apis.forEach(function(api) { %>
-							if (!di.isIdKnown(<%- api.getIdentifier('intf') %><%- intfTokensExt %>)) {
-								if (defaultConfig && (!di.isIdKnown(<%- api.getIdentifier('impl') %>Config<%- intfTokensExt %>)))
-									di.bindConstant(<%- api.getIdentifier('impl') %>Config<%- intfTokensExt %>, defaultConfig);
-								di.bindClass(<%- api.getIdentifier('intf') %><%- intfTokensExt %>, <%- api.getIdentifier('impl') %>).asSingleton();
-							}<% }); %>
+							if (defaultConfig && (!di.isIdKnown(<%- api.getIdentifier('impl') %>Config<%- intfTokensExt %>)))
+								di.bindConstant(<%- api.getIdentifier('impl') %>Config<%- intfTokensExt %>, defaultConfig);
+							if (!di.isIdKnown(<%- api.getIdentifier('intf') %><%- intfTokensExt %>))
+								di.bindClass(<%- api.getIdentifier('intf') %><%- intfTokensExt %>, <%- api.getIdentifier('impl') %>).asSingleton();<% }); %>
 						}
 					`
 		},

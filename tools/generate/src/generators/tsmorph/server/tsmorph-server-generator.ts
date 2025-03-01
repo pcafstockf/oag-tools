@@ -26,28 +26,30 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 	}
 
 	protected async preGenerate(_ast: CodeGenAst): Promise<void> {
-		let dstPath: string;
-		let srcFilePath: string;
-		let srcTxt: string;
-		const internalDir = path.normalize(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir, this.tsmorphServerSettings.support.dstDirName));
-		mkdirSync(internalDir, {recursive: true});
-		this.tsmorphServerSettings.support.files.forEach(fp => {
-			let dstBase: string;
-			if (typeof fp === 'object') {
-				const key = Object.keys(fp)[0];
-				fp = interpolateBashStyle((fp as any)[key], {framework: this.tsmorphServerSettings.framework});
-				dstBase = path.basename(key);
-			}
-			else {
-				fp = interpolateBashStyle(fp, {framework: this.tsmorphServerSettings.framework});
-				dstBase = path.basename(fp);
-			}
-			srcFilePath = path.normalize(path.join(this.tsmorphServerSettings.support.srcDirName, fp));
-			dstPath = path.join(internalDir, dstBase);
-			if (!safeLStatSync(dstPath)) {
-				srcTxt = readFileSync(srcFilePath, 'utf-8');
-				writeFileSync(dstPath, srcTxt);
-			}
+		this.tsmorphServerSettings.support.forEach(entry => {
+			let dstPath: string;
+			let srcFilePath: string;
+			let srcTxt: string;
+			const internalDir = path.normalize(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir, this.tsmorphServerSettings.internalDirName));
+			mkdirSync(internalDir, {recursive: true});
+			entry.files.forEach(fp => {
+				let dstBase: string;
+				if (typeof fp === 'object') {
+					const key = Object.keys(fp)[0];
+					fp = interpolateBashStyle((fp as any)[key], {framework: this.tsmorphServerSettings.framework});
+					dstBase = path.basename(key);
+				}
+				else {
+					fp = interpolateBashStyle(fp, {framework: this.tsmorphServerSettings.framework});
+					dstBase = path.basename(fp);
+				}
+				srcFilePath = path.normalize(path.join(entry.srcDirName, fp));
+				dstPath = path.join(internalDir, dstBase);
+				if (!safeLStatSync(dstPath)) {
+					srcTxt = readFileSync(srcFilePath, 'utf-8');
+					writeFileSync(dstPath, srcTxt);
+				}
+			});
 		});
 	}
 
