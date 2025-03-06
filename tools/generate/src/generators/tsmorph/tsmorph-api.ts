@@ -4,7 +4,7 @@ import {Api, BaseApi, BaseSettingsType} from 'oag-shared/lang-neutral/base';
 import {isFileBasedLangNeutral, isOpenApiLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
 import {safeLStatSync} from 'oag-shared/utils/misc-utils';
 import {OpenAPIV3_1} from 'openapi-types';
-import {ClassDeclaration, ExportableNode, Identifier, InterfaceDeclaration, JSDocStructure, Node, Project, SourceFile, StructureKind} from 'ts-morph';
+import {ClassDeclaration, ExportableNode, Identifier, InterfaceDeclaration, JSDocStructure, Node, Project, PropertyDeclaration, SourceFile, StructureKind} from 'ts-morph';
 import {TsMorphSettingsType} from '../../settings/tsmorph';
 import {bindAst, importIfNotSameFile, makeJsDoc} from './oag-tsmorph';
 import {isTsmorphMethod} from './tsmorph-method';
@@ -26,7 +26,7 @@ export interface TsmorphApi<INTF extends ApiInterfaceDeclaration | ApiClassDecla
 	generate(sf: SourceFile): Promise<void>;
 }
 
-export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiClassDeclaration, IMPL extends ApiClassDeclaration> extends BaseApi implements TsmorphApi<INTF, IMPL> {
+export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiClassDeclaration> extends BaseApi implements TsmorphApi<INTF, ApiClassDeclaration> {
 	protected constructor(baseSettings: BaseSettingsType, protected readonly tsMorphSettings: TsMorphSettingsType) {
 		super(baseSettings);
 		this.#tsTypes = {} as any;
@@ -35,7 +35,7 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 
 	readonly #tsTypes: {
 		intf: INTF,
-		impl: IMPL
+		impl: ApiClassDeclaration
 	};
 
 	protected ensureIdentifier(type: LangNeutralApiTypes) {
@@ -115,21 +115,21 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 			importIfNotSameFile(sf, t, t.getText());
 	}
 
-	getTypeNode(ln?: Readonly<INTF | IMPL>): BoundTypeNode<INTF, IMPL> {
+	getTypeNode(ln?: Readonly<INTF | ApiClassDeclaration>): BoundTypeNode<INTF, ApiClassDeclaration> {
 		if (!ln)
 			ln = this.getLangNode('intf');
 		return bindAst(ln.getNameNode() as any, this);
 	}
 
 	getLangNode(alnType: 'intf'): INTF;
-	getLangNode(alnType: 'impl'): IMPL;
-	getLangNode(alnType: 'intf' | 'impl'): INTF | IMPL {
+	getLangNode(alnType: 'impl'): ApiClassDeclaration;
+	getLangNode(alnType: 'intf' | 'impl'): INTF | ApiClassDeclaration {
 		return this.#tsTypes[alnType];
 	}
 
 	bind(alnType: 'intf', ast: Omit<INTF, '$ast'>): INTF;
-	bind(alnType: 'impl', ast: Omit<IMPL, '$ast'>): IMPL;
-	bind(alnType: 'intf' | 'impl', ast: Omit<INTF, '$ast'> | Omit<IMPL, '$ast'>): INTF | IMPL {
+	bind(alnType: 'impl', ast: Omit<ApiClassDeclaration, '$ast'>): ApiClassDeclaration;
+	bind(alnType: 'intf' | 'impl', ast: Omit<INTF, '$ast'> | Omit<ApiClassDeclaration, '$ast'>): INTF | ApiClassDeclaration {
 		return this.#tsTypes[alnType] = bindAst(ast as any, this);
 	}
 
@@ -182,7 +182,7 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 			sf = await this.getSrcFile('impl', sf.getProject(), sf);
 			if (sf) {
 				const id = this.ensureIdentifier('impl');
-				let impl = this.findImpl(sf, id) as IMPL;
+				let impl = this.findImpl(sf, id) as ApiClassDeclaration;
 				if (!impl) {
 					impl = this.bind('impl', this.createImpl(sf, id));
 					if (this.baseSettings.emitDescriptions) {
@@ -212,9 +212,9 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 
 	protected abstract createIntf(sf: SourceFile, id: string): INTF;
 
-	protected abstract findImpl(sf: SourceFile, id: string): Omit<IMPL, '$ast'>;
+	protected abstract findImpl(sf: SourceFile, id: string): Omit<ApiClassDeclaration, '$ast'>;
 
-	protected abstract createImpl(sf: SourceFile, id: string): IMPL;
+	protected abstract createImpl(sf: SourceFile, id: string): ApiClassDeclaration;
 }
 
 export function isTsmorphApi(obj: any): obj is TsmorphApi<any, any> {
@@ -233,3 +233,6 @@ export interface ApiClassDeclaration extends ClassDeclaration {
 	readonly $ast?: TsmorphApi<ApiInterfaceDeclaration | ApiClassDeclaration, ApiClassDeclaration>;
 }
 
+export interface ApiPropertyDeclaration extends PropertyDeclaration {
+	readonly $ast?: TsmorphApi<ApiInterfaceDeclaration | ApiClassDeclaration, ApiClassDeclaration>;
+}

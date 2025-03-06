@@ -16,7 +16,7 @@ export abstract class BaseLangNeutral {
 			templ = this.baseSettings.apiIntfName_Tmpl;
 		else if (type === 'model' && this.baseSettings.modelIntfName_Tmpl)
 			templ = this.baseSettings.modelIntfName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, typeSuffix: this.typeSuffix(type), intfSuffix: this.baseSettings.intfSuffix});
+		let iname = interpolateBashStyle(templ, {name: name, typeSuffix: this.typeSuffix(type), intfSuffix: this.baseSettings.intfSuffix, intfPrefix: this.baseSettings.intfPrefix});
 		return nameUtils.setCase(iname, this.baseSettings.intfNameCasing);
 	}
 
@@ -36,7 +36,7 @@ export abstract class BaseLangNeutral {
 			templ = this.baseSettings.apiImplName_Tmpl;
 		else if (type === 'model' && this.baseSettings.modelImplName_Tmpl)
 			templ = this.baseSettings.modelImplName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, typeSuffix: this.typeSuffix(type), implSuffix: this.baseSettings.implSuffix});
+		let iname = interpolateBashStyle(templ, {name: name, typeSuffix: this.typeSuffix(type), implSuffix: this.baseSettings.implSuffix, implPrefix: this.baseSettings.implPrefix});
 		return nameUtils.setCase(iname, this.baseSettings.implNameCasing);
 	}
 
@@ -54,7 +54,7 @@ export abstract class BaseLangNeutral {
 		let templ = this.baseSettings.jsonName_Tmpl;
 		if (this.baseSettings.modelJsonName_Tmpl)
 			templ = this.baseSettings.modelJsonName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, jsonSuffix: this.baseSettings.jsonSuffix});
+		let iname = interpolateBashStyle(templ, {name: name, jsonSuffix: this.baseSettings.jsonSuffix, jsonPrefix: this.baseSettings.jsonPrefix});
 		return nameUtils.setCase(iname, this.baseSettings.jsonNameCasing);
 	}
 
@@ -68,13 +68,13 @@ export abstract class BaseLangNeutral {
 
 	protected toHndlName(name: string): string {
 		let templ = this.baseSettings.hndlName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, hndlSuffix: this.baseSettings.hndlSuffix});
+		let iname = interpolateBashStyle(templ, {name: name, hndlSuffix: this.baseSettings.hndlSuffix, hndlPrefix: this.baseSettings.hndlPrefix});
 		return nameUtils.setCase(iname, this.baseSettings.hndlNameCasing);
 	}
 
 	protected toMockName(name: string): string {
 		let templ = this.baseSettings.mockName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, mockSuffix: this.baseSettings.mockSuffix});
+		let iname = interpolateBashStyle(templ, {name: name, mockSuffix: this.baseSettings.mockSuffix, mockPrefix: this.baseSettings.mockPrefix});
 		return nameUtils.setCase(iname, this.baseSettings.mockNameCasing);
 	}
 

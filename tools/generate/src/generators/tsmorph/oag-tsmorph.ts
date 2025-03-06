@@ -1,9 +1,13 @@
 import {randomUUID} from 'crypto';
+import {stringify as json5Stringify} from 'json5';
+import {template as lodashTemplate} from 'lodash';
 import os from 'node:os';
 import path from 'node:path';
+import {CodeGenAst, isIdentifiedLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
 import * as nameUtils from 'oag-shared/utils/name-utils';
 import {OpenAPIV3_1} from 'openapi-types';
 import {JSDocStructure, Node, SourceFile, StructureKind} from 'ts-morph';
+import {isTsmorphModel, TsmorphModel} from './tsmorph-model';
 
 export const TempFileName = '_$temp-File.ts';
 
@@ -132,4 +136,43 @@ export class CannotGenerateError extends Error {
 		super(message, options);
 		this.name = CannotGenerateError.Name;
 	}
+}
+
+export function oae2ObjLiteralStr(oae: OpenAPIV3_1.SchemaObject, verbose: boolean, cb: (dependent: TsmorphModel) => void) {
+	const seen = new Set<TsmorphModel>();
+	const schemaVarNames: Record<string, string> = {};
+	const initTemplate = json5Stringify(oae, (key, value) => {
+		if (key === '') {
+			if (!value.description)
+				if (value.summary)
+					value.description = value.summary;
+			delete value.summary;
+		}
+		if (key === '$schema')
+			return undefined;
+		if (key === '$ast')
+			return undefined;
+		if (key.toLowerCase().startsWith('x-'))
+			return undefined;
+		if (key === 'summary')
+			return undefined;
+		if (key === 'description' && !verbose)
+			return undefined;
+		if (value && value[CodeGenAst] && isTsmorphModel(value[CodeGenAst]) && (!seen.has(value[CodeGenAst]))) {
+			const model = value[CodeGenAst];
+			seen.add(model);
+			if (isIdentifiedLangNeutral(model)) {
+				const varName = model.getIdentifier('json');
+				schemaVarNames[varName] = varName;
+				cb(model);
+				// It is inconceivable that a REST api would contain these doublet values, so we will use them as lodash template delimiters.
+				// But the ugly secret is that json5 will *escape* our delimiters, and quote our string.
+				return `\x07\x13 ${varName} \x11\x07`;
+			}
+		}
+		return value;
+	}, '\t');
+	// Remember, the json will *escape* the non-printable delimiters we used above.
+	const templateFn = lodashTemplate(initTemplate, {interpolate: /'\\x07\\x13 (.+?) \\x11\\x07'/g});
+	return templateFn(schemaVarNames);
 }

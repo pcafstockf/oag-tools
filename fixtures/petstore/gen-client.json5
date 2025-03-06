@@ -11,9 +11,11 @@
 		//		'base.implFileSuffix="dto"',
 		//		'base.modelImplDir="dto"',
 		//		'base.implFileBasename_Tmpl="#{name}.#{implFileSuffix}"',
+		'base.modelJsonDir="schema"',
 		'base.jsonSuffix="Schema"',
 		'base.jsonFileSuffix="schema"',
-		'base.modelJsonDir="schema"',
-		'base.jsonFileBasename_Tmpl="#{name}.#{jsonFileSuffix}"'
+		'base.jsonFileBasename_Tmpl="#{name}.#{jsonFileSuffix}"',
+		'base.apiMockDir="mocks"',
+		'base.mockSuffix="api"'
 	]
 }

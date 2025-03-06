@@ -9,10 +9,9 @@ import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmor
 import {TsMorphServerSettingsToken, TsMorphServerSettingsType} from '../../../settings/tsmorph-server';
 import {bindAst, importIfNotSameFile} from '../oag-tsmorph';
 import {ApiClassDeclaration,} from '../tsmorph-api';
-import {BaseTsmorphMethod, MethodMethodDeclaration, TsmorphMethod} from '../tsmorph-method';
+import {BaseTsmorphMethod, MethodMethodDeclaration, TsMethodSignature, TsmorphMethod} from '../tsmorph-method';
 import {isTsmorphModel, TsmorphModel} from '../tsmorph-model';
-import {isTsmorphParameter, TsMorphParameter} from '../tsmorph-parameter';
-import {TsmorphResponse} from '../tsmorph-response';
+import {isTsmorphParameter} from '../tsmorph-parameter';
 import {ApiFunctionDeclaration} from './tsmorph-server-api';
 
 export interface TsmorphServerMethodType extends TsmorphMethod<ApiClassDeclaration, ApiClassDeclaration, MethodMethodDeclaration, MethodMethodDeclaration> {
@@ -54,15 +53,8 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 		}
 	}
 
-	protected async createTsMethod(alnType: LangNeutralApiTypes, owner: ApiClassDeclaration | ApiFunctionDeclaration, id: string, params: TsMorphParameter[], responses: Map<string, TsmorphResponse>): Promise<MethodMethodDeclaration> {
-		const rspModels = [] as TsmorphModel[];
-		responses.forEach((v, k) => {
-			if (k.startsWith('2') || k.startsWith('d') || k.startsWith('D'))
-				if (isTsmorphModel(v.model))
-					rspModels.push(v.model);
-		});
-		const rspTypeTxt = rspModels.map(m => m.getTypeNode().getText()).join(' | ') || 'void';
-		const returnType = `Promise<HttpResponse<${rspTypeTxt}>>`;
+	protected async createTsMethod(alnType: LangNeutralApiTypes, owner: ApiClassDeclaration | ApiFunctionDeclaration, id: string, signature: TsMethodSignature): Promise<MethodMethodDeclaration> {
+		const returnType = `Promise<HttpResponse<${signature.returnText}>>`;
 		let meth: MethodDeclaration;
 		switch (alnType) {
 			case 'intf':
@@ -90,13 +82,13 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 				this.populateMethodBody(meth);
 				break;
 		}
-		params.forEach(param => {
-			const p = meth.addParameter({
-				name: param.getIdentifier(alnType),
-				hasQuestionToken: !param.required,
-				type: param.model.getTypeNode().getText()
+		signature.params.forEach(p => {
+			const arg = meth.addParameter({
+				name: p.param.getIdentifier(alnType),
+				hasQuestionToken: !p.required,
+				type: p.param.model.getTypeNode().getText()
 			});
-			bindAst(p, param);
+			bindAst(arg, p);
 		});
 		return bindAst(meth, this) as MethodMethodDeclaration;
 	}

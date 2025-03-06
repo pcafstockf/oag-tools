@@ -20,7 +20,7 @@ export interface MockedResponse<T> {
  */
 export interface MockResponseDescription extends Omit<OpenAPIV3_1.MediaTypeObject, 'schema'> {
 	status?: number;
-	schema?: OpenAPIV3_1.SchemaObject | { type: string };
+	schema?: OpenAPIV3_1.SchemaObject | ({ type: string; [key: string | number]: any });
 }
 
 /**
@@ -30,7 +30,7 @@ export interface MockDataGenerator {
 	/**
 	 * Generates a json object conforming to the supplied jsons schema, and then optionally deep merges overridable properties.
 	 */
-	genMockData<T>(schema: { type: string }, overrides?: DeepPartial<T>): T;
+	genMockData<T>(schema: { type: string; [key: string | number]: any }, overrides?: DeepPartial<T>): T;
 
 	/**
 	 * Uses a static @see MockResponseDescription to produce a dynamic @see MockedResponse.
@@ -45,7 +45,7 @@ export interface MockDataGenerator {
  * Can also be configured to prefer (or ignore) examples described in an OpenApi MediaTypeObject, over dynamically generating mock data.
  */
 export class DefaultMockDataGenerator implements MockDataGenerator {
-	protected constructor(protected mockGenFn?: (s: { type: string }) => any, protected preferExamples?: boolean) {
+	constructor(protected mockGenFn?: (s: { type: string }) => any, protected preferExamples?: boolean) {
 	}
 
 	/**

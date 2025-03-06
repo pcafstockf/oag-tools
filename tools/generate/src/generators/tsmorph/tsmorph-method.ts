@@ -7,8 +7,22 @@ import {JSDocTagStructure, MethodDeclaration, MethodSignature, StructureKind} fr
 import {TsMorphSettingsType} from '../../settings/tsmorph';
 import {bindAst, makeJsDoc, makeJsDocTxt} from './oag-tsmorph';
 import {ApiClassDeclaration, ApiInterfaceDeclaration} from './tsmorph-api';
+import {isTsmorphModel, TsmorphModel} from './tsmorph-model';
 import {isTsmorphParameter, TsMorphParameter} from './tsmorph-parameter';
 import {isTsmorphResponse, TsmorphResponse} from './tsmorph-response';
+
+export interface TsMethodSignature {
+	params: {
+		param: TsMorphParameter
+		name: string;
+		required: boolean;
+		typeText: string;
+	}[],
+	responses: Map<string, TsmorphResponse>;
+	okRsp: TsmorphResponse[];
+	returnText: string;
+	preferredStatus: number | undefined;
+}
 
 export interface TsmorphMethod<
 	AINTF extends ApiInterfaceDeclaration | ApiClassDeclaration,
@@ -17,8 +31,12 @@ export interface TsmorphMethod<
 	MIMPL extends MethodMethodDeclaration
 > extends Method {
 	generate(alnType: 'intf', api: AINTF): Promise<MINTF>;
-
 	generate(alnType: 'impl', api: AIMPL): Promise<MIMPL>;
+
+	/**
+	 * Helper method to compute textual / template friendly signature.
+	 */
+	computeSignature(): TsMethodSignature;
 }
 
 export abstract class BaseTsmorphMethod<
@@ -31,7 +49,7 @@ export abstract class BaseTsmorphMethod<
 		super(baseSettings);
 	}
 
-	protected makeJsDoc(params: TsMorphParameter[], responses: Map<string, TsmorphResponse>) {
+	protected makeJsDoc(sig: TsMethodSignature) {
 		if (isTsmorphMethod(this)) {
 			return makeJsDoc(this.oae, (docs) => {
 				const makeDescFn = (outer: Model) => {
@@ -52,11 +70,11 @@ export abstract class BaseTsmorphMethod<
 						desc = computeModelDesc(outer);
 					return desc;
 				};
-				params.forEach(p => {
+				sig.params.forEach(p => {
 					if (isOpenApiLangNeutral<OpenAPIV3_1.ParameterBaseObject, Parameter>(p)) {
 						let jsTxt = makeJsDocTxt('summary' in p.oae ? p.oae.summary as string : undefined, p.oae.description);
 						const jsTxts: string[] = [];
-						const desc = makeDescFn(p.model);
+						const desc = makeDescFn(p.param.model);
 						if (desc)
 							jsTxts.push(desc);
 						if ((!jsTxt) && jsTxts.length > 0)
@@ -64,7 +82,7 @@ export abstract class BaseTsmorphMethod<
 						const jsDoc = <JSDocTagStructure>{
 							kind: StructureKind.JSDocTag,
 							tagName: 'param',
-							text: p.getIdentifier('intf') + (jsTxt ? '\t' + jsTxt : '')
+							text: p.param.getIdentifier('intf') + (jsTxt ? '\t' + jsTxt : '')
 						};
 						if (!Array.isArray(docs.tags))
 							docs.tags = [];
@@ -73,7 +91,7 @@ export abstract class BaseTsmorphMethod<
 				});
 				let returnDoc = [] as string [];
 				let throwsDoc = [] as string [];
-				responses.forEach((v, k) => {
+				sig.responses.forEach((v, k) => {
 					const desc = makeDescFn(v.model);
 					if (desc) {
 						if (k.startsWith('2') || k.startsWith('d') || k.startsWith('D'))
@@ -115,17 +133,11 @@ export abstract class BaseTsmorphMethod<
 		const id = this.getIdentifier(alnType);
 		let meth = (api as AINTF | AIMPL).getMethod(id) as MINTF | MIMPL;
 		if (!meth) {
-			const params = this.parameters.filter(p => isTsmorphParameter(p)) as TsMorphParameter[];
-			const responses = Array.from(this.responses.keys()).reduce((p, key) => {
-				const r = this.responses.get(key);
-				if (isTsmorphResponse(r))
-					p.set(key, r);
-				return p;
-			}, new Map<string, TsmorphResponse>());
-			meth = await this.createTsMethod(alnType, api, id, params, responses);
+			const sig = this.computeSignature();
+			meth = await this.createTsMethod(alnType, api, id, sig);
 			if (this.baseSettings.emitDescriptions) {
 				if (alnType === 'intf' && isOpenApiLangNeutral<OpenAPIV3_1.OperationObject, Method>(this)) {
-					const docs = this.makeJsDoc(params, responses);
+					const docs = this.makeJsDoc(sig);
 					if (docs)
 						meth.addJsDoc(docs);
 				}
@@ -140,8 +152,44 @@ export abstract class BaseTsmorphMethod<
 	 * Subclasses should override.
 	 * They may generate anything they like, but the returned method will be the one the JSDoc is attached to.
 	 */
-	protected async createTsMethod(_alnType: 'intf' | 'impl', _owner: AINTF | AIMPL, _id: string, _params: TsMorphParameter[], _responses: Map<string, TsmorphResponse>): Promise<MINTF | MIMPL> {
+	protected async createTsMethod(_alnType: 'intf' | 'impl', _owner: AINTF | AIMPL, _id: string, signature: TsMethodSignature): Promise<MINTF | MIMPL> {
 		throw new Error('Not Implemented');
+	}
+
+	computeSignature(): TsMethodSignature {
+		let preferredStatus: number;
+		const params = this.parameters.filter(p => isTsmorphParameter(p)) as TsMorphParameter[];
+		const responses = Array.from(this.responses.keys()).reduce((p, key) => {
+			if (key.startsWith('2') || key.startsWith('d') || key.startsWith('D')) {
+				if (!preferredStatus)
+					if (/2[0-9][0-9]/.test(key))
+						preferredStatus = Number(key);
+				const r = this.responses.get(key);
+				if (isTsmorphResponse(r) && isTsmorphModel(r.model))
+					p.push(r);
+			}
+			return p;
+		}, [] as TsmorphResponse[]);
+		let rspTypeTxt = (responses.map(r => (r.model as TsmorphModel).getTypeNode().getText()).join(' | ') || 'void').trim();
+		if (/\s/.test(rspTypeTxt))
+			rspTypeTxt = `(${rspTypeTxt})`;
+		return {
+			params: params.map(p => {
+				let typeTxt = p.model.getTypeNode().getText();
+				if (/\s/.test(typeTxt))
+					typeTxt = `(${typeTxt})`;
+				return {
+					param: p,
+					name: p.name,
+					required: !!p.required,
+					typeText: typeTxt
+				};
+			}),
+			responses: new Map<string, TsmorphResponse>(Array.from(this.responses.entries() as any)),
+			okRsp: responses,
+			returnText: rspTypeTxt,
+			preferredStatus: preferredStatus
+		};
 	}
 }
 

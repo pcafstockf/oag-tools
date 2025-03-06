@@ -1,13 +1,19 @@
 import {Inject, Injectable} from 'async-injection';
-import {findLastIndex} from 'lodash';
+import {findLastIndex, template as lodashTemplate} from 'lodash';
+import os from 'node:os';
+import path from 'node:path';
 import {LangNeutralApiTypes} from 'oag-shared/lang-neutral/api';
 import {BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/base';
+import {isSchemaModel} from 'oag-shared/lang-neutral/model';
 import {interpolateBashStyle} from 'oag-shared/utils/misc-utils';
-import {ClassDeclaration, Identifier, InterfaceDeclaration, Node, Scope, SourceFile, SyntaxKind, VariableDeclarationKind} from 'ts-morph';
+import {ClassDeclaration, Identifier, InterfaceDeclaration, JSDocStructure, Node, Scope, SourceFile, StructureKind, SyntaxKind, VariableDeclarationKind} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmorph';
 import {TsMorphClientSettingsToken, TsMorphClientSettingsType} from '../../../settings/tsmorph-client';
-import {bindAst} from '../oag-tsmorph';
+import {bindAst, importIfNotSameFile, oae2ObjLiteralStr} from '../oag-tsmorph';
 import {ApiClassDeclaration, ApiInterfaceDeclaration, BaseTsmorphApi, TsmorphApi} from '../tsmorph-api';
+import {isTsmorphMethod} from '../tsmorph-method';
+import {TsmorphModel} from '../tsmorph-model';
+import {isTsmorphClientMethod} from './tsmorph-client-method';
 
 export interface TsmorphClientApiType extends TsmorphApi<ApiInterfaceDeclaration, ApiClassDeclaration> {
 	getLangNode(type: 'intf'): ApiInterfaceDeclaration;
@@ -23,7 +29,7 @@ type LangNeutralClientApiTypes = Extract<LangNeutralApiTypes, 'intf' | 'impl' | 
 type BoundTypeNode = Identifier & { readonly $ast: TsmorphClientApiType };
 
 @Injectable()
-export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration, ApiClassDeclaration> implements TsmorphClientApiType {
+export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> implements TsmorphClientApiType {
 	constructor(
 		@Inject(BaseSettingsToken)
 		baseSettings: BaseSettingsType,
@@ -49,7 +55,7 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration, Ap
 				imports.push('ApiHttpClientToken');
 		}
 		decl.getSourceFile().addImportDeclaration({
-			moduleSpecifier: this.tsmorphClientSettings.support.dstDirName,
+			moduleSpecifier: this.tsmorphClientSettings.internalDirName,
 			namedImports: imports
 		});
 	}
@@ -84,33 +90,134 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration, Ap
 	async generate(sf: SourceFile): Promise<void> {
 		await super.generate(sf);
 
-		// if (!this.getLangNode('mock')) {
-		// 	sf = await this.getSrcFile('mock', sf.getProject(), sf);
-		// 	if (sf) {
-		// 		const id = this.ensureIdentifier('mock');
-		// 		let mock = this.findMock(sf, id);
-		// 		if (!mock) {
-		// 			mock = this.bind('mock', this.createMock(sf, id));
-		// 			this.importInto(sf, 'intf');
-		// 			this.dependencies.forEach(d => d.importInto(sf, 'intf'));
-		//
-		// 			for (let m of this.methods) {
-		// 				if (isTsmorphMethod(m))
-		// 					await (m as TsmorphServerMethodType).generate('mock', mock);
-		// 			}
-		// 		}
-		// 		if (mock && !mock.$ast)
-		// 			this.bind('mock', mock);
-		// 	}
-		// }
+		if (this.baseSettings.apiMockDir && this.baseSettings.modelJsonDir && this.tsmorphClientSettings.mocklib) {
+			if (!this.getLangNode('mock')) {
+				sf = await this.getSrcFile('mock', sf.getProject(), sf);
+				if (sf) {
+					const id = this.ensureIdentifier('mock');
+					let mock = this.findMock(sf, id);
+					if (!mock) {
+						mock = this.bind('mock', this.createMock(sf, id));
+						if (this.baseSettings.emitDescriptions) {
+							mock.addJsDoc(<JSDocStructure>{
+								kind: StructureKind.JSDoc,
+								tags: [{
+									kind: StructureKind.JSDocTag,
+									tagName: 'inheritDoc'
+								}]
+							});
+						}
+						this.importInto(sf, 'intf');
+						this.dependencies.forEach(d => d.importInto(sf, 'intf'));
+
+						for (let m of this.methods) {
+							if (isTsmorphClientMethod(m))
+								await m.generate('mock', mock);
+						}
+					}
+					if (mock && !mock.$ast)
+						this.bind('mock', mock);
+				}
+			}
+		}
 	}
 
-	// protected findMock(sf: SourceFile, id: string): FunctionDeclaration {
-	// 	return sf.getFunction(id);
-	// }
-	// protected createMock(sf: SourceFile, id: string): FunctionDeclaration {
-	//
-	// }
+	protected findMock(sf: SourceFile, id: string): ApiClassDeclaration {
+		return sf.getClass(id);
+	}
+
+	protected createMock(sf: SourceFile, id: string): ApiClassDeclaration {
+		const intf = this.getLangNode('intf');
+		let retVal = sf.addClass({
+			name: id,
+			isExported: true,
+			implements: [intf.getName()]
+		});
+		this.importInto(sf, 'intf');
+		this.ensureInternalDirImport(retVal);
+		const di = this.tsmorphClientSettings.dependencyInjection ? this.tsmorphClientSettings.di[this.tsmorphClientSettings.dependencyInjection] : undefined;
+		if (di) {
+			di.implImport?.forEach(i => sf.addImportDeclaration(i));
+			if (di.apiIntfTokens) {
+				const intfName = this.getLangNode('intf').getName();
+				const apiImportDecl = sf.getImportDeclaration(c => !!c.getNamedImports().find(i => i.getName() === intfName));
+				di.apiIntfTokens?.forEach(tok => {
+					let varName = interpolateBashStyle(tok.name_Tmpl, {intfName: intfName});
+					apiImportDecl.addNamedImport(varName);
+				});
+			}
+			di.apiConstruction.implDecorator.forEach(d => {
+				retVal.addDecorator(d);
+			});
+		}
+		this.makeMockConstructor(retVal);
+		return retVal;
+	}
+
+	protected makeMockConstructor(c: ClassDeclaration) {
+		const intDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir), this.tsmorphClientSettings.internalDirName);
+		const dmSfPath = path.relative(path.dirname(c.getSourceFile().getFilePath()), intDir);
+		c.getSourceFile().addImportDeclaration({
+			namedImports: ['MockDataGenerator', 'MockDataGeneratorToken'],
+			moduleSpecifier: path.join(dmSfPath, 'data-mocking')
+		});
+		const impl = c.addConstructor({
+			parameters: [
+				{name: 'mdg', type: 'MockDataGenerator', isReadonly: true, scope: Scope.Protected}
+			]
+		});
+		const di = this.tsmorphClientSettings.dependencyInjection ? this.tsmorphClientSettings.di[this.tsmorphClientSettings.dependencyInjection] : undefined;
+		if (di?.apiConstruction) {
+			const params = impl.getParameters();
+			di.apiConstruction.apiMockInject?.forEach((d => {
+				params[0].addDecorator(d);
+			}));
+		}
+		const spy = this.tsmorphClientSettings.spy[this.tsmorphClientSettings.mocklib];
+		impl.setBodyText((writer) => {
+			this.methods.forEach(m => {
+				if (isTsmorphMethod(m)) {
+					const sig = m.computeSignature();
+					const okRspModels = sig.okRsp.map(r => r.model as TsmorphModel);
+					const exportedOkRspModels = okRspModels.filter(m => m.getLangNode('json')?.isExported());
+					let modelSchema: string;
+					let id: Identifier;
+					if (exportedOkRspModels.length > 0) {
+						const rspModel = exportedOkRspModels[0];
+						id = rspModel.getLangNode('json').getFirstDescendantByKind(SyntaxKind.Identifier);
+						if (id) {
+							modelSchema = id.getText();
+							importIfNotSameFile(impl, id, modelSchema);
+						}
+					}
+					if (!modelSchema && okRspModels.length > 0) {
+						const rspModel = okRspModels[0];
+						if (isSchemaModel(rspModel))
+							modelSchema = oae2ObjLiteralStr(rspModel.oae, this.baseSettings.verboseJsonSchema, (d) => {
+								const id = d.getLangNode('json')?.getFirstDescendantByKind(SyntaxKind.Identifier);
+								if (id)
+									importIfNotSameFile(impl, id, id.getText());
+							});
+					}
+					const miTemplate = lodashTemplate(spy.methodInit);
+					const rhs = miTemplate(Object.assign(sig, {modelSchema: modelSchema})).trim();
+					writer.writeLine(`this.${m.getIdentifier('intf')} = ${rhs} as typeof this.${m.getIdentifier('intf')};${os.EOL}`);
+				}
+			});
+			/*
+		this.createUser = mock.fn(async (body?: User, hdrsOrRsp?: Record<string, string> | 'body' | 'http', rsp?: 'body' | 'http') => {
+			const data = jsdMock(UserSchema as any);
+			if (hdrsOrRsp === 'http' || rsp === 'http')
+				return {
+					status: 201,    // Computed from OpenApi
+					headers: {},    // Can we compute this from the spec?
+					data: data
+				}
+			return data;
+		});
+			 */
+		});
+	}
 
 	protected findIntf(sf: SourceFile, id: string): InterfaceDeclaration {
 		return sf.getInterface(id);

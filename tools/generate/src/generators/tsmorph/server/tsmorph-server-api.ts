@@ -29,7 +29,7 @@ type BoundTypeNode = Identifier & { readonly $ast: TsmorphServerApiType };
 type LangNeutralServerApiTypes = Extract<LangNeutralApiTypes, 'intf' | 'impl' | 'hndl'>;
 
 @Injectable()
-export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration, ApiClassDeclaration> implements TsmorphServerApiType {
+export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration> implements TsmorphServerApiType {
 	constructor(
 		@Inject(BaseSettingsToken)
 		baseSettings: BaseSettingsType,

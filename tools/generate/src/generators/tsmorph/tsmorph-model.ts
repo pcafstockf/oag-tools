@@ -1,8 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
 import {Inject, Injectable} from 'async-injection';
-import {stringify as json5Stringify} from 'json5';
-import {template as lodashTemplate} from 'lodash';
 import path from 'node:path';
 import {Model} from 'oag-shared/lang-neutral';
 import {BaseArrayModel, BasePrimitiveModel, BaseRecordModel, BaseSettingsToken, BaseSettingsType, BaseTypedModel, BaseUnionModel, CodeGenAst} from 'oag-shared/lang-neutral/base';
@@ -14,7 +12,7 @@ import * as nameUtils from 'oag-shared/utils/name-utils';
 import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
 import {ClassDeclaration, EnumDeclaration, ExportableNode, ExpressionWithTypeArguments, Identifier, InterfaceDeclaration, JSDocableNode, JSDocStructure, Node, ObjectLiteralElement, Project, ScriptTarget, SourceFile, StructureKind, ts, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeReferenceNode, VariableDeclarationKind, VariableStatement} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
-import {bindAst, CannotGenerateError, importIfNotSameFile, makeFakeIdentifier, makeJsDoc, TempFileName} from './oag-tsmorph';
+import {bindAst, CannotGenerateError, importIfNotSameFile, makeFakeIdentifier, makeJsDoc, oae2ObjLiteralStr, TempFileName} from './oag-tsmorph';
 
 /**
  * All methods of this interface MUST be idempotent.
@@ -136,46 +134,21 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 					if (sf) {
 						let retVal: ModelVariableStatement = sf.getVariableStatement(id);
 						if (!retVal) {
-							const oae = this.oae;
-							const schemaVarNames: Record<string, string> = {};
-							const initTemplate = json5Stringify(oae, (key, value) => {
-								if (key === '') {
-									if (!value.description)
-										if (value.summary)
-											value.description = value.summary;
-									delete value.summary;
-								}
-								if (key === '$schema')
-									return undefined;
-								if (key === '$ast')
-									return undefined;
-								if (key.toLowerCase().startsWith('x-'))
-									return undefined;
-								if (key === 'summary')
-									return undefined;
-								if (key === 'description' && isTsmorphModel(this) && (!this.baseSettings.verboseJsonSchema))
-									return undefined;
-								if (value && value[CodeGenAst] && (!Object.is(value[CodeGenAst], this))) {
-									const model = value[CodeGenAst] as TsmorphModel & this;
-									if (isIdentifiedLangNeutral(model)) {
-										const varName = model.getIdentifier('json');
-										schemaVarNames[varName] = varName;
-										this.addDependency(model);
-										// It is inconceivable that a REST api would contain these doublet values, so we will use them as lodash template delimiters.
-										// But the ugly secret is that json5 will *escape* our delimiters, and quote our string.
-										return `\x07\x13 ${varName} \x11\x07`;
-									}
-								}
-								return value;
-							}, '\t');
-							// Remember, the json will *escape* the non-printable delimiters we used above.
-							const templateFn = lodashTemplate(initTemplate, {interpolate: /'\\x07\\x13 (.+?) \\x11\\x07'/g});
+							let txt: string;
+							const hold = this.oae[CodeGenAst];
+							try {
+								delete this.oae[CodeGenAst];
+								txt = oae2ObjLiteralStr(this.oae, this.baseSettings.verboseJsonSchema, (d) => this.addDependency(d));
+							}
+							finally {
+								this.oae[CodeGenAst] = hold;
+							}
 							retVal = this.bind('json', sf.addVariableStatement({
 								declarationKind: VariableDeclarationKind.Const,
 								isExported: true,
 								declarations: [{
 									name: id,
-									initializer: templateFn(schemaVarNames)
+									initializer: txt
 								}]
 							}));
 							if (isTsmorphModel(this) && !fake && this.baseSettings.emitDescriptions && (!this.baseSettings.verboseJsonSchema)) {
@@ -714,8 +687,11 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
 		const n = ln ?? this.getLangNode(mlnType as any) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);
 		if (n) {
-			if (isIdentifiedLangNeutral(this) && Node.isExportable(n) && n.isExported())
+			if (isIdentifiedLangNeutral(this) && Node.isExportable(n) && n.isExported()) {
+				if (Node.isVariableStatement(n))
+					return bindAst(n.getFirstDescendantByKind(ts.SyntaxKind.Identifier), this) as any;
 				return bindAst(n.getNameNode(), this);
+			}
 			if (Node.isInterfaceDeclaration(n) || Node.isClassDeclaration(n)) {
 				// If this *object* is not named, we need to treat it as a literal type.
 				let retVal: TypeNode = n.getFirstDescendantByKind(ts.SyntaxKind.TypeLiteral);

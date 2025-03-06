@@ -1,18 +1,16 @@
 import {Inject, Injectable} from 'async-injection';
 import {stringify as json5Stringify} from 'json5';
+import {template as lodashTemplate} from 'lodash';
 import {LangNeutralApiTypes} from 'oag-shared/lang-neutral/api';
 import {BaseNamedParameter, BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/base';
 import {isSchemaModel} from 'oag-shared/lang-neutral/model';
 import {BodyParameter, NamedParameter} from 'oag-shared/lang-neutral/parameter';
-import {MethodDeclaration, MethodSignature, Node, VariableDeclarationKind, VariableStatement} from 'ts-morph';
+import {JSDocStructure, MethodDeclaration, MethodSignature, Node, StructureKind, VariableDeclarationKind, VariableStatement} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmorph';
 import {TsMorphClientSettingsToken, TsMorphClientSettingsType} from '../../../settings/tsmorph-client';
 import {bindAst, bindNext} from '../oag-tsmorph';
-import {ApiClassDeclaration, ApiInterfaceDeclaration} from '../tsmorph-api';
-import {BaseTsmorphMethod, MethodMethodDeclaration, MethodMethodSignature, TsmorphMethod} from '../tsmorph-method';
-import {isTsmorphModel, TsmorphModel} from '../tsmorph-model';
-import {TsMorphParameter} from '../tsmorph-parameter';
-import {TsmorphResponse} from '../tsmorph-response';
+import {ApiClassDeclaration, ApiInterfaceDeclaration, ApiPropertyDeclaration} from '../tsmorph-api';
+import {BaseTsmorphMethod, isTsmorphMethod, MethodMethodDeclaration, MethodMethodSignature, TsMethodSignature, TsmorphMethod} from '../tsmorph-method';
 
 export interface TsmorphClientMethodType extends TsmorphMethod<ApiInterfaceDeclaration, ApiClassDeclaration, MethodMethodSignature, MethodMethodDeclaration> {
 	generate(alnType: 'intf', api: ApiInterfaceDeclaration): Promise<MethodMethodSignature>;
@@ -39,29 +37,63 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 
 	generate(alnType: 'intf', api: ApiInterfaceDeclaration): Promise<MethodMethodSignature>;
 	generate(alnType: 'impl', api: ApiClassDeclaration): Promise<MethodMethodDeclaration>;
-	generate(alnType: 'mock', api: ApiClassDeclaration): Promise<MethodMethodDeclaration>;
-	async generate(alnType: 'intf' | 'impl' | 'mock', api: ApiInterfaceDeclaration | ApiClassDeclaration): Promise<MethodMethodSignature | MethodMethodDeclaration> {
+	generate(alnType: 'mock', api: ApiClassDeclaration): Promise<any>;
+	async generate(alnType: 'intf' | 'impl' | 'mock', api: ApiInterfaceDeclaration | ApiClassDeclaration): Promise<MethodMethodSignature | MethodMethodDeclaration | ApiPropertyDeclaration> {
 		switch (alnType) {
 			case 'intf':
 				return super.generate(alnType, api as ApiInterfaceDeclaration);
 			case 'impl':
 				return super.generate(alnType, api as ApiClassDeclaration);
 			case 'mock':
-				break;
+				return this.createMockMethod(api as ApiClassDeclaration);
 		}
+	}
+
+	private createMockMethod(api: ApiClassDeclaration) {
+		const id = this.getIdentifier('mock');
+		/*
+	findPetsByStatus:
+		SinonStub<[('available' | 'pending' | 'sold')?], Promise<Array<Pet>>> &
+		SinonStub<[('available' | 'pending' | 'sold')?, 'http'?], Promise<HttpResponse<Array<Pet>>>> &
+		SinonStub<[('available' | 'pending' | 'sold')?, Record<string, string>?], Promise<Array<Pet>>> &
+		SinonStub<[('available' | 'pending' | 'sold')?, Record<string, string>?, 'http'?], Promise<HttpResponse<Array<Pet>>>>;
+	}>;
+		 */
+		let prop = api.getProperty(id);
+		if (!prop) {
+			const sig = this.computeSignature();
+			const spy = this.tsmorphClientSettings.spy[this.tsmorphClientSettings.mocklib];
+			const innerTemplate = lodashTemplate(spy.method.inner);
+			const innerTxt = innerTemplate(sig).trim();
+			const outerTemplate = lodashTemplate(spy.method.outer);
+			const outerTxt = outerTemplate({
+				innerTxt: innerTxt
+			}).trim();
+			spy.imphort.forEach(i => api.getSourceFile().addImportDeclaration(i));
+			prop = api.addProperty({
+				name: id,
+				isReadonly: true,
+				type: outerTxt
+			});
+			if (this.baseSettings.emitDescriptions) {
+				prop.addJsDoc(<JSDocStructure>{
+					kind: StructureKind.JSDoc,
+					tags: [{
+						kind: StructureKind.JSDocTag,
+						tagName: 'inheritDoc'
+					}]
+				});
+			}
+		}
+		if (prop && !(prop as any).$ast)
+			prop = bindAst(prop, this);
+		return prop;
 	}
 
 	/**
 	 * @inheritDoc
 	 */
-	protected async createTsMethod(alnType: LangNeutralApiTypes, owner: ApiInterfaceDeclaration | ApiClassDeclaration, id: string, params: TsMorphParameter[], responses: Map<string, TsmorphResponse>): Promise<MethodMethodSignature | MethodMethodDeclaration> {
-		const rspModels = [] as TsmorphModel[];
-		responses.forEach((v, k) => {
-			if (k.startsWith('2') || k.startsWith('d') || k.startsWith('D'))
-				if (isTsmorphModel(v.model))
-					rspModels.push(v.model);
-		});
-		const rspTypeTxt = rspModels.map(m => m.getTypeNode().getText()).join(' | ') || 'void';
+	protected async createTsMethod(alnType: LangNeutralApiTypes, owner: ApiInterfaceDeclaration | ApiClassDeclaration, id: string, signature: TsMethodSignature): Promise<MethodMethodSignature | MethodMethodDeclaration> {
 		let methods: (MethodDeclaration | MethodSignature)[];
 		if (Node.isClassDeclaration(owner)) {
 			const method = owner.addMethod({
@@ -98,17 +130,17 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 			];
 		}
 		methods.forEach((meth, idx) => {
-			params.forEach(param => {
-				const p = meth.addParameter({
-					name: param.getIdentifier(alnType),
-					hasQuestionToken: !param.required,
-					type: param.model.getTypeNode().getText()
+			signature.params.forEach(p => {
+				const arg = meth.addParameter({
+					name: p.param.getIdentifier(alnType),
+					hasQuestionToken: !p.required,
+					type: p.param.model.getTypeNode().getText()
 				});
-				bindAst(p, param);
+				bindAst(arg, p);
 			});
 			switch (idx) {
 				case 0:
-					meth.setReturnType(`Promise<${rspTypeTxt}>`);
+					meth.setReturnType(`Promise<${signature.returnText}>`);
 					break;
 				case 1:
 					meth.addParameter({
@@ -116,7 +148,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 						hasQuestionToken: true,
 						type: '\'http\''
 					});
-					meth.setReturnType(`Promise<HttpResponse<${rspTypeTxt}>>`);
+					meth.setReturnType(`Promise<HttpResponse<${signature.returnText}>>`);
 					break;
 				case 2:
 					meth.addParameter({
@@ -124,7 +156,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 						hasQuestionToken: true,
 						type: 'Record<string, string>'
 					});
-					meth.setReturnType(`Promise<${rspTypeTxt}>`);
+					meth.setReturnType(`Promise<${signature.returnText}>`);
 					break;
 				case 3:
 					meth.addParameter({
@@ -137,7 +169,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 						hasQuestionToken: true,
 						type: '\'http\''
 					});
-					meth.setReturnType(`Promise<HttpResponse<${rspTypeTxt}>>`);
+					meth.setReturnType(`Promise<HttpResponse<${signature.returnText}>>`);
 					break;
 				case 4:
 					meth.addParameter({
@@ -150,10 +182,10 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 						type: '\'body\' | \'http\' | undefined',
 						initializer: '\'body\''
 					});
-					meth.setReturnType(`Promise<${rspTypeTxt} | HttpResponse<${rspTypeTxt}>>`);
+					meth.setReturnType(`Promise<${signature.returnText} | HttpResponse<${signature.returnText}>>`);
 					break;
 			}
-			bindAst(meth.getReturnTypeNode(), rspModels);
+			bindAst(meth.getReturnTypeNode(), signature.okRsp);
 			if (idx > 0)
 				bindNext(methods[idx - 1], meth);
 		});
@@ -320,4 +352,11 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 		}
 		return definedHdrsStatement as VariableStatement;
 	}
+}
+
+export function isTsmorphClientMethod(obj: any): obj is TsmorphClientMethod {
+	if (obj && isTsmorphMethod(obj))
+		if (obj instanceof TsmorphClientMethod)
+			return true;
+	return false;
 }
