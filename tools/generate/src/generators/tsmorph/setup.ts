@@ -23,21 +23,21 @@ export async function beginTsMorphSetup(dic: Container, _path: string[], _obj: o
 				case 'float':
 					return dic.get(CodeGenPrimitiveModelToken);
 				case 'binary':
-					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('Blob');
+					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).addOagType({ts: {type: 'Blob', lib: undefined}});
 				case 'date':
 				case 'date-time':
-					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('Date');
+					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).addOagType({ts: {type: 'Date', lib: undefined}});
 				case 'VOID':
 					if (!tsVoid)
-						tsVoid = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('void');
+						tsVoid = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).addOagType({ts: {type: 'void', lib: undefined}});
 					return tsVoid;
 				case 'ANY':
 					if (!tsAny)
-						tsAny = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('any');
+						tsAny = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).addOagType({ts: {type: 'any', lib: undefined}});
 					return tsAny;
 				case 'UNKNOWN':
 					if (!tsUnknown)
-						tsUnknown = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).setTypeName('unknown');
+						tsUnknown = dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).addOagType({ts: {type: 'unknown', lib: undefined}});
 					return tsUnknown;
 				default:
 					return null;

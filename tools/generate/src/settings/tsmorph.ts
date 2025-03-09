@@ -41,7 +41,17 @@ export const TsMorphSettings = {
 			outDir: undefined as string,
 			target: ScriptTarget.ES2021
 		}
-	}
+	},
+	support: [{
+		// Full (parent) path name to the files to be copied into the target support directory
+		srcDirName: `${__dirname}/../generators/tsmorph/docs`,
+		// Source files to be copied into the internal support directory.
+		// Path should be relative to 'srcDirName'
+		files: [
+			{'Intro.client.md': `Intro#{role}.md`},
+			{'Setup.fog.md': `Setup#{target}.md`}
+		]
+	}],
 };
 
 export type TsMorphSettingsType = Omit<typeof TsMorphSettings, '__conf_register'>;

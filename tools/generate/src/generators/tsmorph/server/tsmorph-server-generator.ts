@@ -56,8 +56,8 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 		});
 	}
 
-	protected async postGenerate(ast: CodeGenAst): Promise<void> {
-		await super.postGenerate(ast);
+	protected async postGenerate(ast: CodeGenAst, target?: string): Promise<void> {
+		await super.postGenerate(ast, this.tsmorphServerSettings.framework);
 
 		// Generate the handler index.ts file.
 		const hndlIndexTs = ast.apis.filter(a => isTsmorphApi(a) && isFileBasedLangNeutral(a)).reduce((p, a) => {

@@ -1095,6 +1095,10 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel, ModelType
 		super(baseSettings, tsMorphSettings);
 	}
 
+	protected get lang(): string {
+		return 'ts';
+	}
+
 	getTypeNode(ln?: ModelTypeAliasDeclaration): BoundTypeNode {
 		const mlnType = this.baseSettings.modelImplDir && (!this.baseSettings.modelIntfDir) ? 'impl' : 'intf';
 		const n = ln ?? this.getLangNode(mlnType as any) ?? (mlnType === 'impl' ? this.getLangNode('intf') : undefined);

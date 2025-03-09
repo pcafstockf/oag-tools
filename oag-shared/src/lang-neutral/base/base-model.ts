@@ -353,32 +353,34 @@ export abstract class BaseRecordModel extends BaseSchemaModel implements RecordM
 
 export abstract class BaseTypedModel extends BaseSchemaModel implements TypedModel {
 	constructor(
-		baseSettings: BaseSettingsType
+		baseSettings: BaseSettingsType,
 	) {
 		super(baseSettings);
-		this.#importPath = null;
+		this.#langTypes = {};
 	}
+
+	protected abstract get lang(): string
 
 	get typeName(): string {
-		return this.#typeName;
+		let key = `${this.baseSettings.role}_${this.lang}`;
+		if (!this.#langTypes[key])
+			key = this.lang;
+		return this.#langTypes[key]?.type;
 	}
 
-	#typeName: string;
+	get importPath(): string {
+		let key = `${this.baseSettings.role}_${this.lang}`;
+		if (!this.#langTypes[key])
+			key = this.lang;
+		return this.#langTypes[key]?.lib;
+	}
 
-	setTypeName(txt: string, importPath?: string): this {
-		this.#typeName = txt;
-		if (importPath)
-			this.#importPath = importPath;
-		else
-			this.#importPath = null;
+	addOagType(langTypes: Record<string, { type: string, lib: string }>): this {
+		this.#langTypes = Object.assign(this.#langTypes, langTypes);
 		return this;
 	}
 
-	#importPath: string;
-
-	get importPath(): string {
-		return this.#importPath;
-	}
+	#langTypes: Record<string, { type: string, lib: string }>;
 
 	/**
 	 * This is a language neutral toString, so it will return SchemaObject.type if it can (rather than this.typeName);

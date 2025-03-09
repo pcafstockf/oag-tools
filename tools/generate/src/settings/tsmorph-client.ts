@@ -158,13 +158,21 @@ export const TsMorphClientSettings = {
 			// Really tried to avoid templating, but given the differences in DI impls, this lodash template was unavoidable.
 			// NOTE: Relative imports are more difficult to determine, so the code handles importing the Token and Class.
 			apiSetup: `import { Container } from 'async-injection';
-						export function setup(di: Container, httpClient: ApiHttpClient, defaultConfig?: ApiClientConfig): void {
+						export function setupApis(di: Container, httpClient: ApiHttpClient, defaultConfig?: ApiClientConfig): void {
 							if (!di.isIdKnown(ApiHttpClientToken)) 
 								di.bindConstant(ApiHttpClientToken, httpClient);<% apis.forEach(function(api) { %>
 							if (defaultConfig && (!di.isIdKnown(<%- api.getIdentifier('impl') %>Config<%- intfTokensExt %>)))
 								di.bindConstant(<%- api.getIdentifier('impl') %>Config<%- intfTokensExt %>, defaultConfig);
 							if (!di.isIdKnown(<%- api.getIdentifier('intf') %><%- intfTokensExt %>))
 								di.bindClass(<%- api.getIdentifier('intf') %><%- intfTokensExt %>, <%- api.getIdentifier('impl') %>).asSingleton();<% }); %>
+						}
+					`,
+			mockSetup: `import { Container } from 'async-injection';
+						export function setupMocks(di: Container, mdg?: MockDataGenerator): void {
+							if (mdg && !di.isIdKnown(MockDataGeneratorToken)) 
+								di.bindConstant(MockDataGeneratorToken, mdg);<% apis.forEach(function(api) { %>
+							if (!di.isIdKnown(<%- api.getIdentifier('intf') %><%- intfTokensExt %>))
+								di.bindClass(<%- api.getIdentifier('intf') %><%- intfTokensExt %>, <%- api.getIdentifier('mock') %>).asSingleton();<% }); %>
 						}
 					`
 		},
@@ -184,6 +192,9 @@ export const TsMorphClientSettings = {
 			apiImplTokens: [{
 				name_Tmpl: '#{implName}ConfigToken',
 				initializer_Tmpl: 'new InjectionToken<ApiClientConfig>(\'#{intfLabel}ClientConfig\')'
+			}],
+			apiImplExports: [{
+				name_Tmpl: '#{intfName}Token'
 			}],
 			apiConstruction: {
 				implDecorator: [{
@@ -228,7 +239,8 @@ export const TsMorphClientSettings = {
 						            throw new Error('ApiModule is already loaded. Import in your base AppModule only.');
 						    }
 						}
-					`
+					`,
+			mockSetup: ''
 		}
 	},
 	[InitializeMarker]: {

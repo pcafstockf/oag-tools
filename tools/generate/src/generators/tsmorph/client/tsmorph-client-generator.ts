@@ -16,6 +16,7 @@ import {importIfNotSameFile} from '../oag-tsmorph';
 import {isTsmorphApi} from '../tsmorph-api';
 import {TsmorphGenerator} from '../tsmorph-generator';
 import {isTsmorphModel} from '../tsmorph-model';
+import {isTsmorphClientApi} from './tsmorph-client-api';
 
 @Injectable()
 export class TsmorphClientGenerator extends TsmorphGenerator {
@@ -61,7 +62,9 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 		});
 	}
 
-	protected async postGenerate(ast: CodeGenAst): Promise<void> {
+	protected async postGenerate(ast: CodeGenAst, target?: string): Promise<void> {
+		await super.postGenerate(ast, this.baseSettings.role);
+
 		// Generate the apis index.ts file.
 		const apiIndexTs = ast.apis.filter(a => isTsmorphApi(a) && isFileBasedLangNeutral(a)).reduce((p, a) => {
 			const filePath = path.basename(a.getFilepath('intf'));
@@ -78,42 +81,73 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 		}, ``);
 		if (modelIndexTs)
 			this.project.createSourceFile(path.join(this.baseSettings.outputDirectory, this.baseSettings.modelIntfDir, 'index.ts'), modelIndexTs, {overwrite: true});
-		const supportDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir), this.tsmorphClientSettings.internalDirName);
-		let dmSf: SourceFile;
-		let dmSfPath = path.join(supportDir, 'data-mocking.ts');
-		if (this.baseSettings.apiMockDir && this.baseSettings.modelJsonDir && this.tsmorphClientSettings.mocklib)
-			dmSf = this.project.addSourceFileAtPath(dmSfPath);
-		else
-			fs.rmSync(dmSfPath);
-		// If we Dependency Injection is requested, generate a setup.ts file in the services directory
+		// If Dependency Injection is requested...
 		const di = this.tsmorphClientSettings.dependencyInjection ? this.tsmorphClientSettings.di[this.tsmorphClientSettings.dependencyInjection] : undefined;
 		if (di) {
-			const intfTokensExt = di.apiIntfTokens.map(i => interpolateBashStyle(i.name_Tmpl, {intfName: ''}));
-			const confTokensExt = di.apiImplTokens.map(i => interpolateBashStyle(i.name_Tmpl, {implName: ''}));
-			const setupTemplate = lodashTemplate(di.apiSetup);
-			const setupTxt = setupTemplate({
-				intfTokensExt,
-				confTokensExt,
-				apis: ast.apis.filter(a => isTsmorphApi(a))
-			}).trim();
-			const diSetupSf = this.project.createSourceFile(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiImplDir, 'setup.ts'), setupTxt, {overwrite: true});
-			// To difficult for the template to know where the interfaces are, so we import those ourselves.
-			const imports = ['HttpClient as ApiHttpClient', 'ApiHttpClientToken', 'ApiClientConfig'];
-			diSetupSf.addImportDeclaration({
-				moduleSpecifier: this.tsmorphClientSettings.internalDirName,
-				namedImports: imports
-			});
-			ast.apis.forEach((api) => {
-				if (isTsmorphApi(api)) {
-					const intf = api.getLangNode('intf');
-					const impl = api.getLangNode('impl');
-					const intfImport = importIfNotSameFile(diSetupSf, intf, intf.getName());
-					intfTokensExt.forEach(ext => intfImport.addNamedImport(intf.getName() + ext));
-					const implImport = importIfNotSameFile(diSetupSf, impl, impl.getName());
-					confTokensExt.forEach(ext => implImport.addNamedImport(impl.getName() + ext));
+			// generate a setup.ts file in the services directory
+			{
+				const intfTokensExt = di.apiIntfTokens.map(i => interpolateBashStyle(i.name_Tmpl, {intfName: ''}));
+				const confTokensExt = di.apiImplTokens.map(i => interpolateBashStyle(i.name_Tmpl, {implName: ''}));
+				const setupTemplate = lodashTemplate(di.apiSetup);
+				const setupTxt = setupTemplate({
+					intfTokensExt,
+					confTokensExt,
+					apis: ast.apis.filter(a => isTsmorphApi(a))
+				}).trim();
+				const diSetupSf = this.project.createSourceFile(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiImplDir, 'setup.ts'), setupTxt, {overwrite: true});
+				// To difficult for the template to know where the interfaces are, so we import those ourselves.
+				const imports = ['HttpClient as ApiHttpClient', 'ApiHttpClientToken', 'ApiClientConfig'];
+				diSetupSf.addImportDeclaration({
+					moduleSpecifier: this.tsmorphClientSettings.internalDirName,
+					namedImports: imports
+				});
+				ast.apis.forEach((api) => {
+					if (isTsmorphApi(api)) {
+						const intf = api.getLangNode('intf');
+						const impl = api.getLangNode('impl');
+						const implImport = importIfNotSameFile(diSetupSf, impl, impl.getName());
+						intfTokensExt.forEach(ext => implImport.addNamedImport(intf.getName() + ext));
+						confTokensExt.forEach(ext => implImport.addNamedImport(impl.getName() + ext));
+					}
+				});
+			}
+			// If we are using mocking, generate a setup file for the mocks directory.
+			if (this.baseSettings.apiMockDir && this.tsmorphClientSettings.mocklib) {
+				let diMockSetupSf: SourceFile;
+				let dmMockSfPath = path.join(this.baseSettings.outputDirectory, this.baseSettings.apiMockDir, 'setup.ts');
+				if (this.baseSettings.apiMockDir && this.baseSettings.modelJsonDir && this.tsmorphClientSettings.mocklib) {
+					const intfTokensExt = di.apiIntfTokens.map(i => interpolateBashStyle(i.name_Tmpl, {intfName: ''}));
+					const setupTemplate = lodashTemplate(di.mockSetup);
+					const setupTxt = setupTemplate({
+						intfTokensExt,
+						apis: ast.apis.filter(a => isTsmorphApi(a))
+					}).trim();
+					diMockSetupSf = this.project.createSourceFile(dmMockSfPath, setupTxt, {overwrite: true});
+					// To difficult for the template to know where the interfaces are, so we import those ourselves.
+					diMockSetupSf.addImportDeclaration({
+						moduleSpecifier: path.join(this.tsmorphClientSettings.internalDirName, 'data-mocking'),
+						namedImports: ['MockDataGenerator', 'MockDataGeneratorToken']
+					});
+					ast.apis.forEach((api) => {
+						if (isTsmorphClientApi(api)) {
+							const intf = api.getLangNode('intf');
+							const mock = api.getLangNode('mock');
+							const implImport = importIfNotSameFile(diMockSetupSf, mock, mock.getName());
+							intfTokensExt.forEach(ext => implImport.addNamedImport(intf.getName() + ext));
+						}
+					});
 				}
-			});
+				else if (fs.existsSync(dmMockSfPath))
+					fs.rmSync(dmMockSfPath);
+			}
 			// Add an injection token for the MockDataGenerator.
+			const supportDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir), this.tsmorphClientSettings.internalDirName);
+			let dmSf: SourceFile;
+			let dmSfPath = path.join(supportDir, 'data-mocking.ts');
+			if (this.baseSettings.apiMockDir && this.baseSettings.modelJsonDir && this.tsmorphClientSettings.mocklib)
+				dmSf = this.project.addSourceFileAtPath(dmSfPath);
+			else if (fs.existsSync(dmSfPath))
+				fs.rmSync(dmSfPath);
 			if (dmSf) {
 				const mdgIntf = dmSf.getInterface('MockDataGenerator');
 				di.intfImport?.forEach(i => dmSf.addImportDeclaration(i));

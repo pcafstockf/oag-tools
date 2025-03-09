@@ -99,8 +99,12 @@ export function isUnionModel(obj: Readonly<Model>): obj is UnionModel {
 }
 
 export function isTypedModel(obj: Readonly<Model>): obj is TypedModel {
-	const p = (obj as TypedModel)?.importPath;
-	return (p === null || typeof p === 'string') && isModel(obj);
+	if (isModel(obj))
+		if (typeof (obj as any).lang === 'function') {
+			const p = (obj as TypedModel)?.importPath;
+			return (p === null || typeof p === 'string');
+		}
+	return false;
 }
 
 export const CodeGenTypedModelToken = new InjectionToken<TypedModel>('codegen-typed-model');

@@ -1,9 +1,10 @@
 import {Inject} from 'async-injection';
-import {lstatSync, mkdirSync} from 'fs';
+import {lstatSync, mkdirSync, readFileSync} from 'fs';
 import {writeFile} from 'fs/promises';
+import {writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/settings';
-import {safeLStatSync} from 'oag-shared/utils/misc-utils';
+import {interpolateBashStyle, safeLStatSync} from 'oag-shared/utils/misc-utils';
 import {Project, SourceFile} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
 import {CodeGenAst, SourceGenerator} from '../source-generator';
@@ -37,7 +38,7 @@ export class TsmorphGenerator implements SourceGenerator {
 				await a.generate(this.tempFile);
 		}
 
-		await this.postGenerate(ast);
+		await this.postGenerate(ast, undefined);
 
 		// Remove the temp file
 		this.tempFile.deleteImmediatelySync();
@@ -66,7 +67,32 @@ export class TsmorphGenerator implements SourceGenerator {
 
 	}
 
-	protected async postGenerate(_ast: CodeGenAst): Promise<void> {
-
+	protected async postGenerate(_ast: CodeGenAst, target?: string): Promise<void> {
+		this.tsmorphSettings.support.forEach(entry => {
+			let dstBase: string;
+			const opts = {
+				role: `.${this.baseSettings.role}`,
+				target: `.${target}`
+			};
+			entry.files.forEach((fp: object | string) => {
+				if (typeof fp === 'object') {
+					const key = Object.keys(fp)[0];
+					fp = interpolateBashStyle((fp as any)[key], opts);    // Default to none
+					dstBase = path.basename(key);
+				}
+				else {
+					fp = interpolateBashStyle(fp, opts);    // Default to none
+					dstBase = path.basename(fp);
+				}
+				const srcFilePath = path.normalize(path.join(entry.srcDirName, fp));
+				if (safeLStatSync(srcFilePath)) {
+					const dstPath = path.join(this.baseSettings.outputDirectory, dstBase);
+					if (!safeLStatSync(dstPath)) {
+						const srcTxt = readFileSync(srcFilePath, 'utf-8');
+						writeFileSync(dstPath, srcTxt);
+					}
+				}
+			});
+		});
 	}
 }

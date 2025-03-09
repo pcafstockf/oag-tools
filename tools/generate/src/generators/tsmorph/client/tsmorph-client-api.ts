@@ -10,7 +10,7 @@ import {ClassDeclaration, Identifier, InterfaceDeclaration, JSDocStructure, Node
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../../settings/tsmorph';
 import {TsMorphClientSettingsToken, TsMorphClientSettingsType} from '../../../settings/tsmorph-client';
 import {bindAst, importIfNotSameFile, oae2ObjLiteralStr} from '../oag-tsmorph';
-import {ApiClassDeclaration, ApiInterfaceDeclaration, BaseTsmorphApi, TsmorphApi} from '../tsmorph-api';
+import {ApiClassDeclaration, ApiInterfaceDeclaration, BaseTsmorphApi, isTsmorphApi, TsmorphApi} from '../tsmorph-api';
 import {isTsmorphMethod} from '../tsmorph-method';
 import {TsmorphModel} from '../tsmorph-model';
 import {isTsmorphClientMethod} from './tsmorph-client-method';
@@ -145,6 +145,10 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 					let varName = interpolateBashStyle(tok.name_Tmpl, {intfName: intfName});
 					apiImportDecl.addNamedImport(varName);
 				});
+				sf.addExportDeclaration({
+					namedExports: di.apiIntfTokens.map(n => interpolateBashStyle(n.name_Tmpl, {intfName: intfName})),
+					moduleSpecifier: path.relative(path.dirname(sf.getFilePath()), path.join(path.dirname(intf.getSourceFile().getFilePath()), path.basename(intf.getSourceFile().getFilePath(), '.ts')))
+				});
 			}
 			di.apiConstruction.implDecorator.forEach(d => {
 				retVal.addDecorator(d);
@@ -267,11 +271,16 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 		if (di) {
 			di.implImport?.forEach(i => sf.addImportDeclaration(i));
 			if (di.apiIntfTokens) {
-				const intfName = this.getLangNode('intf').getName();
+				const intf = this.getLangNode('intf');
+				const intfName = intf.getName();
 				const apiImportDecl = sf.getImportDeclaration(c => !!c.getNamedImports().find(i => i.getName() === intfName));
-				di.apiIntfTokens?.forEach(tok => {
+				di.apiIntfTokens.forEach(tok => {
 					let varName = interpolateBashStyle(tok.name_Tmpl, {intfName: intfName});
 					apiImportDecl.addNamedImport(varName);
+				});
+				sf.addExportDeclaration({
+					namedExports: di.apiIntfTokens.map(n => interpolateBashStyle(n.name_Tmpl, {intfName: intfName})),
+					moduleSpecifier: path.relative(path.dirname(sf.getFilePath()), path.join(path.dirname(intf.getSourceFile().getFilePath()), path.basename(intf.getSourceFile().getFilePath(), '.ts')))
 				});
 			}
 			di.apiConstruction.implDecorator.forEach(d => {
@@ -323,4 +332,11 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 			writer.writeLine('this.config = this.config || {}');
 		});
 	}
+}
+
+export function isTsmorphClientApi(obj: any): obj is TsmorphClientApi {
+	if (obj && isTsmorphApi(obj))
+		if (obj instanceof TsmorphClientApi)
+			return true;
+	return false;
 }
