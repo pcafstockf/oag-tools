@@ -170,7 +170,9 @@ export abstract class BaseTsmorphMethod<
 			}
 			return p;
 		}, [] as TsmorphResponse[]);
-		let rspTypeTxt = (responses.map(r => (r.model as TsmorphModel).getTypeNode().getText()).join(' | ') || 'void').trim();
+
+		let elems = responses.map(r => (r.model as TsmorphModel).getTypeNode().getText());
+		let rspTypeTxt = (Array.from(new Set(elems)).join(' | ') || 'void').trim();
 		if (/\s/.test(rspTypeTxt))
 			rspTypeTxt = `(${rspTypeTxt})`;
 		return {

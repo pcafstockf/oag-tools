@@ -362,9 +362,16 @@ export abstract class BaseTypedModel extends BaseSchemaModel implements TypedMod
 	protected abstract get lang(): string
 
 	get typeName(): string {
-		let key = `${this.baseSettings.role}_${this.lang}`;
+		let lang = this.lang;
+		let key = `${this.baseSettings.role}_${lang}`;
 		if (!this.#langTypes[key])
-			key = this.lang;
+			key = lang;
+		if (this.#langTypes[key])
+			return this.#langTypes[key].type;
+		lang = 'literal';
+		key = `${this.baseSettings.role}_${lang}`;
+		if (!this.#langTypes[key])
+			key = lang;
 		return this.#langTypes[key]?.type;
 	}
 

@@ -1,5 +1,6 @@
 import SwaggerParser from '@apidevtools/swagger-parser';
 import {Container} from 'async-injection';
+import {stringify as json5Stringify} from 'json5';
 import {Api, Model, Parameter} from 'oag-shared/lang-neutral';
 import {BaseApi, BaseArrayModel, BaseBodyParameter, BaseMethod, BaseNamedParameter, BaseOpenApiResponse, BaseRecordModel, BaseSchemaModel, BaseSettingsToken, BaseTypedModel, BaseUnionModel, CodeGenApiToken, CodeGenArrayModelToken, CodeGenAst, CodeGenBodyParameterToken, CodeGenCommonModelsToken, CodeGenMethodToken, CodeGenNamedParameterToken, CodeGenOpenApiResponseToken, CodeGenRecordModelToken, CodeGenUnionModelToken, CommonModelTypes, OpenApiSchemaWithModelRef} from 'oag-shared/lang-neutral/base';
 import {CodeGenTypedModelToken, isPrimitiveModel} from 'oag-shared/lang-neutral/model';
@@ -208,10 +209,10 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 							model = this.container.get<BaseSchemaModel>(CodeGenArrayModelToken);
 							break;
 						case 'boolean':
-							key = schema.type as string;
+							key = schema.type as string ?? schemaType;
 							break;
 						case 'number':
-							key = schema.type as string;
+							key = schema.type as string ?? schemaType;
 							constraints = SchemaJsdConstraints(schema);
 							switch (constraints.format) {
 								case 'float':
@@ -221,7 +222,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 							}
 							break;
 						case 'string':
-							key = schema.type as string;
+							key = schema.type as string ?? schemaType;
 							constraints = SchemaJsdConstraints(schema);
 							switch (constraints.format) {
 								case 'binary':
@@ -235,7 +236,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 							}
 							break;
 						case 'integer':
-							key = schema.type as string;
+							key = schema.type as string ?? schemaType;
 							constraints = SchemaJsdConstraints(schema);
 							switch (constraints.format) {
 								case 'int32':
@@ -250,10 +251,41 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 						default:
 							if (asUnion)
 								model = this.container.get<BaseUnionModel>(CodeGenUnionModelToken);
-							else
-								key = 'any';    // The absence of a type means it can be anything.
+							else {
+								let constVal: string;
+								if (schema.const === null)
+									constVal = 'null';
+								else if (Array.isArray(schema.const))
+									constVal = json5Stringify(schema.const);
+								else {
+									switch (typeof schema.const) {
+										case 'string':
+											constVal = `'${schema.const}'`;
+											break;
+										case 'number':
+											constVal = String(schema.const);
+											break;
+										case 'boolean':
+											constVal = schema.const ? 'true' : 'false';
+											break;
+										case 'object':
+											constVal = json5Stringify(schema.const);
+											break;
+										default:
+											key = 'any';    // The absence of a type means it can be anything.
+											break;
+									}
+								}
+								if (constVal) {
+									model = this.container.get<BaseTypedModel>(CodeGenTypedModelToken);
+									(model as BaseTypedModel).addOagType({literal: {type: constVal, lib: undefined}});
+								}
+							}
 							break;
 					}
+					// No supported language can handle not, so it is effectively 'any'
+					if ((!key) && (schema.not))
+						key = 'any';
 					if (key) {
 						model = this.container.get(CodeGenCommonModelsToken)(key as CommonModelTypes) as BaseSchemaModel;
 						if (asUnion) {

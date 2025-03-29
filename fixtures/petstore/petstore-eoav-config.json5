@@ -1,0 +1,9 @@
+{
+	i: './fixtures/petstore/petstore.bundle.json',
+	o: '~/oag-tools-projects/petstore-eoav/src/server',
+	d: 'all',
+	r: 'server',
+	p: [
+		'tsmorph.server.framework="express-openapi-validator"',
+	]
+}
