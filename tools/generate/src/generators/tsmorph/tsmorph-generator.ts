@@ -64,10 +64,11 @@ export class TsmorphGenerator implements SourceGenerator {
 	protected tempFile: SourceFile;
 
 	protected async preGenerate(_ast: CodeGenAst): Promise<void> {
-
 	}
 
 	protected async postGenerate(_ast: CodeGenAst, target?: string): Promise<void> {
+		if (!safeLStatSync(this.baseSettings.outputDirectory))
+			mkdirSync(this.baseSettings.outputDirectory, {recursive: true});
 		this.tsmorphSettings.support.forEach(entry => {
 			let dstBase: string;
 			const opts = {

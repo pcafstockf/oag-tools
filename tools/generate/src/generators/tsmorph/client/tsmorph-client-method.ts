@@ -133,7 +133,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 			signature.params.forEach(p => {
 				const arg = meth.addParameter({
 					name: p.param.getIdentifier(alnType),
-					hasQuestionToken: !p.required,
+					hasQuestionToken: idx === 1 || idx == 3 ? false : !p.required,
 					type: p.param.model.getTypeNode().getText()
 				});
 				bindAst(arg, p);
@@ -145,7 +145,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				case 1:
 					meth.addParameter({
 						name: 'rsp',
-						hasQuestionToken: true,
+						hasQuestionToken: false,
 						type: '\'http\''
 					});
 					meth.setReturnType(`Promise<HttpResponse<${signature.returnText}>>`);
@@ -161,12 +161,12 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				case 3:
 					meth.addParameter({
 						name: TsmorphClientMethod.DefinedHdrsName,
-						hasQuestionToken: true,
+						hasQuestionToken: false,
 						type: 'Record<string, string>'
 					});
 					meth.addParameter({
 						name: 'rsp',
-						hasQuestionToken: true,
+						hasQuestionToken: false,
 						type: '\'http\''
 					});
 					meth.setReturnType(`Promise<HttpResponse<${signature.returnText}>>`);
