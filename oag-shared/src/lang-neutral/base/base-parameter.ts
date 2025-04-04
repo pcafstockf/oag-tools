@@ -129,7 +129,7 @@ export class BaseBodyParameter extends MixOpenApiLangNeutral<OpenAPIV3_1.Request
 	}
 
 	get preferredMediaTypes(): string[] | undefined {
-		return this.#preferredMT.slice();
+		return this.#preferredMT?.slice();
 	}
 
 	#preferredMT: string[];
