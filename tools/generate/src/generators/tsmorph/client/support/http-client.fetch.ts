@@ -69,7 +69,7 @@ class FetchHttpClient implements HttpClient {
 			retVal.headers[lk] = val;
 		});
 		if (rsp.ok && rsp.status === 204)
-			return null;
+			return retVal;
 		let contentType = rsp.headers.get('Content-Type')?.toLowerCase();
 		if (contentType) {
 			const semi = contentType.indexOf(';');

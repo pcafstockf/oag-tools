@@ -317,6 +317,8 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				.write('$serviceUrl,');
 			if (body)
 				writer.write(`$body,`);
+			else if (['post', 'put', 'patch'].includes(this.httpMethod.toLowerCase()))
+				writer.write(`undefined,`);
 			writer.write('$opts);');
 			writer.writeLine('});');
 			writer.write('if (rsp !== \'http\')').indent().writeLine('return $rsp.then(r => r.data as any);');
