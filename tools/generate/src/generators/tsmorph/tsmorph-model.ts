@@ -12,7 +12,7 @@ import * as nameUtils from 'oag-shared/utils/name-utils';
 import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
 import {ClassDeclaration, EnumDeclaration, ExportableNode, ExpressionWithTypeArguments, Identifier, InterfaceDeclaration, JSDocableNode, JSDocStructure, Node, ObjectLiteralElement, Project, ScriptTarget, SourceFile, StructureKind, ts, TypeAliasDeclaration, TypeLiteralNode, TypeNode, TypeReferenceNode, VariableDeclarationKind, VariableStatement} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
-import {bindAst, CannotGenerateError, importIfNotSameFile, makeFakeIdentifier, makeJsDoc, oae2ObjLiteralStr, TempFileName} from './oag-tsmorph';
+import {bindAst, CannotGenerateError, importIfNotSameFile, isSameSourceFile, makeFakeIdentifier, makeJsDoc, oae2ObjLiteralStr, TempFileName} from './oag-tsmorph';
 
 /**
  * All methods of this interface MUST be idempotent.
@@ -202,10 +202,12 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 					break;
 			}
 			if (t) {
-				if (ex && Node.isExportable(ex) && ex.isExported())
-					importIfNotSameFile(sf, t, t.getText());
-				else
-					this.dependencies.forEach(d => d.importInto(sf));
+				if (!isSameSourceFile(sf, t.getSourceFile())) {
+					if (ex && Node.isExportable(ex) && ex.isExported())
+						importIfNotSameFile(sf, t, t.getText());
+					else
+						this.dependencies.forEach(d => d.importInto(sf));
+				}
 			}
 		}
 

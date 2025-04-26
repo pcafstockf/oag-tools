@@ -1,0 +1,17 @@
+// This is a little sample config to show how naming conventions can be altered.
+{
+	i: './fixtures/naming/naming.yml',
+	o: '~/oag-tools-projects/naming/src/client',
+	d: 'all',
+	r: 'client',
+	p: [
+		'base.modelIntfDir="types"',
+		'base.modelImplDir="dto"',
+		'base.modelJsonDir="schema"',
+		'base.apiIntfDir="api"',
+		'base.apiImplDir="impl"',
+		'base.apiMockDir="mock"',
+		// defaults to ' ', which kebab'd (the default) turns into '-'
+		'base.fileSuffixSep="."',
+	]
+}

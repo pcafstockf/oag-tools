@@ -51,14 +51,6 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 
 	private createMockMethod(api: ApiClassDeclaration) {
 		const id = this.getIdentifier('mock');
-		/*
-	findPetsByStatus:
-		SinonStub<[('available' | 'pending' | 'sold')?], Promise<Array<Pet>>> &
-		SinonStub<[('available' | 'pending' | 'sold')?, 'http'?], Promise<HttpResponse<Array<Pet>>>> &
-		SinonStub<[('available' | 'pending' | 'sold')?, Record<string, string>?], Promise<Array<Pet>>> &
-		SinonStub<[('available' | 'pending' | 'sold')?, Record<string, string>?, 'http'?], Promise<HttpResponse<Array<Pet>>>>;
-	}>;
-		 */
 		let prop = api.getProperty(id);
 		if (!prop) {
 			const sig = this.computeSignature();

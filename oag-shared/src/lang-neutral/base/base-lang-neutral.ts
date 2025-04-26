@@ -10,83 +10,83 @@ export abstract class BaseLangNeutral {
 	constructor(protected baseSettings: BaseSettingsType) {
 	}
 
-	protected toIntfName(name: string, type: 'api' | 'model'): string {
-		let templ = this.baseSettings.intfName_Tmpl;
-		if (type === 'api' && this.baseSettings.apiIntfName_Tmpl)
-			templ = this.baseSettings.apiIntfName_Tmpl;
-		else if (type === 'model' && this.baseSettings.modelIntfName_Tmpl)
-			templ = this.baseSettings.modelIntfName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, typeSuffix: this.typeSuffix(type), intfSuffix: this.baseSettings.intfSuffix, intfPrefix: this.baseSettings.intfPrefix});
+	protected toIntfName(name: string, artifact: 'api' | 'model'): string {
+		let iname = interpolateBashStyle(
+			artifact === 'api' ? this.baseSettings.apiIntfName_Tmpl : this.baseSettings.modelIntfName_Tmpl, {
+				name: name
+			});
 		return nameUtils.setCase(iname, this.baseSettings.intfNameCasing);
 	}
 
-	protected toIntfFileBasename(name: string, type: 'api' | 'model'): string {
-		let templ = this.baseSettings.intfFileBasename_Tmpl;
-		if (type === 'api' && this.baseSettings.apiIntfFileBasename_Tmpl)
-			templ = this.baseSettings.apiIntfFileBasename_Tmpl;
-		else if (type === 'model' && this.baseSettings.modelIntfFileBasename_Tmpl)
-			templ = this.baseSettings.modelIntfFileBasename_Tmpl;
-		let fname = interpolateBashStyle(templ, {name: name, typeSuffix: this.typeSuffix(type), intfFileSuffix: this.baseSettings.intfFileSuffix});
+	protected toIntfFileBasename(name: string, artifact: 'api' | 'model'): string {
+		let fname = interpolateBashStyle(
+			artifact === 'api' ? this.baseSettings.apiIntfFileBasename_Tmpl : this.baseSettings.modelIntfFileBasename_Tmpl, {
+				name: name,
+			});
 		return nameUtils.setCase(fname, this.baseSettings.fileCasing);
 	}
 
-	protected toImplName(name: string, type: 'api' | 'model'): string {
-		let templ = this.baseSettings.implName_Tmpl;
-		if (type === 'api' && this.baseSettings.apiImplName_Tmpl)
-			templ = this.baseSettings.apiImplName_Tmpl;
-		else if (type === 'model' && this.baseSettings.modelImplName_Tmpl)
-			templ = this.baseSettings.modelImplName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, typeSuffix: this.typeSuffix(type), implSuffix: this.baseSettings.implSuffix, implPrefix: this.baseSettings.implPrefix});
+	protected toImplName(name: string, artifact: 'api' | 'model'): string {
+		let iname = interpolateBashStyle(
+			artifact === 'api' ? this.baseSettings.apiImplName_Tmpl : this.baseSettings.modelImplName_Tmpl, {
+				name: name,
+			});
 		return nameUtils.setCase(iname, this.baseSettings.implNameCasing);
 	}
 
-	protected toImplFileBasename(name: string, type: 'api' | 'model'): string {
-		let templ = this.baseSettings.implFileBasename_Tmpl;
-		if (type === 'api' && this.baseSettings.apiImplFileBasename_Tmpl)
-			templ = this.baseSettings.apiImplFileBasename_Tmpl;
-		else if (type === 'model' && this.baseSettings.modelImplFileBasename_Tmpl)
-			templ = this.baseSettings.modelImplFileBasename_Tmpl;
-		let fname = interpolateBashStyle(templ, {name: name, typeSuffix: this.typeSuffix(type), implFileSuffix: this.baseSettings.implFileSuffix});
+	protected toImplFileBasename(name: string, artifact: 'api' | 'model'): string {
+		let fname = interpolateBashStyle(
+			artifact === 'api' ? this.baseSettings.apiImplFileBasename_Tmpl : this.baseSettings.modelImplFileBasename_Tmpl, {
+				name: name,
+			});
 		return nameUtils.setCase(fname, this.baseSettings.fileCasing);
 	}
 
 	protected toJsonName(name: string): string {
-		let templ = this.baseSettings.jsonName_Tmpl;
-		if (this.baseSettings.modelJsonName_Tmpl)
-			templ = this.baseSettings.modelJsonName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, jsonSuffix: this.baseSettings.jsonSuffix, jsonPrefix: this.baseSettings.jsonPrefix});
+		let iname = interpolateBashStyle(
+			this.baseSettings.modelJsonName_Tmpl, {
+				name: name,
+			});
 		return nameUtils.setCase(iname, this.baseSettings.jsonNameCasing);
 	}
 
 	protected toJsonFileBasename(name: string): string {
-		let templ = this.baseSettings.jsonFileBasename_Tmpl;
-		if (this.baseSettings.modelJsonFileBasename_Tmpl)
-			templ = this.baseSettings.modelJsonFileBasename_Tmpl;
-		let fname = interpolateBashStyle(templ, {name: name, jsonFileSuffix: this.baseSettings.jsonFileSuffix});
+		let fname = interpolateBashStyle(
+			this.baseSettings.modelJsonFileBasename_Tmpl, {
+				name: name,
+			});
 		return nameUtils.setCase(fname, this.baseSettings.fileCasing);
 	}
 
 	protected toHndlName(name: string): string {
-		let templ = this.baseSettings.hndlName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, hndlSuffix: this.baseSettings.hndlSuffix, hndlPrefix: this.baseSettings.hndlPrefix});
+		let iname = interpolateBashStyle(
+			this.baseSettings.apiHndlName_Tmpl, {
+				name: name,
+			});
 		return nameUtils.setCase(iname, this.baseSettings.hndlNameCasing);
 	}
 
-	protected toMockName(name: string): string {
-		let templ = this.baseSettings.mockName_Tmpl;
-		let iname = interpolateBashStyle(templ, {name: name, mockSuffix: this.baseSettings.mockSuffix, mockPrefix: this.baseSettings.mockPrefix});
-		return nameUtils.setCase(iname, this.baseSettings.mockNameCasing);
-	}
-
 	protected toHndlFileBasename(name: string): string {
-		let templ = this.baseSettings.hndlFileBasename_Tmpl;
-		let fname = interpolateBashStyle(templ, {name: name, hndlFileSuffix: this.baseSettings.hndlFileSuffix});
+		let fname = interpolateBashStyle(
+			this.baseSettings.apiHndlFileBasename_Tmpl, {
+				name: name,
+			});
 		return nameUtils.setCase(fname, this.baseSettings.fileCasing);
 	}
 
+	protected toMockName(name: string): string {
+		let iname = interpolateBashStyle(
+			this.baseSettings.apiMockName_Tmpl, {
+				name: name,
+			});
+		return nameUtils.setCase(iname, this.baseSettings.mockNameCasing);
+	}
+
 	protected toMockFileBasename(name: string): string {
-		let templ = this.baseSettings.mockFileBasename_Tmpl;
-		let fname = interpolateBashStyle(templ, {name: name, mockFileSuffix: this.baseSettings.mockFileSuffix});
+		let fname = interpolateBashStyle(
+			this.baseSettings.apiMockFileBasename_Tmpl, {
+				name: name,
+			});
 		return nameUtils.setCase(fname, this.baseSettings.fileCasing);
 	}
 
@@ -96,21 +96,6 @@ export abstract class BaseLangNeutral {
 
 	protected toParameterName(name: string): string {
 		return nameUtils.setCase(name, 'camel');
-	}
-
-	private typeSuffix(type: string) {
-		switch (type) {
-			case 'api':
-				return this.baseSettings.apiSuffix;
-			case 'model':
-				return this.baseSettings.modelSuffix;
-			case 'json':
-				return this.baseSettings.jsonSuffix;
-			case 'hndl':
-				return this.baseSettings.hndlSuffix;
-			default:
-				return '';
-		}
 	}
 }
 

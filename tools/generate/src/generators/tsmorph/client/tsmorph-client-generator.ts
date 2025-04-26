@@ -76,7 +76,8 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 		// Generate the models index.ts file.
 		const modelIndexTs = ast.models.filter(m => isTsmorphModel(m) && isFileBasedLangNeutral(m)).reduce((p, m) => {
 			const filePath = (m as unknown as FileBasedLangNeutral).getFilepath('intf');
-			p += `export * from './${path.basename(filePath, path.extname(filePath))}';${os.EOL}`;
+			if (filePath)
+				p += `export * from './${path.basename(filePath, path.extname(filePath))}';${os.EOL}`;
 			return p;
 		}, ``);
 		if (modelIndexTs)

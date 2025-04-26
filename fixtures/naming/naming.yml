@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Naming Sample
+  version: "1.0"
+servers:
+  - url: https://null
+tags:
+  - name: Naming
+    description: Minimalist
+paths:
+  /hello:
+    get:
+      tags:
+        - Naming
+      operationId: greet
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Greeting"
+components:
+  schemas:
+    Greeting:
+      type: object
+      properties:
+        salutation:
+          type: string
