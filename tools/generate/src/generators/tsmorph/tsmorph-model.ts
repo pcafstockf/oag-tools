@@ -80,7 +80,10 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			super(baseSettings);
 			this.#tsTypes = {} as any;
 			this.#dependencies = [];
+			this.#genState = undefined;
 		}
+
+		#genState: undefined | 'generating' | 'done';
 
 		readonly #tsTypes: {
 			intf: I,
@@ -94,6 +97,21 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 		}
 
 		readonly #dependencies: TsmorphModel[];
+
+		async generate(sf: SourceFile): Promise<void> {
+			if (!this.#genState) {
+				try {
+					this.#genState = 'generating';
+					return this.generateModel(sf);
+				}
+				finally {
+					this.#genState = 'done';
+				}
+			}
+		}
+
+		protected async generateModel(sf: SourceFile): Promise<void> {
+		}
 
 		getLangNode(mlnType: 'intf'): I;
 		getLangNode(mlnType: 'impl'): C;
@@ -306,7 +324,7 @@ export class TsmorphUnionModel extends MixTsmorphModel<BaseUnionModel, ModelType
 		return undefined;
 	}
 
-	override async generate(sf: SourceFile): Promise<void> {
+	override async generateModel(sf: SourceFile): Promise<void> {
 		for (let u of this.unionOf) {
 			if (isTsmorphModel(u)) {
 				await u.generate(sf);
@@ -408,7 +426,7 @@ export class TsmorphPrimitiveModel extends MixTsmorphModel<BasePrimitiveModel, M
 		return undefined;
 	}
 
-	override async generate(sf: SourceFile): Promise<void> {
+	override async generateModel(sf: SourceFile): Promise<void> {
 		if (!this.getLangNode('intf')) {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
@@ -603,7 +621,7 @@ export class TsmorphArrayModel extends MixTsmorphModel<BaseArrayModel, ModelType
 			this.items.importInto(sf, mlnType);
 	}
 
-	override async generate(sf: SourceFile): Promise<void> {
+	override async generateModel(sf: SourceFile): Promise<void> {
 		if (isTsmorphModel(this.items)) {
 			await this.items.generate(sf);
 			this.addDependency(this.items);
@@ -713,7 +731,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		return undefined;
 	}
 
-	override async generate(sf: SourceFile): Promise<void> {
+	override async generateModel(sf: SourceFile): Promise<void> {
 		for (let u of this.unionOf) {
 			if (isTsmorphModel(u)) {
 				await u.generate(sf);
@@ -1125,7 +1143,7 @@ export class TsmorphTypedModel extends MixTsmorphModel<BaseTypedModel, ModelType
 		return undefined;
 	}
 
-	override async generate(sf: SourceFile): Promise<void> {
+	override async generateModel(sf: SourceFile): Promise<void> {
 		if (!this.getLangNode('intf')) {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
