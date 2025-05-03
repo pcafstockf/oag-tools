@@ -4,7 +4,7 @@ Collection of tools for high quality OpenApi code generation
 
 ## Overview
 
-OpenApi Generator Tools aims to abstract away the notion of http transport for clients and servers wishing to implement an OpenAPi specification.
+OpenApi Generator Tools aims to abstract away the notion of http transport for clients and servers wishing to implement an OpenApi specification.
 Your application (client), or service (server) can stay focused on business logic.
 
 ## Design
