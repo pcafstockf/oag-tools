@@ -1,5 +1,6 @@
 # oag-tools
-Collection of tools for OpenApi code generation
+
+Collection of tools for high quality OpenApi code generation
 
 ## Overview
 
