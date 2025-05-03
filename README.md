@@ -35,7 +35,7 @@ The generator:
 
 * Supports client / server, and node / browser, for various frameworks.
 * Opinionated, but highly customizable.
-* Does not require, but strongly encourages. the use of Dependency Injection.
+* Does not require, but strongly encourages, the use of Dependency Injection.
 
 NOTE:
 This is first draft documentation. Please feel free to make suggestions and look for more to come.
