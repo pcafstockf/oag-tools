@@ -22,18 +22,19 @@ We will refer to these code generation Ast interfaces as the "`CodeGenAst`"
 * What most languages call a "primitive":
     * `integer`, `number`, `string`, `boolean`, `null`
     * Pseudo primitives `any`, `object`, `enum` are also possible
-* `array`: modelsMatch the OpenApi schema type 'array'
-* `record`: modelsMatch the OpenApi schema type 'object'
+* `array`: Match the OpenApi schema type 'array'
+* `record`: Match the OpenApi schema type 'object'
     * Calling it an 'object' is ambiguous (is it a type/interface/record, or instance), so we go with record.
     * Complex records will also contain one or more of the OpenApi `anyOf`, `allOf`, `oneOf` specifiers.
         * `not`, is unsupported by the code generator. While it is provable by a validator, it is not really a type (none of the supported languages support "any **except**", types).
 * `union`: has `anyOf`, `oneOf` (like a Complex `record`) but is not a `record` \ object.
     * May be OpenApi based or synthetically created by the generator to represent combinations of other models as needed.
-* `typed`: An explicit textual type string that the target language is assumed to understand.
-    * (e.g. `Date` in JavaScript, or a `Container` type globally imported from a 3rd party library).
-      Note:  
-      The transformer from OpenApi DSL -> `CodeGen` DSL is responsible for building an appropriate `Model` to represent the OpenApi intent.  
-      This includes for example when the `type` property is missing from an OpenApi schema object, but it has a `properties` property, `CodeGen` will create the schema as `kind = record`.
+* `typed`: An explicit text string that the target language is assumed to understand.
+    * (e.g. `Date` in JavaScript, or `Container` as the type from a 3rd party library).
+
+Note:  
+The transformer from OpenApi DSL -> `CodeGen` DSL is responsible for building an appropriate `Model` to represent the OpenApi intent.  
+This includes for example when the `type` property is missing from an OpenApi schema object, but it has a `properties` element, `CodeGen` will create the schema as `kind = record`.
 
 `CodeGen` maps TypeScript to OpenApi roughly as:
 
@@ -41,15 +42,15 @@ We will refer to these code generation Ast interfaces as the "`CodeGenAst`"
     * Think of this as "imposes additional constraints" (e.g. must satisfy "all" of these)
     * Of course OpenApi types must match;
       Something cannot be a string and an array and an integer at the same time.
-      Therefore, CodeGen will always create a `record` when it sees this, and the constituent types will be found in `extendsFrom`.
+      Therefore, CodeGen will always create a `record` when it sees this, and the constituent types will be found in `Model.extendsFrom`.
 * `anyOf`: TypeScript union `|` (e.g. can be of one `kind` or another).
     * Constituent types will be found in `Model.unionOf`
 * `oneOf`: TypeScript discriminated (e.g. multiple possible types, but only one actual type).
     * Commonly used programming language type systems cannot distinguish between `anyOf` and `oneOf`.
     * With `oneOf`, schema is chosen by matching the **data** against each possible schema.
       This means that a string schema can be distinguished from an integer schema, and from an object schema, by looking at the instances data type.
-    * With "discriminated", schema is chosen based on the value of a specific field.  
-      All schema need a common **property**, but each schema must declare a unique **value** for that property.
+  * With "discriminated", schema is chosen based on the value of a specific field.
+    All schema need a common **property**, but each schema must declare a unique **value** for that property.
       Since a property is required, only `record` (aka objects) can have a discriminator.
     * NOTE: AJV supports `oneOf` and could be augmented to support discriminators, but it does not do so natively.
 
