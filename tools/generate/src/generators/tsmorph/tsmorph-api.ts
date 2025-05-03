@@ -95,7 +95,7 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 		if (alnType && isFileBasedLangNeutral(this)) {
 			const fp = this.getFilepath(alnType);
 			if (fp) {
-				const fullPath = path.join(proj.getCompilerOptions().outDir, fp) + '.ts';
+				const fullPath = path.join(proj.getCompilerOptions().outDir, fp);
 				// Can be configured to only generate api-impl if non-existent
 				if (alnType === 'impl' && this.baseSettings.role === 'server' && safeLStatSync(fp))
 					return Promise.resolve(null);
@@ -107,6 +107,13 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 				return sf;
 		}
 		return undefined;
+	}
+
+	getFilepath(type: LangNeutralApiTypes): string {
+		const result = super.getFilepath(type);
+		if (result)
+			return result + '.ts';
+		return result;
 	}
 
 	importInto(sf: SourceFile, alnType?: LangNeutralApiTypes): void {
@@ -153,7 +160,7 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 				}
 			}
 		}
-		if (!this.getLangNode('intf')) {
+		if (!this.getLangNode('intf') && this.baseSettings.apiIntfDir) {
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
 				const id = this.ensureIdentifier('intf');
@@ -178,7 +185,7 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 					this.bind('intf', intf);
 			}
 		}
-		if (!this.getLangNode('impl')) {
+		if (!this.getLangNode('impl') && this.baseSettings.apiImplDir) {
 			sf = await this.getSrcFile('impl', sf.getProject(), sf);
 			if (sf) {
 				const id = this.ensureIdentifier('impl');
@@ -194,8 +201,12 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 							}]
 						});
 					}
-					this.importInto(sf, 'intf');
-					this.dependencies.forEach(d => d.importInto(sf, 'intf'));
+					if (this.getLangNode('intf')) {
+						this.importInto(sf, 'intf');
+						this.dependencies.forEach(d => d.importInto(sf, 'intf'));
+					}
+					else
+						this.dependencies.forEach(d => d.importInto(sf, 'impl'));
 
 					for (let m of this.methods) {
 						if (isTsmorphMethod(m))

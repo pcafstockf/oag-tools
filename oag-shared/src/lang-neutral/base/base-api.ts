@@ -28,6 +28,12 @@ export abstract class BaseApi extends MixOpenApiLangNeutral<OpenAPIV3_1.TagObjec
 		if (type === null)
 			return true as any;
 		switch (type) {
+			// A special hack for code which cannot realistically check whether we are only generating impls.
+			case undefined:
+				if (this.baseSettings.apiIntfDir)
+					return this.toIntfName(name, 'api');
+				else
+					return this.toImplName(name, 'api');
 			case 'intf':
 				return this.toIntfName(name, 'api');
 			case 'impl':

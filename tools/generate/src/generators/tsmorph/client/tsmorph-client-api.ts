@@ -159,7 +159,7 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 	}
 
 	protected makeMockConstructor(c: ClassDeclaration) {
-		const intDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir), this.tsmorphClientSettings.internalDirName);
+		const intDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir || this.baseSettings.apiImplDir), this.tsmorphClientSettings.internalDirName);
 		const dmSfPath = path.relative(path.dirname(c.getSourceFile().getFilePath()), intDir);
 		c.getSourceFile().addImportDeclaration({
 			namedImports: ['MockDataGenerator', 'MockDataGeneratorToken'],
@@ -208,18 +208,6 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 					writer.writeLine(`this.${m.getIdentifier('intf')} = ${rhs} as typeof this.${m.getIdentifier('intf')};${os.EOL}`);
 				}
 			});
-			/*
-		this.createUser = mock.fn(async (body?: User, hdrsOrRsp?: Record<string, string> | 'body' | 'http', rsp?: 'body' | 'http') => {
-			const data = jsdMock(UserSchema as any);
-			if (hdrsOrRsp === 'http' || rsp === 'http')
-				return {
-					status: 201,    // Computed from OpenApi
-					headers: {},    // Can we compute this from the spec?
-					data: data
-				}
-			return data;
-		});
-			 */
 		});
 	}
 
@@ -233,7 +221,12 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 			isExported: true
 		});
 		this.ensureInternalDirImport(retVal);
+		this.generateIfDIToken(sf, retVal);
 
+		return retVal;
+	}
+
+	private generateIfDIToken(sf: SourceFile, retVal: InterfaceDeclaration | ClassDeclaration) {
 		const di = this.tsmorphClientSettings.dependencyInjection ? this.tsmorphClientSettings.di[this.tsmorphClientSettings.dependencyInjection] : undefined;
 		if (di) {
 			// Each API interface should define a DI token that the API implementation will be bound to
@@ -251,7 +244,6 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 				});
 			});
 		}
-		return retVal;
 	}
 
 	protected findImpl(sf: SourceFile, id: string): ClassDeclaration {
@@ -263,25 +255,29 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 		let retVal = sf.addClass({
 			name: id,
 			isExported: true,
-			implements: [intf.getName()]
+			implements: intf ? [intf.getName()] : undefined
 		});
-		this.importInto(sf, 'intf');
+		if (intf)
+			this.importInto(sf, 'intf');
 		this.ensureInternalDirImport(retVal);
 		const di = this.tsmorphClientSettings.dependencyInjection ? this.tsmorphClientSettings.di[this.tsmorphClientSettings.dependencyInjection] : undefined;
 		if (di) {
 			di.implImport?.forEach(i => sf.addImportDeclaration(i));
 			if (di.apiIntfTokens) {
-				const intf = this.getLangNode('intf');
-				const intfName = intf.getName();
-				const apiImportDecl = sf.getImportDeclaration(c => !!c.getNamedImports().find(i => i.getName() === intfName));
-				di.apiIntfTokens.forEach(tok => {
-					let varName = interpolateBashStyle(tok.name_Tmpl, {intfName: intfName});
-					apiImportDecl.addNamedImport(varName);
-				});
-				sf.addExportDeclaration({
-					namedExports: di.apiIntfTokens.map(n => interpolateBashStyle(n.name_Tmpl, {intfName: intfName})),
-					moduleSpecifier: path.relative(path.dirname(sf.getFilePath()), path.join(path.dirname(intf.getSourceFile().getFilePath()), path.basename(intf.getSourceFile().getFilePath(), '.ts')))
-				});
+				if (intf) {
+					const intfName = intf.getName();
+					const apiImportDecl = sf.getImportDeclaration(c => !!c.getNamedImports().find(i => i.getName() === intfName));
+					di.apiIntfTokens.forEach(tok => {
+						let varName = interpolateBashStyle(tok.name_Tmpl, {intfName: intfName});
+						apiImportDecl.addNamedImport(varName);
+					});
+					sf.addExportDeclaration({
+						namedExports: di.apiIntfTokens.map(n => interpolateBashStyle(n.name_Tmpl, {intfName: intfName})),
+						moduleSpecifier: path.relative(path.dirname(sf.getFilePath()), path.join(path.dirname(intf.getSourceFile().getFilePath()), path.basename(intf.getSourceFile().getFilePath(), '.ts')))
+					});
+				}
+				else
+					this.generateIfDIToken(sf, retVal);
 			}
 			di.apiConstruction.implDecorator.forEach(d => {
 				retVal.addDecorator(d);

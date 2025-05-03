@@ -163,16 +163,16 @@ export const TsMorphClientSettings = {
 								di.bindConstant(ApiHttpClientToken, httpClient);<% apis.forEach(function(api) { %>
 							if (defaultConfig && (!di.isIdKnown(<%- api.getIdentifier('impl') %>Config<%- intfTokensExt %>)))
 								di.bindConstant(<%- api.getIdentifier('impl') %>Config<%- intfTokensExt %>, defaultConfig);
-							if (!di.isIdKnown(<%- api.getIdentifier('intf') %><%- intfTokensExt %>))
-								di.bindClass(<%- api.getIdentifier('intf') %><%- intfTokensExt %>, <%- api.getIdentifier('impl') %>).asSingleton();<% }); %>
+							if (!di.isIdKnown(<%- api.getIdentifier() %><%- intfTokensExt %>))
+								di.bindClass(<%- api.getIdentifier() %><%- intfTokensExt %>, <%- api.getIdentifier('impl') %>).asSingleton();<% }); %>
 						}
 					`,
 			mockSetup: `import { Container } from 'async-injection';
 						export function setupMocks(di: Container, mdg?: MockDataGenerator): void {
 							if (mdg && !di.isIdKnown(MockDataGeneratorToken)) 
 								di.bindConstant(MockDataGeneratorToken, mdg);<% apis.forEach(function(api) { %>
-							if (!di.isIdKnown(<%- api.getIdentifier('intf') %><%- intfTokensExt %>))
-								di.bindClass(<%- api.getIdentifier('intf') %><%- intfTokensExt %>, <%- api.getIdentifier('mock') %>).asSingleton();<% }); %>
+							if (!di.isIdKnown(<%- api.getIdentifier() %><%- intfTokensExt %>))
+								di.bindClass(<%- api.getIdentifier() %><%- intfTokensExt %>, <%- api.getIdentifier('mock') %>).asSingleton();<% }); %>
 						}
 					`
 		},
@@ -221,7 +221,7 @@ export const TsMorphClientSettings = {
 						  declarations: [],
 						  exports:      [],
 						  providers: [<% apis.forEach(function(api) { %>
-						    { provide: <%- api.getIdentifier('intf') %><%- intfTokensExt %>, useClass: <%- api.getIdentifier('impl') %> },<% }); %>
+						    { provide: <%- api.getIdentifier() %><%- intfTokensExt %>, useClass: <%- api.getIdentifier('impl') %> },<% }); %>
 						  ]
 						})
 						export class ApiModule {
@@ -229,7 +229,7 @@ export const TsMorphClientSettings = {
 						        return {
 						            ngModule: ApiModule,
 						            providers: [<% apis.forEach(function(api) { %>
-						                { provide: <%- api.getIdentifier('impl') %><%- confTokensExt %>, useFactory: apiConfFcty, deps: ["<%- api.getIdentifier('intf') %>"]},<% }); %>
+						                { provide: <%- api.getIdentifier('impl') %><%- confTokensExt %>, useFactory: apiConfFcty, deps: ["<%- api.getIdentifier() %>"]},<% }); %>
 						                { provide: ApiHttpClientToken, useFactory: httpClientFcty, deps: [HttpClient] } 
 						            ]
 						        };

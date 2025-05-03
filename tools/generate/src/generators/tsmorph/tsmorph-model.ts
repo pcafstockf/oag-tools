@@ -3,6 +3,7 @@
 import {Inject, Injectable} from 'async-injection';
 import path from 'node:path';
 import {Model} from 'oag-shared/lang-neutral';
+import {LangNeutralApiTypes} from 'oag-shared/lang-neutral/api';
 import {BaseArrayModel, BasePrimitiveModel, BaseRecordModel, BaseSettingsToken, BaseSettingsType, BaseTypedModel, BaseUnionModel, CodeGenAst} from 'oag-shared/lang-neutral/base';
 import {BaseModel} from 'oag-shared/lang-neutral/base/base-model';
 import {isFileBasedLangNeutral, isIdentifiedLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
@@ -202,12 +203,10 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 					break;
 			}
 			if (t) {
-				if (!isSameSourceFile(sf, t.getSourceFile())) {
 					if (ex && Node.isExportable(ex) && ex.isExported())
 						importIfNotSameFile(sf, t, t.getText());
-					else
+					else if (!isSameSourceFile(sf, t.getSourceFile(), true))
 						this.dependencies.forEach(d => d.importInto(sf));
-				}
 			}
 		}
 
@@ -221,7 +220,7 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			if (mlnType && isFileBasedLangNeutral(this)) {
 				const fp = this.getFilepath(mlnType);
 				if (fp) {
-					const fullPath = path.join(proj.getCompilerOptions().outDir, fp) + '.ts';
+					const fullPath = path.join(proj.getCompilerOptions().outDir, fp);
 					// Can be configured to only generate api-impl if non-existent
 					if (mlnType === 'impl' && this.baseSettings.role === 'server' && safeLStatSync(fp))
 						return Promise.resolve(null);
@@ -233,6 +232,13 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 					return sf;
 			}
 			return proj.getSourceFile(`${TempFileName}`);
+		}
+
+		getFilepath(type: LangNeutralApiTypes): string {
+			const result = super.getFilepath(type);
+			if (result)
+				return result + '.ts';
+			return result;
 		}
 
 		protected ensureIdentifier(type: LangNeutralModelTypes) {
@@ -821,11 +827,14 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		let hasProps = props.length > 0 || this.additionalProperties;
 		let subTypes: string[] = [];
 		let asTypeAlias = unionTxt || fake;
+		let ap = this.additionalProperties;
 		for (let e of this.extendsFrom) {
 			if (isTsmorphModel(e)) {
 				if (!isIdentifiedLangNeutral(e)) {
-					if (isRecordModel(e) && Object.keys(e.properties).length > 0 && !e.additionalProperties) {
+					if (isRecordModel(e) && (Object.keys(e.properties).length > 0 || e.additionalProperties)) {
 						hasProps = true;
+						if ((!ap) && e.additionalProperties)
+							ap = e.additionalProperties;
 						props.push(e.properties);
 					}
 					else {
@@ -855,7 +864,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			if (hasProps) {
 				const tls = retVal.getDescendants().filter(d => d.getKind() == ts.SyntaxKind.TypeLiteral);
 				if (tls.length > 0)
-					await this.genProperties(props, sf, tls[tls.length - 1] as TypeLiteralNode);
+					await this.genProperties(props, sf, tls[tls.length - 1] as TypeLiteralNode, this.additionalProperties);
 			}
 		}
 		else {
@@ -865,7 +874,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				extends: subTypes.length > 0 ? subTypes : undefined
 			});
 			if (hasProps)
-				await this.genProperties(props, sf, retVal);
+				await this.genProperties(props, sf, retVal, this.additionalProperties);
 		}
 		if (this.baseSettings.emitDescriptions && !fake) {
 			const docs = this.makeJsDoc();
@@ -940,14 +949,17 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 
 		// Now work on optimizing the 'implements' statement.
 		const implTxts = [] as string[];
+		let ap = this.additionalProperties;
 		if (intf)
 			implTxts.push(intf.getName());
 		else {
 			for (let e of mutableUnionOf.concat(this.extendsFrom as TsmorphModel[])) {
 				// Is it basically an inline definition of properties?  If so, we can just incorporate those properties into our body.
-				if (!Object.is(singleExt, e) && !isIdentifiedLangNeutral(e) && isRecordModel(e) && Object.keys(e.properties).length > 0 && !e.additionalProperties) {
+				if (!Object.is(singleExt, e) && !isIdentifiedLangNeutral(e) && isRecordModel(e) && (Object.keys(e.properties).length > 0 || e.additionalProperties)) {
 					e.importInto(sf);
 					props.push(e.properties);
+					if ((!ap) && e.additionalProperties)
+						ap = e.additionalProperties;
 				}
 				else if (!singleExt || !Object.is(singleExt, e)) {
 					e.importInto(sf);
@@ -974,8 +986,8 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 			this.importInto(sf);
 
 		// Generate our properties as well as any we picked up in our implements optimizations.
-		if (props.length > 0 || this.additionalProperties)
-			await this.genProperties(props, sf, retVal);
+		if (props.length > 0 || ap)
+			await this.genProperties(props, sf, retVal, ap);
 
 		// Now the JSDoc.
 		if (this.baseSettings.emitDescriptions) {
@@ -990,7 +1002,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				retVal.addJsDoc(docs);
 		}
 
-		// Import all our dependnecies (or the TypeScript LanguageService will attempt it for us, and it's usually wrong).
+		// Import all our dependencies (or the TypeScript LanguageService will attempt it for us, and it's usually wrong).
 		this.dependencies.forEach(d => d.importInto(sf));
 
 		// Finally, take advantage of the TypeScript LanguageService to automatically implement any properties we missed as we jumped through our implements statement optimizations.
@@ -1023,7 +1035,7 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		return retVal;
 	}
 
-	private async genProperties(props: Readonly<Record<string, Readonly<RecordPropertyType>>>[], sf: SourceFile, owner: ClassDeclaration | InterfaceDeclaration | TypeLiteralNode): Promise<void> {
+	private async genProperties(props: Readonly<Record<string, Readonly<RecordPropertyType>>>[], sf: SourceFile, owner: ClassDeclaration | InterfaceDeclaration | TypeLiteralNode, ap: Readonly<Model> | false): Promise<void> {
 		props.forEach(p => {
 			for (const [key, value] of Object.entries(p)) {
 				const propModel = value.model;
@@ -1051,7 +1063,6 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 				}
 			}
 		});
-		const ap = this.additionalProperties;
 		if (ap && isTsmorphModel(ap)) {
 			let propType = ap.getTypeNode();
 			let sig;

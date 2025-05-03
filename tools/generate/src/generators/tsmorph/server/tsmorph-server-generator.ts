@@ -33,7 +33,7 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 			let dstPath: string;
 			let srcFilePath: string;
 			let srcTxt: string;
-			const internalDir = path.normalize(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir, this.tsmorphServerSettings.internalDirName));
+			const internalDir = path.normalize(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir || this.baseSettings.apiImplDir, this.tsmorphServerSettings.internalDirName));
 			mkdirSync(internalDir, {recursive: true});
 			entry.files.forEach(fp => {
 				let dstBase: string;
@@ -103,7 +103,7 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 				}
 			});
 			// Add an injection token for the MockDataGenerator.
-			const supportDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir), this.tsmorphServerSettings.internalDirName);
+			const supportDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir || this.baseSettings.apiImplDir), this.tsmorphServerSettings.internalDirName);
 			const dmSf = this.project.addSourceFileAtPath(path.join(supportDir, 'data-mocking.ts'));
 			const mdgIntf = dmSf.getInterface('MockDataGenerator');
 			di.intfImport?.forEach(i => dmSf.addImportDeclaration(i));

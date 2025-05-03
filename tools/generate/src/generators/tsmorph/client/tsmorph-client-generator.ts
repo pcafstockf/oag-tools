@@ -31,7 +31,7 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 	protected async preGenerate(_ast: CodeGenAst): Promise<void> {
 		let srcTxt: string;
 		let dstPath: string;
-		const internalDir = path.normalize(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir, this.tsmorphClientSettings.internalDirName));
+		const internalDir = path.normalize(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir || this.baseSettings.apiImplDir, this.tsmorphClientSettings.internalDirName));
 		mkdirSync(internalDir, {recursive: true});
 		this.tsmorphClientSettings.support.forEach(entry => {
 			let dstBase: string;
@@ -67,21 +67,22 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 
 		// Generate the apis index.ts file.
 		const apiIndexTs = ast.apis.filter(a => isTsmorphApi(a) && isFileBasedLangNeutral(a)).reduce((p, a) => {
-			const filePath = path.basename(a.getFilepath('intf'));
-			p += `export * from './${path.basename(filePath, path.extname(filePath))}';${os.EOL}`;
+			const filePath = path.basename(a.getFilepath('intf') || a.getFilepath('impl'));
+			if (filePath)
+				p += `export * from './${path.basename(filePath, path.extname(filePath))}';${os.EOL}`;
 			return p;
 		}, ``);
 		if (apiIndexTs)
-			this.project.createSourceFile(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir, 'index.ts'), apiIndexTs, {overwrite: true});
+			this.project.createSourceFile(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir || this.baseSettings.apiImplDir, 'index.ts'), apiIndexTs, {overwrite: true});
 		// Generate the models index.ts file.
 		const modelIndexTs = ast.models.filter(m => isTsmorphModel(m) && isFileBasedLangNeutral(m)).reduce((p, m) => {
-			const filePath = (m as unknown as FileBasedLangNeutral).getFilepath('intf');
+			const filePath = (m as unknown as FileBasedLangNeutral).getFilepath('intf') || (m as unknown as FileBasedLangNeutral).getFilepath('impl');
 			if (filePath)
 				p += `export * from './${path.basename(filePath, path.extname(filePath))}';${os.EOL}`;
 			return p;
 		}, ``);
 		if (modelIndexTs)
-			this.project.createSourceFile(path.join(this.baseSettings.outputDirectory, this.baseSettings.modelIntfDir, 'index.ts'), modelIndexTs, {overwrite: true});
+			this.project.createSourceFile(path.join(this.baseSettings.outputDirectory, this.baseSettings.modelIntfDir || this.baseSettings.modelImplDir, 'index.ts'), modelIndexTs, {overwrite: true});
 		// If Dependency Injection is requested...
 		const di = this.tsmorphClientSettings.dependencyInjection ? this.tsmorphClientSettings.di[this.tsmorphClientSettings.dependencyInjection] : undefined;
 		if (di) {
@@ -107,7 +108,10 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 						const intf = api.getLangNode('intf');
 						const impl = api.getLangNode('impl');
 						const implImport = importIfNotSameFile(diSetupSf, impl, impl.getName());
-						intfTokensExt.forEach(ext => implImport.addNamedImport(intf.getName() + ext));
+						if (intf)
+							intfTokensExt.forEach(ext => implImport.addNamedImport(intf.getName() + ext));
+						else
+							intfTokensExt.forEach(ext => implImport.addNamedImport(impl.getName() + ext));
 						confTokensExt.forEach(ext => implImport.addNamedImport(impl.getName() + ext));
 					}
 				});
@@ -142,7 +146,7 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 					fs.rmSync(dmMockSfPath);
 			}
 			// Add an injection token for the MockDataGenerator.
-			const supportDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir), this.tsmorphClientSettings.internalDirName);
+			const supportDir = path.resolve(path.join(this.baseSettings.outputDirectory, this.baseSettings.apiIntfDir || this.baseSettings.apiImplDir), this.tsmorphClientSettings.internalDirName);
 			let dmSf: SourceFile;
 			let dmSfPath = path.join(supportDir, 'data-mocking.ts');
 			if (this.baseSettings.apiMockDir && this.baseSettings.modelJsonDir && this.tsmorphClientSettings.mocklib)
