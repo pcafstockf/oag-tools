@@ -35,18 +35,9 @@ export class FrameworkUtils extends DefaultMockDataGenerator {
 	 */
 	processApiResult<T>(req: Request, result: Promise<HttpResponse<T>> | null, res: Response, next: NextFunction) {
 		if (typeof result === 'object' && (result instanceof Promise || typeof (result as any)?.then === 'function')) {
-			result.then(r => {
-				if (r) {
-					if (r.headers && typeof r.headers === 'object')
-						Object.keys(r.headers).forEach(name => {
-							res.setHeader(name, r.headers[name]);
-						});
-					res.status(r.status ?? 200);
-					if (typeof r.data === 'undefined')
-						return res.send();
-					else
-						return res.send(r.data);
-				}
+			return result.then(r => {
+				if (r)
+					return this.sendResponseAsync(req, r, res);
 				// else, remember that undefined means it has been handled and we should do nothing.
 			}).catch(err => {
 				if (!err)
@@ -56,20 +47,44 @@ export class FrameworkUtils extends DefaultMockDataGenerator {
 			});
 		}
 		else {
-			let rspStatus = 501;
-			let rspData = undefined;
+			const rsp = {
+				status: 501,
+				data: undefined as T | undefined,
+				headers: undefined as Record<string, string | string[]>
+			};
 			const desc = findDefaultStatusCodeMatch((req as any).openapi.schema.responses as any);
 			if (desc) {
-				const mockRsp = this.genMockResponse(desc, req.url);
-				if (typeof mockRsp?.status === 'number')
-					rspStatus = mockRsp.status;
+				const mockRsp = this.genMockResponse<T>(desc, req.url);
+				if (typeof mockRsp.status === 'number')
+					rsp.status = mockRsp.status;
 				if (mockRsp.data)
-					rspData = mockRsp.data;
+					rsp.data = mockRsp.data;
 				if (mockRsp.headers)
-					res = res.setHeaders(mockRsp.headers as any);
+					rsp.headers = mockRsp.headers;
 			}
-			res = res.status(rspStatus);
-			return res.send(rspData);
+			return this.sendResponseAsync(req, rsp, res);
 		}
+	}
+
+	/**
+	 * This can be an extension point for subclasses that effectively allows for async response handling.
+	 */
+	protected sendResponseAsync<T>(req: Request, oagRsp: HttpResponse<T>, expRes: Response<T>): Promise<Response<T>> {
+		return Promise.resolve(this.sendResponseSync(req, oagRsp, expRes));
+	}
+
+	/**
+	 * This can be a helper for subclasses to convert oag-tools HttpResponse to Express Response.
+	 */
+	protected sendResponseSync<T>(req: Request, oagRsp: HttpResponse<T>, expRes: Response<T>): Response<T> {
+		if (oagRsp.headers && typeof oagRsp.headers === 'object')
+			Object.keys(oagRsp.headers).forEach(name => {
+				expRes.setHeader(name, oagRsp.headers[name]);
+			});
+		expRes.status(oagRsp.status ?? 200);
+		if (typeof oagRsp.data === 'undefined')
+			return expRes.send();
+		else
+			return expRes.send(oagRsp.data);
 	}
 }

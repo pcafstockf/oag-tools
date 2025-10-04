@@ -70,14 +70,8 @@ export const TsMorphServerSettings = {
 						\t\treq.query = { ...req.query.#{name}, ...req.query };
 						\t\tdelete req.query.#{name};
 						\t}`,
-			/* "$accounts/oauth-redirect!GET": (req: Request<never, OAuthCallbackResponse, never, { ['oauthParams']: OAuthRedirectQueryParams; }>, res: Response<OAuthCallbackResponse>, next: NextFunction) => {
-			api.storage.run({ request: req, response: res }, () => {
-				const result = api.handleOAuthRedirect(req.query['oauthParams']);
-				return utils.processApiResult(req as unknown as Request, result, res, next);
-			});
-		}, */
 			body: `(req: Request<#{path}, #{reply}, #{body}, #{query}>, res: Response<#{reply}>, next: NextFunction) => {
-						#{queryCleaner}\tapi.storage.run({request: req, response: res}, () => {
+						#{queryCleaner}\treturn api.storage.run({request: req, response: res}, () => {
 						\t\tconst result = #{apiInvocation};
 						\t\treturn utils.processApiResult(req as unknown as Request, result, res, next);
 						\t});
