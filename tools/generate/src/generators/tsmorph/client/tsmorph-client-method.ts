@@ -286,7 +286,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 			if (sec.length > 0) {
 				writer.writeLine('if (this.config.ensureAuth) {')
 					.writeLine(`const $security = ${json5Stringify(sec)} as any;`)
-					.writeLine(`$pre = $pre.then(c => this.config.ensureAuth($opDesc, $security, $serviceUrl, $localHdrs, c));`)
+					.writeLine(`$pre = $pre.then(c => this.config.ensureAuth!($opDesc, $security, $serviceUrl, $localHdrs, c));`)
 					.writeLine('}');
 			}
 			writer.writeLine('const $rsp = $pre.then((c) => {');

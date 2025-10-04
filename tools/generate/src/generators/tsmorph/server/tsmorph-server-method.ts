@@ -1,7 +1,9 @@
 import {Inject, Injectable} from 'async-injection';
+import os from 'node:os';
 import path from 'node:path';
 import {LangNeutralApiTypes} from 'oag-shared/lang-neutral/api';
 import {BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/base';
+import {isRecordModel} from 'oag-shared/lang-neutral/model';
 import {interpolateBashStyle} from 'oag-shared/utils/misc-utils';
 import {isValidJsIdentifier} from 'oag-shared/utils/name-utils';
 import {MethodDeclaration, ObjectLiteralExpression, Scope, StructureKind, SyntaxKind} from 'ts-morph';
@@ -136,7 +138,7 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 
 	protected createAdapterMember(adapter: ObjectLiteralExpression) {
 		const framework = this.tsMorphServerSettings[this.tsMorphServerSettings.framework];
-		const genericParams = {body: 'never', path: [], query: [], header: [], cookie: [], reply: 'never', oaVers: this.document.openapi, apiInvocation: undefined} as any;
+		const genericParams = {body: 'never', path: [], query: [], header: [], cookie: [], reply: 'never', oaVers: this.document.openapi, apiInvocation: undefined, queryCleaner: ''} as any;
 		const resolver = framework.hndl.lookup as { [key: keyof typeof genericParams]: string };
 		genericParams.apiInvocation = this.parameters.reduce((s, p, idx) => {
 			let ref: string;
@@ -158,6 +160,13 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 							jsId = `['${jsId}']`;
 						}
 						genericParams[loc].push(`${jsId}:${typeStr}`);
+						// express-openapi-validator, fastify-openapi-glue, (and even openapi-backend) all handle obj;style=form;explode=true query params differently.
+						// So if the framework defines a framework.hndl.queryCleaner, ensure it gets invoked.
+						if (loc === 'query' && framework.hndl.queryCleaner && isRecordModel(p.model)) {
+							const clean = interpolateBashStyle(framework.hndl.queryCleaner, {name: p.name});
+							genericParams.queryCleaner += `${clean}${os.EOL}`;
+							ref = `req.query as any`;
+						}
 					}
 				}
 			}
@@ -180,7 +189,7 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 					rspModels.push(v.model);
 		});
 		const rspTypeTxt = rspModels.map(m => m.getTypeNode().getText()).join(' | ') || 'void';
-		if (rspTypeTxt && rspTypeTxt !== 'void')
+		if (rspTypeTxt)
 			genericParams.reply = rspTypeTxt;
 
 		const initTxt = interpolateBashStyle(framework.hndl.body, genericParams);

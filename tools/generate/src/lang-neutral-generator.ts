@@ -21,6 +21,7 @@ interface MediaSchemaModel extends SchemaModel {
 
 interface ParamSchemaModel extends SchemaModel {
 	jsonPath: string;
+	ignore: boolean;
 	param: OpenAPIV3_1.ParameterObject;
 }
 
@@ -109,7 +110,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		delete this.activeDoc;
 		return {
 			models: this.models,
-			apis: this.apis
+			apis: this.apis.filter(a => a.methods.length > 0)
 		};
 	}
 
@@ -449,13 +450,17 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 	}
 
 	visitParameter(parameter: OpenAPIV3_1.ParameterObject): boolean | void {
+		const settings = this.container.get(BaseSettingsToken);
+		const ignore = (parameter as any)['x-ignore'] || (parameter as any)[`x-ignore-${settings.role}`];
 		if (this.activeOpParams)
 			this.activeOpParams.push({
+				ignore: ignore,
 				jsonPath: this.activeJsonPath,
 				param: parameter
 			});
 		else if (this.activePathItemParams)
 			this.activePathItemParams.push({
+				ignore: ignore,
 				jsonPath: this.activeJsonPath,
 				param: parameter
 			});
@@ -494,16 +499,18 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 			clientSettings = this.container.get(ClientSettingsToken);
 
 		// Make a NamedParameter for each "shared" parameter (if any) that we collected for the current PathItem.
-		const opParams = (this.activePathItemParams ?? []).map(p => {
+		const opParams = (this.activePathItemParams ?? []).filter(p => !p.ignore).map(p => {
 			const param = this.container.get<BaseNamedParameter>(CodeGenNamedParameterToken);
 			param.init(this.activeDoc, p.jsonPath, p.param, p.model);
 			return param;
 		}) as Parameter[];
 		// Make a NamedParameter for each parameter (if any) that we collected for this operation.
 		(this.activeOpParams ?? []).reduce((r, p) => {
-			const param = this.container.get<BaseNamedParameter>(CodeGenNamedParameterToken);
-			param.init(this.activeDoc, p.jsonPath, p.param, p.model);
-			r.push(param);
+			if (!p.ignore) {
+				const param = this.container.get<BaseNamedParameter>(CodeGenNamedParameterToken);
+				param.init(this.activeDoc, p.jsonPath, p.param, p.model);
+				r.push(param);
+			}
 			return r;
 		}, opParams);
 

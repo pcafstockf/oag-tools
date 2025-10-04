@@ -1,7 +1,6 @@
 import {Container, InjectableId} from 'async-injection';
 import {InitializeMarker, InitializerFn, RegisterConfigMarker} from 'dyflex-config';
 
-// @ts-ignore
 export const TsMorphClientSettings = {
 	[RegisterConfigMarker]: 'CODE_GEN_TSMORPH_CLIENT',
 	httpsup: 'fetch' as 'fetch' | 'axios' | 'node' | 'angular' | undefined,

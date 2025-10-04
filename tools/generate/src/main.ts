@@ -70,7 +70,6 @@ import {TsMorphServerSettings} from './settings/tsmorph-server';
 	const parser = new SwaggerParser();
 	const doc = await parser.bundle(cliArgs.i) as OpenAPIV3_1.Document;
 	const lang = await lng.generate(doc, !config.base.allModels);
-
 	await cleanOutDir(cliArgs.d, cliArgs.o, config.base);
 	await lg.generate(lang);
 })().catch(err => {

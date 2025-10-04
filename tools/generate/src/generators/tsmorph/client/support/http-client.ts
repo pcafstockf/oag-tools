@@ -5,6 +5,7 @@ export interface HttpResponse<T = string | ArrayBuffer | object | number | boole
 	readonly status: number;
 	readonly headers?: Record<string, string | string[]>;
 	readonly data?: T;
+	readonly error?: Error;
 }
 
 /**

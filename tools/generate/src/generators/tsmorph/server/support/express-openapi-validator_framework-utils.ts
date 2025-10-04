@@ -21,7 +21,6 @@ export class FrameworkUtils extends DefaultMockDataGenerator {
 		super(mockGenFn, preferExamples);
 	}
 
-
 	/**
 	 * Handlers call an appropriate Api/Service method, and this method processes those responses. <br/>
 	 * Every Api/Service method is passed a 'ctx' object of type {request: Request; response: Response} (aka @see Context).

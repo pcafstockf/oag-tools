@@ -21,7 +21,10 @@ export async function beginTsMorphSetup(dic: Container, _path: string[], _obj: o
 				case 'int64':
 				case 'double':
 				case 'float':
+				case 'uri':
 					return dic.get(CodeGenPrimitiveModelToken);
+				case 'byte':
+					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).addOagType({ts: {type: 'ArrayBuffer', lib: undefined}});
 				case 'binary':
 					return dic.get<TsmorphTypedModel>(CodeGenTypedModelToken).addOagType({ts: {type: 'Blob', lib: undefined}});
 				case 'date':

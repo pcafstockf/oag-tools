@@ -33,9 +33,10 @@ with the underlying generated code, so you never accidentally overlook a needed 
 
 ## Correctness, Compatibility, and Efficiency
 
-All the supported server frameworks (openapi-backend, fastify-openapi-glue, express-openapi-validator) natively
+All the supported server frameworks (fastify-openapi-glue, express-openapi-validator) natively
 support incoming and outgoing data validation based on your OpenApi specification.
 They also all provide the needed hooks to implement the security mechanisms defined in your specification.
+Sadly openapi-backend which looks nice, doesn't support data validation of OpenApi v3.1, is not supported.
 
 ## Dependency Injection is king
 

@@ -97,7 +97,7 @@ export abstract class BaseTsmorphApi<INTF extends ApiInterfaceDeclaration | ApiC
 			if (fp) {
 				const fullPath = path.join(proj.getCompilerOptions().outDir, fp);
 				// Can be configured to only generate api-impl if non-existent
-				if (alnType === 'impl' && this.baseSettings.role === 'server' && safeLStatSync(fp))
+				if (alnType === 'impl' && this.baseSettings.role === 'server' && safeLStatSync(fullPath))
 					return Promise.resolve(null);
 				sf = proj.getSourceFile(fullPath);
 				if (!sf)

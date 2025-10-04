@@ -5,44 +5,7 @@ export const TsMorphServerSettings = {
 	[RegisterConfigMarker]: 'CODE_GEN_TSMORPH_SERVER',
 
 	// The framework should actually be the npm package name.
-	framework: 'openapi-backend' as ('openapi-backend' | 'express-openapi-validator' | 'fastify-openapi-glue'),
-	'openapi-backend': {
-		stubReturn: 'null',
-		context: {
-			type: 'Context',
-			imphorts: [{
-				moduleSpecifier: 'openapi-backend',
-				namedImports: ['Context']
-			}],
-		},
-		hndl: {
-			imphorts: [{
-				moduleSpecifier: 'openapi-backend',
-				namedImports: ['Context', 'Handler']
-			}, {
-				moduleSpecifier: 'express',
-				namedImports: ['Request', 'Response', 'NextFunction']
-			}, {
-				moduleSpecifier: '#{internal}',
-				namedImports: ['processApiResult']
-			}],
-			lookup: {
-				body: 'ctx.request.requestBody',
-				query: 'ctx.request.query.#{name}',
-				path: 'ctx.request.params.#{name}',
-				header: 'ctx.request.headers.#{name}',
-				cookie: `ctx.request.cookies['#{name}']`
-			},
-			operationId: undefined as string,
-			body: `(ctx: Context<#{body}, #{path}, #{query}, #{header}, #{cookie}>, _: Request, res: Response, next: NextFunction) => {
-						\tapi.storage.run(ctx, () => {
-						\t\tconst result = #{apiInvocation};
-						\t\treturn utils.processApiResult(ctx, result, res, next);
-						\t});
-						}`,
-			cast: '{[operationId: string]: Handler;}'
-		}
-	},
+	framework: 'express-openapi-validator' as ('express-openapi-validator' | 'fastify-openapi-glue'),
 	'fastify-openapi-glue': {
 		stubReturn: 'null',
 		context: {
@@ -68,6 +31,7 @@ export const TsMorphServerSettings = {
 				cookie: `req.cookies['#{name}']`   // This presumes the presence of @fastify/cookie
 			},
 			operationId: undefined as string,
+			queryCleaner: undefined as string,
 			body: `(req: FastifyRequest<{Body: #{body}, Params: #{path}, Querystring: #{query}, Headers: #{header}, Reply: #{reply}}>, rsp: FastifyReply) => {
 						\tapi.storage.run({request: req, response: rsp}, () => {
 						\t\tconst result = #{apiInvocation};
@@ -102,8 +66,18 @@ export const TsMorphServerSettings = {
 				cookie: `req.cookies['#{name}']`
 			},
 			operationId: '"$#{pattern}!#{method}"',
+			queryCleaner: `\tif (req.query.#{name} && typeof req.query.#{name} === 'object') {
+						\t\treq.query = { ...req.query.#{name}, ...req.query };
+						\t\tdelete req.query.#{name};
+						\t}`,
+			/* "$accounts/oauth-redirect!GET": (req: Request<never, OAuthCallbackResponse, never, { ['oauthParams']: OAuthRedirectQueryParams; }>, res: Response<OAuthCallbackResponse>, next: NextFunction) => {
+			api.storage.run({ request: req, response: res }, () => {
+				const result = api.handleOAuthRedirect(req.query['oauthParams']);
+				return utils.processApiResult(req as unknown as Request, result, res, next);
+			});
+		}, */
 			body: `(req: Request<#{path}, #{reply}, #{body}, #{query}>, res: Response<#{reply}>, next: NextFunction) => {
-						\tapi.storage.run({request: req, response: res}, () => {
+						#{queryCleaner}\tapi.storage.run({request: req, response: res}, () => {
 						\t\tconst result = #{apiInvocation};
 						\t\treturn utils.processApiResult(req as unknown as Request, result, res, next);
 						\t});

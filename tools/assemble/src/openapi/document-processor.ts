@@ -52,7 +52,8 @@ export class OpenApiInputProcessor {
 						process.chdir(path.dirname(loc));
 					}
 					try {
-						return await p.parse(loc).then(d => this.attemptBundleV3(p, d));
+						const d = await p.parse(loc);
+						return this.attemptBundleV3(p, d);
 					}
 					finally {
 						process.chdir(cwd);
@@ -151,7 +152,13 @@ export class OpenApiInputProcessor {
 		const bdoc = await parser.bundle(doc) as OpenAPIV3.Document | OpenAPIV3_1.Document;
 		// Validating resolves all references which we do not want to do.
 		// Clone deep and validate the clone.
-		await parser.validate(structuredClone(bdoc));
+		await parser.validate(structuredClone(bdoc), {
+				validate: {
+					schema: true,
+					spec: true
+				}
+			}
+		);
 		return bdoc;
 	}
 

@@ -182,7 +182,7 @@ export abstract class BaseTsmorphMethod<
 					typeTxt = `(${typeTxt})`;
 				return {
 					param: p,
-					name: p.name,
+					name: this.toParameterName(p.name),
 					required: !!p.required,
 					typeText: typeTxt
 				};
