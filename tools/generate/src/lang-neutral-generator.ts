@@ -409,9 +409,13 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 	}
 
 	visitTag(tag: OpenAPIV3_1.TagObject): boolean | void {
-		const api = this.container.get<BaseApi>(CodeGenApiToken);
-		api.init(this.activeDoc, this.activeJsonPath, tag);
-		this.apis.push(api);
+		const settings = this.container.get(BaseSettingsToken);
+		const ignore = (tag as any)['x-ignore'] || (tag as any)[`x-ignore-${settings.role}`]
+		if (!ignore) {
+			const api = this.container.get<BaseApi>(CodeGenApiToken);
+			api.init(this.activeDoc, this.activeJsonPath, tag);
+			this.apis.push(api);
+		}
 		return super.visitTag(tag);
 	}
 
