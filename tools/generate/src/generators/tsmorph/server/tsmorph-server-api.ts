@@ -124,10 +124,6 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration> implem
 			isAbstract: true,
 			isExported: true
 		});
-		retVal.addTypeParameter({
-			name: 'CTX',
-			default: 'Record<string, any>'
-		});
 		this.ensureInternalDirImport(retVal);
 		this.makeIntfConstructor(retVal);
 		const di = this.tsMorphServerSettings.dependencyInjection ? this.tsMorphServerSettings.di[this.tsMorphServerSettings.dependencyInjection] : undefined;
@@ -150,25 +146,9 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration> implem
 	}
 
 	protected makeIntfConstructor(c: ClassDeclaration) {
-		c.getSourceFile().addImportDeclaration({
-			moduleSpecifier: 'node:async_hooks',
-			namedImports: ['AsyncLocalStorage']
-		});
 		const i = c.addConstructor({
 			scope: Scope.Protected,
 		});
-		i.setBodyText(`this.storage = new AsyncLocalStorage<CTX>()`);
-		c.addProperty({
-			name: 'storage',
-			isReadonly: true,
-			type: 'AsyncLocalStorage<CTX>'
-		});
-		const g = c.addGetAccessor({
-			scope: Scope.Protected,
-			name: 'ctx',
-			returnType: 'CTX',
-		});
-		g.setBodyText('return this.storage.getStore();');
 	}
 
 	protected findImpl(sf: SourceFile, id: string): ClassDeclaration {
@@ -183,8 +163,6 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration> implem
 			extends: intf.getName()
 		});
 		this.importInto(sf, 'intf');
-		const framework = this.tsMorphServerSettings[this.tsMorphServerSettings.framework];
-		retVal.getExtends().addTypeArgument(framework.context.type);
 		this.ensureInternalDirImport(retVal);
 		const di = this.tsMorphServerSettings.dependencyInjection ? this.tsMorphServerSettings.di[this.tsMorphServerSettings.dependencyInjection] : undefined;
 		if (di) {
@@ -220,7 +198,7 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration> implem
 		const intf = this.getLangNode('intf');
 		sf.addImportDeclaration({
 			moduleSpecifier: this.tsMorphServerSettings.internalDirName,
-			namedImports: ['FrameworkUtils']
+			namedImports: ['FrameworkUtils', 'FrameworkStorageCtx']
 		});
 		const fn = sf.addFunction({
 			name: id,
@@ -228,6 +206,9 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration> implem
 			parameters: [{
 				name: 'utils',
 				type: 'FrameworkUtils',
+			}, {
+				name: 'storage',
+				type: 'FrameworkStorageCtx'
 			}, {
 				name: 'api',
 				type: intf.getName(),

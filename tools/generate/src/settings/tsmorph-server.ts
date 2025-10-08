@@ -33,7 +33,7 @@ export const TsMorphServerSettings = {
 			operationId: undefined as string,
 			queryCleaner: undefined as string,
 			body: `(req: FastifyRequest<{Body: #{body}, Params: #{path}, Querystring: #{query}, Headers: #{header}, Reply: #{reply}}>, rsp: FastifyReply) => {
-						\tapi.storage.run({request: req, response: rsp}, () => {
+						\tstorage.run({request: req as unknown as FastifyRequest, response: rsp as unknown as FastifyReply}, () => {
 						\t\tconst result = #{apiInvocation};
 						\t\treturn utils.processApiResult(req, result, rsp);
 						\t});
@@ -71,7 +71,7 @@ export const TsMorphServerSettings = {
 						\t\tdelete req.query.#{name};
 						\t}`,
 			body: `(req: Request<#{path}, #{reply}, #{body}, #{query}>, res: Response<#{reply}>, next: NextFunction) => {
-						#{queryCleaner}\treturn api.storage.run({request: req, response: res}, () => {
+						#{queryCleaner}\treturn storage.run({request: req as unknown as Request, response: res as unknown as Response}, () => {
 						\t\tconst result = #{apiInvocation};
 						\t\treturn utils.processApiResult(req as unknown as Request, result, res, next);
 						\t});

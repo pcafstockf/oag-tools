@@ -5,6 +5,7 @@ import {FastifyInstance, FastifyReply, FastifyRequest, FastifySchema, RouteOptio
 import {OpenAPIV3_1} from 'openapi-types';
 import {DefaultMockDataGenerator, findDefaultStatusCodeMatch, MockResponseDescription} from './data-mocking';
 import {HttpResponse} from './http-response';
+import {AsyncLocalStorage} from "node:async_hooks";
 
 /**
  * Every Api/Service method receives this as its first parameter.
@@ -13,6 +14,8 @@ export interface Context {
 	request: FastifyRequest;
 	response: FastifyReply;
 }
+
+export type FrameworkStorageCtx = AsyncLocalStorage<Context>;
 
 /**
  * @inheritDoc

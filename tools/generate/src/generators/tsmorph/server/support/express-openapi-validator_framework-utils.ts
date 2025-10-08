@@ -1,15 +1,14 @@
 import {NextFunction, Request, Response} from 'express';
 import {DefaultMockDataGenerator, findDefaultStatusCodeMatch} from './data-mocking';
 import {HttpResponse} from './http-response';
+import {AsyncLocalStorage} from "node:async_hooks";
 
-/**
- * Every Api/Service method receives this as its first parameter.
- */
 export interface Context {
-	openapiVersion: string;
 	request: Request;
 	response: Response;
 }
+
+export type FrameworkStorageCtx = AsyncLocalStorage<Context>;
 
 
 /**
