@@ -110,13 +110,13 @@ export const ParamSerializers = Object.freeze({
 						p = '';
 					p += `${i > 0 ? ',' : ''}${v},${value[v]}`;
 					return p;
-				}, undefined);
+				}, undefined as undefined | string);
 			if (typeof value === 'undefined' || value === null || (typeof value === 'string' && (!value)))
 				return undefined;
 			return `${String(value)}`;
 		})();
 		if (encode)
-			return encodeURIComponent(retVal);
+			return encodeURIComponent(retVal!);
 		return retVal;
 	},
 	// simple-explode (can only be in path and header). It never has a name AND can never be empty. If in path, you must encode, if in header you need not.
@@ -134,13 +134,13 @@ export const ParamSerializers = Object.freeze({
 						p = '';
 					p += `${i > 0 ? ',' : ''}${v}=${value[v]}`;
 					return p;
-				}, undefined);
+				}, undefined as undefined | string);
 			if (typeof value === 'undefined' || value === null || (typeof value === 'string' && (!value)))
 				return undefined;
 			return `${String(value)}`;
 		})();
 		if (encode)
-			return encodeURIComponent(retVal);
+			return encodeURIComponent(retVal!);
 		return retVal;
 	},
 	// space-delimited (can only be in query and always has a name) and despite the spec, empty and primitive are reasonable.

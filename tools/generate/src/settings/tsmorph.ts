@@ -48,8 +48,8 @@ export const TsMorphSettings = {
 		// Source files to be copied into the internal support directory.
 		// Path should be relative to 'srcDirName'
 		files: [
-			{'Intro.client.md': `Intro#{role}.md`},
-			{'Setup.fog.md': `Setup#{target}.md`}
+			{'Intro.md': `Intro#{role}.md`},
+			{'Setup.md': `Setup#{target}.md`}
 		]
 	}],
 };

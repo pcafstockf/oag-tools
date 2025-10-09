@@ -66,11 +66,11 @@ class AngularHttpClient implements HttpClient {
 	}
 
 	protected toHttpResponsePromise<T>(o: Observable<AHR<T>>): Promise<HttpResponse<T>> {
-		return lastValueFrom(o.pipe(map((r) => {
+		return lastValueFrom(o.pipe(map((r: AHR<T>) => {
 			return {
 				status: r.status,
 				headers: r.headers.keys().reduce((p, key) => {
-					p[key] = r.headers.getAll(key);
+					p[key] = r.headers.getAll(key)!;
 					if (Array.isArray(p[key]) && p[key].length < 2)
 						p[key] = p[key][0];
 					return p;
@@ -81,7 +81,7 @@ class AngularHttpClient implements HttpClient {
 	}
 
 	protected computeResponseType(headers?: Record<string, string | string[]>): 'arraybuffer' | 'blob' | 'json' | 'text' {
-		let accept = headers?.accept;
+		let accept = headers?.['accept'];
 		if (typeof accept === 'string')
 			accept = [accept];
 		return accept?.find(t => {

@@ -159,14 +159,15 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 				di.apiIntfTokens?.forEach(tok => {
 					let varName = interpolateBashStyle(tok.name_Tmpl, {intfName: mdgIntf.getName()});
 					let varInitializer = interpolateBashStyle(tok.initializer_Tmpl || '', {intfName: mdgIntf.getName(), intfLabel: mdgIntf.getName(), varName: varName});
-					dmSf.addVariableStatement({
-						declarationKind: VariableDeclarationKind.Const,
-						isExported: true,
-						declarations: [{
-							name: varName,
-							initializer: varInitializer ? varInitializer : undefined
-						}]
-					});
+					if (!dmSf.getVariableStatement(vs => vs.getDeclarations().some(d => d.getName() === varName)))
+						dmSf.addVariableStatement({
+							declarationKind: VariableDeclarationKind.Const,
+							isExported: true,
+							declarations: [{
+								name: varName,
+								initializer: varInitializer ? varInitializer : undefined
+							}]
+						});
 				});
 			}
 		}

@@ -52,7 +52,7 @@ export class DefaultMockDataGenerator implements MockDataGenerator {
 	 * @inheritDoc
 	 */
 	genMockData<T>(schema: { type: string }, overrides?: DeepPartial<T>): T {
-		let retVal: T;
+		let retVal: T = undefined as T;
 		if (typeof this.mockGenFn === 'function') {
 			retVal = this.mockGenFn(schema) as T;
 			if (overrides)
