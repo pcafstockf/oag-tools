@@ -1,5 +1,6 @@
-import {RequestAuthFn, RequestEnhancerFn} from './client-request';
 import {BodySerializerFn, ParamSerializersType} from './client-types';
+import {ReqTransformerFn, ResTransformerFn} from "./client-transformers";
+
 
 export interface ApiClientConfig {
 	/**
@@ -20,6 +21,9 @@ export interface ApiClientConfig {
 	/**
 	 * This is where you add custom headers and control cookie submission.
 	 */
-	enhanceReq?: RequestEnhancerFn;
-	ensureAuth?: RequestAuthFn;
+	reqTransformer?: ReqTransformerFn;
+	/**
+	 * This is where you can process and/or transform the response before it is returned to the caller.
+	 */
+	resTransformer?: ResTransformerFn;
 }

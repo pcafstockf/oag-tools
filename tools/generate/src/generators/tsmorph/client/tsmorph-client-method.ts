@@ -274,22 +274,15 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				writer.write(`const $body = this.config.bodySerializer ? this.config.bodySerializer($opDesc, $serviceUrl, `).quote(bodyMimeType).write(`, ${body.getIdentifier('intf')}, $localHdrs) : ${body.getIdentifier('intf')};`);
 				writer.newLine();
 			}
-			writer.write(`let $pre = this.config.enhanceReq ? this.config.enhanceReq($opDesc, $serviceUrl, $localHdrs`);
-			if (this.baseSettings.target === 'browser')
-				writer.write(`) : Promise.resolve(${cookieParams.length > 0 ? 'true' : ''});`);
-			else
-				writer.write(`, $cookies) : Promise.resolve($cookies);`);
-
 			let sec = this.document.security ?? [];
 			if (Array.isArray(this.oae.security))
 				sec = this.oae.security;
-			if (sec.length > 0) {
-				writer.writeLine('if (this.config.ensureAuth) {')
-					.writeLine(`const $security = ${json5Stringify(sec)} as any;`)
-					.writeLine(`$pre = $pre.then(c => this.config.ensureAuth!($opDesc, $security, $serviceUrl, $localHdrs, c));`)
-					.writeLine('}');
-			}
-			writer.writeLine('const $rsp = $pre.then((c) => {');
+			writer.write(`const $pre = this.config.reqTransformer ? this.config.reqTransformer($opDesc, $serviceUrl, $localHdrs`);
+			if (this.baseSettings.target === 'browser')
+				writer.write(`${sec ? ', ' + json5Stringify(sec) + ' as any' : ''}) : Promise.resolve(${cookieParams.length > 0 ? 'true' : ''});`);
+			else
+				writer.write(`, $cookies${sec ? ', ' + json5Stringify(sec) + ' as any' : ''}) : Promise.resolve($cookies);`);
+			writer.writeLine('let $rsp = $pre.then((c) => {');
 			writer.writeLine('const $opts = {} as HttpOptions;');
 			if (this.baseSettings.target === 'browser') {
 				writer.writeLine('if (c)')
@@ -313,7 +306,12 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				writer.write(`undefined,`);
 			writer.write('$opts);');
 			writer.writeLine('});');
-			writer.write('if (rsp !== \'http\')').indent().writeLine('return $rsp.then(r => r.data as any);');
+
+			writer.write(`if (typeof this.config.resTransformer === 'function')`)
+				.indent()
+				.writeLine(`$rsp = $rsp.then((r) => this.config.resTransformer($opDesc, r));`);
+
+			writer.write('if (rsp !== \'http\')').indent().writeLine('$rsp = $rsp.then(r => r.data as any);');
 			writer.writeLine('return $rsp;');
 		});
 	}

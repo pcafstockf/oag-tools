@@ -109,7 +109,7 @@ export const TsMorphClientSettings = {
 		// Path should be relative to 'srcDirName'
 		files: [
 			`client-types.ts`,
-			{'client-request.ts': `client-request#{target}.ts`},
+			{'client-transformers.ts': `client-transformers#{target}.ts`},
 			`client-config.ts`,
 			`param-serializers.ts`,
 			{'body-serializer.ts': `body-serializer#{httpsup}.ts`},
