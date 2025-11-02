@@ -65,7 +65,7 @@ export class DefaultMockDataGenerator implements MockDataGenerator {
 	 * @inheritDoc
 	 */
 	genMockResponse<T>(mt: MockResponseDescription, urlPath?: string): MockedResponse<T> {
-		let data: T;
+		let data: T = undefined as T;
 		// if operation has an example, return its value
 		if (this.preferExamples) {
 			if (mt.example)
@@ -101,9 +101,9 @@ export function findDefaultStatusCodeMatch(obj: OpenAPIV3_1.ResponsesObject, mim
 		if (!rsp)
 			return undefined;
 		const mts = Object.keys(rsp.content ?? {}).map(k => k.toLowerCase());
-		return rsp.content?.[mts.find(mimeFilter)];
+		return rsp.content?.[mts.find(mimeFilter)!];
 	};
-	let mt: OpenAPIV3_1.MediaTypeObject;
+	let mt: OpenAPIV3_1.MediaTypeObject | undefined = undefined;
 
 	// 1. check for a 20X response
 	for (const ok of [200, 201, 202, 203, 204, '200', '201', '202', '203', '204']) {
@@ -124,7 +124,7 @@ export function findDefaultStatusCodeMatch(obj: OpenAPIV3_1.ResponsesObject, mim
 		};
 	}
 	// 3. check for the "default" response
-	mt = getMT(obj.default as OpenAPIV3_1.ResponseObject);
+	mt = getMT(obj['default'] as OpenAPIV3_1.ResponseObject);
 	if (mt) {
 		return {
 			...mt,

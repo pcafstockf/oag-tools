@@ -231,6 +231,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 								case 'date':
 								case 'date-time':
 								case 'uri':
+								case 'uri-reference':
 								case 'regex':
 									key = constraints.format;
 									break;

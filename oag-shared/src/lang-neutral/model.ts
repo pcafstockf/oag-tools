@@ -128,6 +128,7 @@ export const CommonModelKeys = [
 	'date-time',
 	'regex',
 	'uri',
+	'uri-reference',
 	'float',
 	'double',
 	'int32',

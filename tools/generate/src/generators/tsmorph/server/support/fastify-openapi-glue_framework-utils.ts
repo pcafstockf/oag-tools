@@ -5,24 +5,18 @@ import {FastifyInstance, FastifyReply, FastifyRequest, FastifySchema, RouteOptio
 import {OpenAPIV3_1} from 'openapi-types';
 import {DefaultMockDataGenerator, findDefaultStatusCodeMatch, MockResponseDescription} from './data-mocking';
 import {HttpResponse} from './http-response';
-import {AsyncLocalStorage} from "node:async_hooks";
 
-/**
- * Every Api/Service method receives this as its first parameter.
- */
 export interface Context {
 	request: FastifyRequest;
-	response: FastifyReply;
+	reply: FastifyReply;
 }
-
-export type FrameworkStorageCtx = AsyncLocalStorage<Context>;
 
 /**
  * @inheritDoc
  * Additional support functions specific to fastify-openapi-glue.
  */
 export class FrameworkUtils extends DefaultMockDataGenerator {
-	constructor(mockGenFn?: (s: { type: string }) => any, preferExamples?: boolean) {
+	constructor(mockGenFn?: (s: { type: string | string[] }) => any, preferExamples?: boolean) {
 		super(mockGenFn, preferExamples);
 	}
 

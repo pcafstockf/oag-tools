@@ -1,22 +1,18 @@
 import {NextFunction, Request, Response} from 'express';
 import {DefaultMockDataGenerator, findDefaultStatusCodeMatch} from './data-mocking';
 import {HttpResponse} from './http-response';
-import {AsyncLocalStorage} from "node:async_hooks";
 
 export interface Context {
 	request: Request;
 	response: Response;
 }
 
-export type FrameworkStorageCtx = AsyncLocalStorage<Context>;
-
-
 /**
  * @inheritDoc
  * Additional support functions specific to fastify-openapi-glue.
  */
 export class FrameworkUtils extends DefaultMockDataGenerator {
-	constructor(mockGenFn?: (s: { type: string }) => any, preferExamples?: boolean) {
+	constructor(mockGenFn?: (s: { type: string | string[] }) => any, preferExamples?: boolean) {
 		super(mockGenFn, preferExamples);
 	}
 

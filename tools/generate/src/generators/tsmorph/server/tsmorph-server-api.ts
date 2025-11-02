@@ -197,8 +197,12 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration> implem
 		const framework = this.tsMorphServerSettings[this.tsMorphServerSettings.framework];
 		const intf = this.getLangNode('intf');
 		sf.addImportDeclaration({
+			moduleSpecifier: "node:async_hooks",
+			namedImports: ['AsyncLocalStorage']
+		});
+		sf.addImportDeclaration({
 			moduleSpecifier: this.tsMorphServerSettings.internalDirName,
-			namedImports: ['FrameworkUtils', 'FrameworkStorageCtx']
+			namedImports: [framework.context.type, 'FrameworkUtils']
 		});
 		const fn = sf.addFunction({
 			name: id,
@@ -208,7 +212,7 @@ export class TsmorphServerApi extends BaseTsmorphApi<ApiClassDeclaration> implem
 				type: 'FrameworkUtils',
 			}, {
 				name: 'storage',
-				type: 'FrameworkStorageCtx'
+				type: `AsyncLocalStorage<${framework.context.type}>`
 			}, {
 				name: 'api',
 				type: intf.getName(),

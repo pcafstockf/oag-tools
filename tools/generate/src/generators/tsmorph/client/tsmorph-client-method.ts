@@ -309,7 +309,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 
 			writer.write(`if (typeof this.config.resTransformer === 'function')`)
 				.indent()
-				.writeLine(`$rsp = $rsp.then((r) => this.config.resTransformer($opDesc, r));`);
+				.writeLine(`$rsp = $rsp.then((r) => this.config.resTransformer!($opDesc, r));`);
 
 			writer.write('if (rsp !== \'http\')').indent().writeLine('$rsp = $rsp.then(r => r.data as any);');
 			writer.writeLine('return $rsp;');

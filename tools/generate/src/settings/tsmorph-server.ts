@@ -33,7 +33,7 @@ export const TsMorphServerSettings = {
 			operationId: undefined as string,
 			queryCleaner: undefined as string,
 			body: `(req: FastifyRequest<{Body: #{body}, Params: #{path}, Querystring: #{query}, Headers: #{header}, Reply: #{reply}}>, rsp: FastifyReply) => {
-						\tstorage.run({request: req as unknown as FastifyRequest, response: rsp as unknown as FastifyReply}, () => {
+						\tstorage.run({request: req as unknown as FastifyRequest, reply: rsp as unknown as FastifyReply}, () => {
 						\t\tconst result = #{apiInvocation};
 						\t\treturn utils.processApiResult(req, result, rsp);
 						\t});

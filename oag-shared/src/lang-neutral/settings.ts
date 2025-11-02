@@ -95,16 +95,25 @@ export async function cleanOutDir(del: boolean | string, outDir: string, setting
 			rimrafSync(outDir, {recursive: true, force: true});   // This may make all the follow statements irrelevant, but not necessarily.
 		if (settings.modelIntfDir)
 			rimrafSync(path.join(outDir, settings.modelIntfDir), {recursive: true, force: true});
-		if (settings.modelImplDir && !(typeof del === 'string' && del.indexOf('keep-model-impl')))
-			rimrafSync(path.join(outDir, settings.modelImplDir), {recursive: true, force: true});
+		if (settings.modelImplDir) {
+			const keep = typeof del === 'string' && del.indexOf('keep-model-impl') >= 0;
+			if (!keep)
+				rimrafSync(path.join(outDir, settings.modelImplDir), {recursive: true, force: true});
+		}
 		if (settings.modelJsonDir)
 			rimrafSync(path.join(outDir, settings.modelJsonDir), {recursive: true, force: true});
 		if (settings.apiIntfDir)
 			rimrafSync(path.join(outDir, settings.apiIntfDir), {recursive: true, force: true});
-		if (settings.apiImplDir && !(settings.role === 'server' && typeof del === 'string' && del.indexOf('keep-api-impl')))
-			rimrafSync(path.join(outDir, settings.apiImplDir), {recursive: true, force: true});
-		if (settings.apiMockDir && !(settings.role === 'client' && typeof del === 'string' && del.indexOf('keep-api-mock')))
-			rimrafSync(path.join(outDir, settings.apiMockDir), {recursive: true, force: true});
+		if (settings.apiImplDir) {
+			const keep = settings.role === 'server' && typeof del === 'string' && del.indexOf('keep-api-impl') >= 0;
+			if (!keep)
+				rimrafSync(path.join(outDir, settings.apiImplDir), {recursive: true, force: true});
+		}
+		if (settings.apiMockDir) {
+			const keep = settings.role === 'client' && typeof del === 'string' && del.indexOf('keep-api-mock') >= 0;
+			if (!keep)
+				rimrafSync(path.join(outDir, settings.apiMockDir), {recursive: true, force: true});
+		}
 		if (settings.apiHndlDir)
 			rimrafSync(path.join(outDir, settings.apiHndlDir), {recursive: true, force: true});
 	}
