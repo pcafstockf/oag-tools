@@ -11,6 +11,7 @@ import {CodeGenAst, SourceGenerator} from '../source-generator';
 import {TempFileName} from './oag-tsmorph';
 import {isTsmorphApi} from './tsmorph-api';
 import {isTsmorphModel} from './tsmorph-model';
+import {supportManifest} from '../../support-manifest';
 
 export class TsmorphGenerator implements SourceGenerator {
 	constructor(
@@ -85,12 +86,21 @@ export class TsmorphGenerator implements SourceGenerator {
 					fp = interpolateBashStyle(fp, opts);    // Default to none
 					dstBase = path.basename(fp);
 				}
-				const srcFilePath = path.normalize(path.join(entry.srcDirName, fp));
-				if (safeLStatSync(srcFilePath)) {
-					const dstPath = path.join(this.baseSettings.outputDirectory, dstBase);
-					if (!safeLStatSync(dstPath)) {
-						const srcTxt = readFileSync(srcFilePath, 'utf-8');
-						writeFileSync(dstPath, srcTxt);
+				const dstPath = path.join(this.baseSettings.outputDirectory, dstBase);
+				if (!safeLStatSync(dstPath)) {
+					// Try embedded manifest first
+					const key = supportManifest.makeKeyFromSrc(entry.srcDirName, fp as string);
+					const content = key ? supportManifest.get(key) : undefined;
+					if (typeof content === 'string') {
+						writeFileSync(dstPath, content, 'utf8');
+					}
+					else {
+						// Fallback to filesystem for non-bundled dev runs
+						const srcFilePath = path.normalize(path.join(entry.srcDirName, fp as string));
+						if (safeLStatSync(srcFilePath)) {
+							const srcTxt = readFileSync(srcFilePath, 'utf-8');
+							writeFileSync(dstPath, srcTxt);
+						}
 					}
 				}
 			});

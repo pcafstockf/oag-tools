@@ -17,6 +17,7 @@ import {isTsmorphApi} from '../tsmorph-api';
 import {TsmorphGenerator} from '../tsmorph-generator';
 import {isTsmorphModel} from '../tsmorph-model';
 import {isTsmorphClientApi} from './tsmorph-client-api';
+import {supportManifest} from '../../../support-manifest';
 
 @Injectable()
 export class TsmorphClientGenerator extends TsmorphGenerator {
@@ -50,12 +51,20 @@ export class TsmorphClientGenerator extends TsmorphGenerator {
 					fp = interpolateBashStyle(fp, opts);    // Default to none
 					dstBase = path.basename(fp);
 				}
-				const srcFilePath = path.normalize(path.join(entry.srcDirName, fp));
-				if (safeLStatSync(srcFilePath)) {
-					dstPath = path.join(internalDir, dstBase);
-					if (!safeLStatSync(dstPath)) {
-						srcTxt = readFileSync(srcFilePath, 'utf-8');
-						writeFileSync(dstPath, srcTxt);
+				dstPath = path.join(internalDir, dstBase);
+				if (!safeLStatSync(dstPath)) {
+					const key = supportManifest.makeKeyFromSrc(entry.srcDirName, fp);
+					const content = key ? supportManifest.get(key) : undefined;
+					if (typeof content === 'string') {
+						writeFileSync(dstPath, content, 'utf8');
+					}
+					else {
+						// Fallback to filesystem for non-bundled runs
+						const srcFilePath = path.normalize(path.join(entry.srcDirName, fp));
+						if (safeLStatSync(srcFilePath)) {
+							srcTxt = readFileSync(srcFilePath, 'utf-8');
+							writeFileSync(dstPath, srcTxt);
+						}
 					}
 				}
 			});

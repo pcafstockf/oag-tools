@@ -1,5 +1,5 @@
 import {randomUUID} from 'crypto';
-import {stringify as json5Stringify} from 'json5';
+import * as JSON5 from 'json5';
 import {template as lodashTemplate} from 'lodash';
 import os from 'node:os';
 import path from 'node:path';
@@ -141,7 +141,7 @@ export class CannotGenerateError extends Error {
 export function oae2ObjLiteralStr(oae: OpenAPIV3_1.SchemaObject, verbose: boolean, cb: (dependent: TsmorphModel) => void) {
 	const seen = new Set<TsmorphModel>();
 	const schemaVarNames: Record<string, string> = {};
-	const initTemplate = json5Stringify(oae, (key, value) => {
+	const initTemplate = JSON5.stringify(oae, (key, value) => {
 		if (key === '') {
 			if (!value.description)
 				if (value.summary)

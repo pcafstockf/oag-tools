@@ -1,5 +1,5 @@
 import {Inject, Injectable} from 'async-injection';
-import {stringify as json5Stringify} from 'json5';
+import * as JSON5 from 'json5';
 import {template as lodashTemplate} from 'lodash';
 import {LangNeutralApiTypes} from 'oag-shared/lang-neutral/api';
 import {BaseNamedParameter, BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/base';
@@ -279,9 +279,9 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				sec = this.oae.security;
 			writer.write(`const $pre = this.config.reqTransformer ? this.config.reqTransformer($opDesc, $serviceUrl, $localHdrs`);
 			if (this.baseSettings.target === 'browser')
-				writer.write(`${sec ? ', ' + json5Stringify(sec) + ' as any' : ''}) : Promise.resolve(${cookieParams.length > 0 ? 'true' : ''});`);
+				writer.write(`${sec ? ', ' + JSON5.stringify(sec) + ' as any' : ''}) : Promise.resolve(${cookieParams.length > 0 ? 'true' : ''});`);
 			else
-				writer.write(`, $cookies${sec ? ', ' + json5Stringify(sec) + ' as any' : ''}) : Promise.resolve($cookies);`);
+				writer.write(`, $cookies${sec ? ', ' + JSON5.stringify(sec) + ' as any' : ''}) : Promise.resolve($cookies);`);
 			writer.writeLine('let $rsp = $pre.then((c) => {');
 			writer.writeLine('const $opts = {} as HttpOptions;');
 			if (this.baseSettings.target === 'browser') {

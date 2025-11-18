@@ -15,6 +15,7 @@ import {importIfNotSameFile} from '../oag-tsmorph';
 import {isTsmorphApi} from '../tsmorph-api';
 import {TsmorphGenerator} from '../tsmorph-generator';
 import {isTsmorphModel} from '../tsmorph-model';
+import {supportManifest} from '../../../support-manifest';
 
 @Injectable()
 export class TsmorphServerGenerator extends TsmorphGenerator {
@@ -46,11 +47,21 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 					fp = interpolateBashStyle(fp, {framework: this.tsmorphServerSettings.framework});
 					dstBase = path.basename(fp);
 				}
-				srcFilePath = path.normalize(path.join(entry.srcDirName, fp));
 				dstPath = path.join(internalDir, dstBase);
 				if (!safeLStatSync(dstPath)) {
-					srcTxt = readFileSync(srcFilePath, 'utf-8');
-					writeFileSync(dstPath, srcTxt);
+					const key = supportManifest.makeKeyFromSrc(entry.srcDirName, fp);
+					const content = key ? supportManifest.get(key) : undefined;
+					if (typeof content === 'string') {
+						writeFileSync(dstPath, content, 'utf8');
+					}
+					else {
+						// Fallback to filesystem for non-bundled runs
+						srcFilePath = path.normalize(path.join(entry.srcDirName, fp));
+						if (safeLStatSync(srcFilePath)) {
+							srcTxt = readFileSync(srcFilePath, 'utf-8');
+							writeFileSync(dstPath, srcTxt);
+						}
+					}
 				}
 			});
 		});

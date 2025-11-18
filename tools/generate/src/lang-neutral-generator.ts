@@ -1,6 +1,6 @@
 import SwaggerParser from '@apidevtools/swagger-parser';
 import {Container} from 'async-injection';
-import {stringify as json5Stringify} from 'json5';
+import * as JSON5 from 'json5';
 import {Api, Model, Parameter} from 'oag-shared/lang-neutral';
 import {BaseApi, BaseArrayModel, BaseBodyParameter, BaseMethod, BaseNamedParameter, BaseOpenApiResponse, BaseRecordModel, BaseSchemaModel, BaseSettingsToken, BaseTypedModel, BaseUnionModel, CodeGenApiToken, CodeGenArrayModelToken, CodeGenAst, CodeGenBodyParameterToken, CodeGenCommonModelsToken, CodeGenMethodToken, CodeGenNamedParameterToken, CodeGenOpenApiResponseToken, CodeGenRecordModelToken, CodeGenUnionModelToken, CommonModelTypes, OpenApiSchemaWithModelRef} from 'oag-shared/lang-neutral/base';
 import {CodeGenTypedModelToken, isPrimitiveModel} from 'oag-shared/lang-neutral/model';
@@ -258,7 +258,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 								if (schema.const === null)
 									constVal = 'null';
 								else if (Array.isArray(schema.const))
-									constVal = json5Stringify(schema.const);
+									constVal = JSON5.stringify(schema.const);
 								else {
 									switch (typeof schema.const) {
 										case 'string':
@@ -271,7 +271,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 											constVal = schema.const ? 'true' : 'false';
 											break;
 										case 'object':
-											constVal = json5Stringify(schema.const);
+											constVal = JSON5.stringify(schema.const);
 											break;
 										default:
 											key = 'any';    // The absence of a type means it can be anything.

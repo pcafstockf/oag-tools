@@ -97,8 +97,12 @@ export class TsmorphServerMethod extends BaseTsmorphMethod<ApiClassDeclaration, 
 
 	protected populateMethodBody(impl: MethodDeclaration) {
 		let retValStr = this.tsMorphServerSettings[this.tsMorphServerSettings.framework].stubReturn;
-		impl.setIsAsync(retValStr.trim() !== 'null');
-		impl.setBodyText(`return ${retValStr};`);
+		const isNull = retValStr.trim() === 'null';
+		impl.setIsAsync(!isNull);
+		let body = `return ${retValStr};`;
+		if (isNull)
+			body = `// @ts-expect-error: unimplemented${os.EOL}` + body;
+		impl.setBodyText(body);
 	}
 
 	protected createHndlLiteral(hndl: ApiFunctionDeclaration): ObjectLiteralExpression {
