@@ -8,6 +8,9 @@ import {parseCliArgs} from './cli-yargs';
 import {OpenApiInputProcessor} from './openapi/document-processor';
 
 (async () => {
+	// @ts-ignore
+	const nodeRequire = typeof __non_webpack_require__ !== 'undefined' ? __non_webpack_require__ : require;
+
 	const cliArgs = await parseCliArgs(process.argv.slice(2), checkCliArgs);
 
 	// Build and optimize the input document.
@@ -30,7 +33,8 @@ import {OpenApiInputProcessor} from './openapi/document-processor';
 		plugins = [plugins];
 	if (Array.isArray(plugins)) {
 		for (let fp of plugins) {
-			const txFn = require(path.resolve(process.cwd(), fp)).default;
+			// This avoids webpack's transformation
+			const txFn = nodeRequire(path.resolve(process.cwd(), fp)).default;
 			const result: OpenAPIV3.Document | OpenAPIV3_1.Document = await txFn(doc, cliArgs);
 			if (result)
 				doc = result;
@@ -46,7 +50,7 @@ import {OpenApiInputProcessor} from './openapi/document-processor';
 			plugins = [plugins];
 		if (Array.isArray(plugins)) {
 			for (let fp of plugins) {
-				const txFn = require(path.resolve(process.cwd(), fp)).default;
+				const txFn = nodeRequire(path.resolve(process.cwd(), fp)).default;
 				const result: OpenAPIV3_1.Document = await txFn(doc, cliArgs);
 				if (result)
 					doc = result;

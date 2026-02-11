@@ -27,9 +27,11 @@
 	"type": "commonjs",
 	"scripts": {
 		"build:uplift-schema": "webpack --config=./tools/plugins/uplift-schema-webpack.js",
+		"build:uplift-tags": "webpack --config=./tools/plugins/uplift-tags-webpack.js",
+		"build:remove-props": "webpack --config=./tools/plugins/remove-props-webpack.js",
 		"build:consolidate-query-params": "webpack --config=./tools/plugins/consolidate-query-params-webpack.js",
 		"build:recase-path-params": "webpack --config=./tools/plugins/recase-path-params-webpack.js",
-		"build:plugins": "rimraf ./dist/plugins && npm run build:uplift-schema && npm run build:consolidate-query-params && npm run build:recase-path-params",
+		"build:plugins": "rimraf ./dist/plugins && npm run build:uplift-schema && npm run build:consolidate-query-params && npm run build:recase-path-params && npm run build:uplift-tags && npm run build:remove-props",
 		"build:generator": "webpack --config=./tools/generate/generator-webpack.js",
 		"build:assembler": "webpack --config=./tools/assemble/assembler-webpack.js"
 	},

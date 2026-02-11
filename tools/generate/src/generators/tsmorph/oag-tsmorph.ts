@@ -154,8 +154,6 @@ export function oae2ObjLiteralStr(oae: OpenAPIV3_1.SchemaObject, verbose: boolea
 			return undefined;
 		if (key === 'example' || key === 'examples')
 			return undefined;
-		if (key.toLowerCase().startsWith('x-'))
-			return undefined;
 		if (key === 'summary')
 			return undefined;
 		if (key === 'description' && !verbose)

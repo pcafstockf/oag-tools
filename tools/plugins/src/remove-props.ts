@@ -7,7 +7,19 @@
 import {OpenAPIV3, OpenAPIV3_1} from 'openapi-types';
 
 // noinspection JSUnusedGlobalSymbols
-export default async function removeExamples(doc: OpenAPIV3.Document | OpenAPIV3_1.Document, _cmdArgs: Record<string, any>): Promise<void> {
+export default async function removeProps(doc: OpenAPIV3.Document | OpenAPIV3_1.Document, cmdArgs: Record<string, any>): Promise<void> {
+	cmdArgs = {...cmdArgs};
+	if (cmdArgs['remove-prop']) {
+		let propName = cmdArgs['remove-prop'];
+		if (!Array.isArray(propName))
+			cmdArgs['remove-prop'] = [propName];
+		else if (cmdArgs['remove-prop'].length == 0)
+			cmdArgs['remove-prop'] = ['example', 'examples'];
+	}
+	else
+		cmdArgs['remove-prop'] = ['example', 'examples']
+	console.log(`Removing properties: '${cmdArgs['remove-prop'].join("', '")}'`);
+
 	function processObject(obj: any): void {
 		if (typeof obj !== 'object' || obj === null)
 			return;
@@ -15,19 +27,15 @@ export default async function removeExamples(doc: OpenAPIV3.Document | OpenAPIV3
 			obj.forEach(processObject);
 			return;
 		}
-		// Remove 'example' property if it exists
-		if (obj.hasOwnProperty('example')) {
-			delete obj.example;
-		}
-		// Remove 'examples' property if it exists
-		if (obj.hasOwnProperty('examples')) {
-			delete obj.examples;
-		}
+		// Remove any relevant properties
+		cmdArgs['remove-prop'].forEach(pn => delete obj[pn]);
+
 		// Recursively process all properties
 		Object.values(obj).forEach(processObject);
 	}
 
-	processObject(doc);
+	if (Array.isArray(cmdArgs['remove-prop']))
+		processObject(doc);
 
 	return Promise.resolve();
 }
