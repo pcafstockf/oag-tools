@@ -3,20 +3,43 @@ import {camelCase as lodashCamelCase, snakeCase as lodashSnakeCase, toUpper} fro
 export type NameCase = 'kebab' | 'pascal' | 'snake' | 'camel' | undefined | null | '';
 
 /**
- * Convert f string to PascalCase.
+ * Convert string to PascalCase.
  * This uses lodash to convert to camelCase and then upper cases the first letter.
  */
 export const pascalCase = (str?: string) => lodashCamelCase(str).replace(/^(.)/, toUpper);
-export const kebabCase = (str?: string) => str.trim().replace(/([a-z])([A-Z])/g, '$1-$2').replace(/[\s_]+/g, '-').toLowerCase();
+
+/**
+ * Convert string to dash-case.
+ * Allows for optional handling of a string like __Foo_Bar -> __foo-bar vs __Foo_Bar -> -foo-bar vs
+ * @param str   String to convert
+ * @param leading   Also convert leading underscores (if any).
+ */
+export function kebabCase(str?: string, leading?: boolean) {
+	str = str?.trim();
+	if (leading)    // Convert leading underscores too!
+		str = str?.replace(/([a-z])([A-Z])/g, '$1-$2').replace(/[\s_]+/g, '-');
+	else    // Keep leading underscores as they are.
+		str = str?.replace(/^(_+)(.*)/, (_, lead, rest) => lead + rest.replace(/([a-z])([A-Z])/g, '$1-$2').replace(/[\s_]+/g, '-'));
+	return str?.toLowerCase();
+}
 export const snakeCase = lodashSnakeCase;
 export const camelCase = lodashCamelCase;
 
 /**
+ * Test a string for dash-case
  * E.g.:    user-login-count
+ * Allows for optional testing of a string with an underscore prefix like __foo-bar -> false vs __foo-bar -> true
+ * @param s   String to convert
+ * @param leading   Include leading underscores in the determination (if any).
  */
-export const isKebabCase = (s: string) => {
-	return (!/[A-Z]/g.test(s)) && (!/[_\s]/g.test(s));
-};
+export function isKebabCase(s: string, leading?: boolean) {
+	if (/[A-Z]/g.test(s))
+		return false;
+	if (leading)
+		return !/[_\s]/g.test(s);
+	return !/(?!^)[_\s]/g.test(s);
+}
+
 /**
  * E.g.:    user_login_count
  */
