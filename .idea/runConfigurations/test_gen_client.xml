@@ -3,6 +3,9 @@
     <envs>
       <env name="TS_NODE_PROJECT" value="tools/generate/tsconfig.json" />
     </envs>
+    <EXTENSION ID="com.intellij.javascript.debugger.execution.StartBrowserRunConfigurationExtension">
+      <browser with-js-debugger="true" />
+    </EXTENSION>
     <method v="2" />
   </configuration>
 </component>

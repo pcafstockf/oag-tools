@@ -61,7 +61,7 @@ export class OpenApiInputProcessor {
 				}
 				catch (e: any) {
 					process.chdir(cwd);
-					if ((e instanceof SyntaxError || e.errno === -constants.ENOENT) && safeLStatSync(loc)) {
+					if ((e instanceof SyntaxError || (e.name === 'SyntaxError') || e.errno === -constants.ENOENT) && safeLStatSync(loc)) {
 						const content = await fs.promises.readFile(loc);
 						doc = json5Parse(content.toString('utf8'));
 						if (Object.keys(doc).length > 0)

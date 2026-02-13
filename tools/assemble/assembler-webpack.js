@@ -11,6 +11,12 @@ const config = {
 		path: path.resolve('dist'),
 		libraryTarget: 'commonjs2',
 	},
+	resolve: {
+		alias: {
+			// Force CommonJS build of json5 to avoid mixed ESM/CJS interop issues
+			json5$: require.resolve('json5/dist/index.js'),
+		},
+	},
 };
 
 const tsconfigFilePath = process.env.TS_NODE_PROJECT || path.resolve(__dirname, 'tsconfig.json');
