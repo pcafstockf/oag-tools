@@ -7,7 +7,13 @@ export type LangNeutralModelTypes = Extract<LangNeutralType, 'intf' | 'impl' | '
 export interface Model extends Omit<LangNeutral, 'getLangNode'> {
 	getLangNode(type: LangNeutralModelTypes): unknown;
 
+	readonly uuid: string;
 	readonly name?: string;
+
+	/**
+	 * Returns any other models this model depends on (aka references).
+	 */
+	getDependencies(): ReadonlyArray<Readonly<Model>>;
 
 	/**
 	 * Returns true if this type is physically or logically the same as another.

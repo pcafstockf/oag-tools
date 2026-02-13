@@ -83,7 +83,7 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 			this.#genState = undefined;
 		}
 
-		#genState: undefined | 'generating' | 'done';
+		#genState: undefined | Promise<void>;
 
 		readonly #tsTypes: {
 			intf: I,
@@ -99,15 +99,9 @@ function MixTsmorphModel<T extends BaseModel, I extends Node = Node, C extends N
 		readonly #dependencies: TsmorphModel[];
 
 		async generate(sf: SourceFile): Promise<void> {
-			if (!this.#genState) {
-				try {
-					this.#genState = 'generating';
-					return this.generateModel(sf);
-				}
-				finally {
-					this.#genState = 'done';
-				}
-			}
+			if (!this.#genState)
+				this.#genState = this.generateModel(sf);
+			return this.#genState;
 		}
 
 		protected async generateModel(sf: SourceFile): Promise<void> {

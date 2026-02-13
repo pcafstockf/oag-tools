@@ -9,6 +9,7 @@ import * as nameUtils from 'oag-shared/utils/name-utils';
 import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
 import {OpenAPIV3_1} from 'openapi-types';
 import {ClientSettingsToken, ClientSettingsType} from './settings/client';
+import {DepGraph} from "dependency-graph";
 
 interface SchemaModel {
 	schema?: OpenAPIV3_1.SchemaObject;
@@ -108,8 +109,27 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		this.seenSchema.clear();
 		this.seenJsonPaths.clear();
 		delete this.activeDoc;
+
+		const graph = new DepGraph<Readonly<Model>>();
+		const cyclicDependencies = [] as Array<[string, string]>;
+		this.models.forEach(m => {
+			if (!graph.hasNode(m.uuid))
+				graph.addNode(m.uuid, m);
+			m.getDependencies().forEach(d => {
+				if (!graph.hasNode(d.uuid))
+					graph.addNode(d.uuid, d);
+				try {
+					graph.addDependency(m.uuid, d.uuid);
+				}
+				catch (e) {
+					cyclicDependencies.push([m.uuid, d.uuid]);
+				}
+			});
+		});
+		const orderedModels = graph.overallOrder().map(uuid => graph.getNodeData(uuid));
+		const cyclicModels = this.models.filter(m => !orderedModels.some(d => d.uuid === m.uuid));
 		return {
-			models: this.models,
+			models: [...orderedModels, ...cyclicModels],
 			apis: this.apis.filter(a => a.methods.length > 0)
 		};
 	}

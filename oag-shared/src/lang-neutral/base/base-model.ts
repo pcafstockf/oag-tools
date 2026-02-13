@@ -13,9 +13,18 @@ import {BaseLangNeutral, MixOpenApiLangNeutral} from './base-lang-neutral';
 export abstract class BaseModel extends BaseLangNeutral implements Model, FileBasedLangNeutral {
 	constructor(baseSettings: BaseSettingsType) {
 		super(baseSettings);
+		this.#uuid = crypto.randomUUID();
 	}
 
+	get uuid(): string {
+		return this.#uuid;
+	}
+
+	#uuid: string;
+
 	abstract getLangNode(type: LangNeutralModelTypes): unknown;
+
+	abstract getDependencies(): ReadonlyArray<Readonly<Model>>;
 
 	modelsMatch(model: Model): boolean {
 		if (Object.is(this, model))
@@ -26,9 +35,7 @@ export abstract class BaseModel extends BaseLangNeutral implements Model, FileBa
 	get name(): string | undefined {
 		return this.#name;
 	}
-
 	#name: string;
-
 	setName(name: string) {
 		this.#name = name;
 	}
@@ -166,6 +173,10 @@ export abstract class BaseUnionModel extends BaseSchemaModel implements UnionMod
 			this.#unionOf.push(union);
 	}
 
+	getDependencies(): ReadonlyArray<Readonly<Model>> {
+		return this.unionOf;
+	}
+
 	toString(owned?: boolean) {
 		let id: string;
 		let retVal = this.unionOf.reduce((p, m, i) => {
@@ -199,6 +210,10 @@ export abstract class BasePrimitiveModel extends BaseSchemaModel implements Prim
 		if (t === 'string' && Array.isArray(this.oae.enum))
 			return 'enum';
 		return t as PrimitiveModelType ?? 'object';
+	}
+
+	getDependencies(): ReadonlyArray<Readonly<Model>> {
+		return [];
 	}
 
 	toString(owned?: boolean) {
@@ -236,6 +251,10 @@ export abstract class BaseArrayModel extends BaseSchemaModel implements ArrayMod
 
 	setItems(items: Model): void {
 		this.#items = items;
+	}
+
+	getDependencies(): ReadonlyArray<Readonly<Model>> {
+		return [this.items];
 	}
 
 	toString(owned?: boolean) {
@@ -313,6 +332,14 @@ export abstract class BaseRecordModel extends BaseSchemaModel implements RecordM
 			this.#unionOf = [union];
 		else
 			this.#unionOf.push(union);
+	}
+
+	getDependencies(): ReadonlyArray<Readonly<Model>> {
+		const deps = this.extendsFrom.concat(this.unionOf);
+		Object.values(this.properties).forEach(p => deps.push(p.model));
+		if (this.additionalProperties)
+			deps.push(this.additionalProperties);
+		return deps;
 	}
 
 	toString(owned?: boolean) {

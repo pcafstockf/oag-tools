@@ -69,10 +69,13 @@ export function importIfNotSameFile<S extends Node, I extends Node>(src: S, imph
 			relModule = './' + imphortBaseName;
 		else
 			relModule = path.join(relPath, imphortBaseName);
-		return srcSf.addImportDeclaration({
-			moduleSpecifier: relModule,
-			namedImports: [imphortName]
-		});
+		let result = srcSf.getImportDeclarations().find(i => i.getModuleSpecifierValue() === relModule && i.getNamedImports().some(ni => ni.getText() === imphortName))
+		if (!result)
+			result = srcSf.addImportDeclaration({
+				moduleSpecifier: relModule,
+				namedImports: [imphortName]
+			});
+		return result;
 	}
 	return undefined;
 }

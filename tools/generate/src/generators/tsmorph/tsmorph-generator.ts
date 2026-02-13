@@ -27,13 +27,15 @@ export class TsmorphGenerator implements SourceGenerator {
 
 		await this.preGenerate(ast);
 
-		//TODO: Remove the console.log and the sort, as they  are only used for manual comparison of regression
-		for (let m of ast.models.sort((a, b) => a.name.localeCompare(b.name))) {
+		const q = [] as Promise<void>[];
+		for (let m of ast.models) {
 			console.log(m.toString());
 			if (isTsmorphModel(m))
-				await m.generate(this.tempFile);
+				q.push(m.generate(this.tempFile));
 		}
-		for (let a of ast.apis.sort((a, b) => a.name.localeCompare(b.name))) {
+		await Promise.all(q);
+
+		for (let a of ast.apis) {
 			console.log(a.toString());
 			if (isTsmorphApi(a))
 				await a.generate(this.tempFile);
