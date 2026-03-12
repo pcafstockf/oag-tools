@@ -19,7 +19,7 @@ export function kebabCase(str?: string, leading?: boolean) {
 	if (leading)    // Convert leading underscores too!
 		str = str?.replace(/([a-z])([A-Z])/g, '$1-$2').replace(/[\s_]+/g, '-');
 	else    // Keep leading underscores as they are.
-		str = str?.replace(/^(_+)(.*)/, (_, lead, rest) => lead + rest.replace(/([a-z])([A-Z])/g, '$1-$2').replace(/[\s_]+/g, '-'));
+		str = str?.replace(/^(_*)(.*)/, (_, lead, rest) => lead + rest.replace(/([a-z])([A-Z])/g, '$1-$2').replace(/[\s_]+/g, '-'));
 	return str?.toLowerCase();
 }
 export const snakeCase = lodashSnakeCase;
