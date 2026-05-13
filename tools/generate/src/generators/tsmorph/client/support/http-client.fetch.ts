@@ -36,9 +36,9 @@ class FetchHttpClient implements HttpClient {
 		};
 		if (typeof opts?.headers !== 'undefined')
 			options.headers = Object.keys(opts.headers).reduce((acc, key) => {
-				if (Array.isArray(opts.headers[key]))
+				if (Array.isArray(opts.headers?.[key]))
 					acc[key] = (opts.headers[key] as string[]).join(',');
-				else
+				else if (opts.headers)
 					acc[key] = opts.headers[key] as unknown as string;
 				return acc;
 			}, opts.headers as unknown as Record<string, string>);

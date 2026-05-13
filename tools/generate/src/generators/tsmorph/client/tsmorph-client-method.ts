@@ -279,7 +279,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				sec = this.oae.security;
 			writer.write(`const $pre = this.config.reqTransformer ? this.config.reqTransformer($opDesc, $serviceUrl, $localHdrs`);
 			if (this.baseSettings.target === 'browser')
-				writer.write(`${sec ? ', ' + JSON5.stringify(sec) + ' as any' : ''}) : Promise.resolve(${cookieParams.length > 0 ? 'true' : ''});`);
+				writer.write(`${sec ? ', undefined, ' + JSON5.stringify(sec) + ' as any' : ''}) : Promise.resolve(${cookieParams.length > 0 ? 'true' : ''});`);
 			else
 				writer.write(`, $cookies${sec ? ', ' + JSON5.stringify(sec) + ' as any' : ''}) : Promise.resolve($cookies);`);
 			writer.writeLine('let $rsp = $pre.then((c) => {');
