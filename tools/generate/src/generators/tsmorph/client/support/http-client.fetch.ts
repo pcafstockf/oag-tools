@@ -2,6 +2,12 @@ import {HttpClient, HttpOptions, HttpResponse} from './http-client';
 
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
+declare module './http-client' {
+	interface HttpOptions {
+		timeout?: number;
+	}
+}
+
 class FetchHttpClient implements HttpClient {
 	constructor() {
 	}
@@ -48,6 +54,8 @@ class FetchHttpClient implements HttpClient {
 			options.credentials = opts?.credentials ? 'include' : 'omit';
 		else if (typeof opts?.credentials === 'string')
 			options.credentials = opts?.credentials as any;
+		if (opts?.timeout)
+			options.signal = AbortSignal.timeout(opts.timeout);
 		return fetch(url, options);
 	}
 
