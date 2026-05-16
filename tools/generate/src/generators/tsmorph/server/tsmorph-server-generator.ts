@@ -110,7 +110,20 @@ export class TsmorphServerGenerator extends TsmorphGenerator {
 					const impl = api.getLangNode('impl');
 					const intfImport = importIfNotSameFile(diSetupSf, intf, intf.getName());
 					intfTokensExt.forEach(ext => intfImport.addNamedImport(intf.getName() + ext));
-					importIfNotSameFile(diSetupSf, impl, impl.getName());
+					if (impl) {
+						importIfNotSameFile(diSetupSf, impl, impl.getName());
+					}
+					else if (isFileBasedLangNeutral(api)) {
+						const implName = api.getIdentifier('impl');
+						const implFilePath = api.getFilepath('impl');
+						if (implName && implFilePath) {
+							const implBaseName = path.basename(implFilePath, path.extname(implFilePath));
+							diSetupSf.addImportDeclaration({
+								moduleSpecifier: './' + implBaseName,
+								namedImports: [implName]
+							});
+						}
+					}
 				}
 			});
 			// Add an injection token for the MockDataGenerator.

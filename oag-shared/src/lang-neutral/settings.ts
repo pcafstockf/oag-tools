@@ -104,16 +104,10 @@ export async function cleanOutDir(del: boolean | string, outDir: string, setting
 			rimrafSync(path.join(outDir, settings.modelJsonDir), {recursive: true, force: true});
 		if (settings.apiIntfDir)
 			rimrafSync(path.join(outDir, settings.apiIntfDir), {recursive: true, force: true});
-		if (settings.apiImplDir) {
-			const keep = settings.role === 'server' && typeof del === 'string' && del.indexOf('keep-api-impl') >= 0;
-			if (!keep)
-				rimrafSync(path.join(outDir, settings.apiImplDir), {recursive: true, force: true});
-		}
-		if (settings.apiMockDir) {
-			const keep = settings.role === 'client' && typeof del === 'string' && del.indexOf('keep-api-mock') >= 0;
-			if (!keep)
-				rimrafSync(path.join(outDir, settings.apiMockDir), {recursive: true, force: true});
-		}
+		if (settings.apiImplDir && del === 'all')
+			rimrafSync(path.join(outDir, settings.apiImplDir), {recursive: true, force: true});
+		if (settings.apiMockDir && del === 'all')
+			rimrafSync(path.join(outDir, settings.apiMockDir), {recursive: true, force: true});
 		if (settings.apiHndlDir)
 			rimrafSync(path.join(outDir, settings.apiHndlDir), {recursive: true, force: true});
 	}
