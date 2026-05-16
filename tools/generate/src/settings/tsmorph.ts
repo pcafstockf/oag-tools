@@ -39,7 +39,8 @@ export const TsMorphSettings = {
 		},
 		compilerOptions: {
 			outDir: undefined as string,
-			target: ScriptTarget.ES2021
+			target: ScriptTarget.ES2021,
+			isolatedModules: undefined as boolean
 		}
 	},
 	support: [{

@@ -5,7 +5,7 @@ import {writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {BaseSettingsToken, BaseSettingsType} from 'oag-shared/lang-neutral/settings';
 import {interpolateBashStyle, safeLStatSync} from 'oag-shared/utils/misc-utils';
-import {Project, SourceFile} from 'ts-morph';
+import {ModuleResolutionKind, Node, Project, SourceFile} from 'ts-morph';
 import {TsMorphSettingsToken, TsMorphSettingsType} from '../../settings/tsmorph';
 import {CodeGenAst, SourceGenerator} from '../source-generator';
 import {TempFileName} from './oag-tsmorph';
@@ -46,7 +46,7 @@ export class TsmorphGenerator implements SourceGenerator {
 		// Remove the temp file
 		this.tempFile.deleteImmediatelySync();
 		delete this.tempFile;
-		// Format and write all remaining project files to disk.
+		// Format and write all project files to disk.
 		for (const file of this.project.getSourceFiles()) {
 			file.organizeImports(this.tsmorphSettings.format);
 			file.formatText(this.tsmorphSettings.format);
@@ -59,7 +59,24 @@ export class TsmorphGenerator implements SourceGenerator {
 			}
 			if (!stat.isDirectory())
 				throw new Error('Invalid output directory for generated file: ' + fp);
-			await writeFile(file.getFilePath(), file.getFullText(), 'utf8');
+			await writeFile(fp, file.getFullText(), 'utf8');
+		}
+		// If isolatedModules is enabled, create a fresh resolver project from the written files
+		// with NodeJs module resolution to accurately determine and fix type-only imports.
+		if (this.tsmorphSettings.project.compilerOptions?.isolatedModules) {
+			const resolverProject = new Project({
+				compilerOptions: {
+					...this.tsmorphSettings.project.compilerOptions,
+					moduleResolution: ModuleResolutionKind.NodeJs
+				}
+			});
+			resolverProject.addSourceFilesAtPaths(path.join(this.baseSettings.outputDirectory, '**/*.ts'));
+			for (const file of resolverProject.getSourceFiles()) {
+				const origText = file.getFullText();
+				this.fixTypeOnlyImports(file);
+				if (file.getFullText() !== origText)
+					await writeFile(file.getFilePath(), file.getFullText(), 'utf8');
+			}
 		}
 	}
 
@@ -67,6 +84,43 @@ export class TsmorphGenerator implements SourceGenerator {
 	protected tempFile: SourceFile;
 
 	protected async preGenerate(_ast: CodeGenAst): Promise<void> {
+	}
+
+	/**
+	 * When isolatedModules is enabled, TypeScript requires type-only imports to use 'import type' syntax.
+	 * This method post-processes a source file's imports, resolving each named import to its original
+	 * declaration to determine whether it is a type (interface/type alias) or a value (class/const/function/enum).
+	 */
+	protected fixTypeOnlyImports(file: SourceFile): void {
+		for (const imp of file.getImportDeclarations()) {
+			if (imp.isTypeOnly())
+				continue;
+			const namedImports = imp.getNamedImports();
+			if (namedImports.length === 0)
+				continue;
+			const typeFlags: boolean[] = namedImports.map(ni => {
+				if (ni.isTypeOnly())
+					return true;
+				const sym = ni.getSymbol();
+				const aliased = sym?.getAliasedSymbol?.() ?? sym;
+				if (!aliased)
+					return false; // Can't resolve — assume value (safe default)
+				const decls = aliased.getDeclarations();
+				return decls.length > 0 && decls.every(d => Node.isInterfaceDeclaration(d) || Node.isTypeAliasDeclaration(d));
+			});
+			const allTypes = typeFlags.every(f => f);
+			const allValues = typeFlags.every(f => !f);
+			if (allTypes) {
+				imp.setIsTypeOnly(true);
+			}
+			else if (!allValues) {
+				// Mixed: mark individual type-only specifiers
+				namedImports.forEach((ni, i) => {
+					if (typeFlags[i])
+						ni.setIsTypeOnly(true);
+				});
+			}
+		}
 	}
 
 	protected async postGenerate(_ast: CodeGenAst, target?: string): Promise<void> {
