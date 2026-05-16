@@ -115,12 +115,13 @@ class FetchHttpClient implements HttpClient {
 		else
 			retVal.data = await rsp.blob() as T;
 		if (!rsp.ok) {
-			retVal.error = new Error(rsp.statusText, {cause: retVal});
-			Object.assign(retVal.error, {
+			const err = new Error(rsp.statusText, {cause: retVal});
+			Object.assign(err, {
 				name: `HTTP_${retVal.status}`,
 				code: `HTTP_${retVal.status}`,
 				httpStatus: retVal.status
 			});
+			throw err;
 		}
 		return retVal;
 	}

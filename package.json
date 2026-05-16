@@ -35,7 +35,11 @@
 		"build:recase-path-params": "webpack --config=./tools/plugins/recase-path-params-webpack.js",
 		"build:plugins": "rimraf ./dist/plugins && npm run build:uplift-schema && npm run build:consolidate-query-params && npm run build:recase-path-params && npm run build:uplift-tags && npm run build:remove-props",
 		"build:generator": "webpack --config=./tools/generate/generator-webpack.js",
-		"build:assembler": "webpack --config=./tools/assemble/assembler-webpack.js"
+		"build:assembler": "webpack --config=./tools/assemble/assembler-webpack.js",
+		"assembler": "node dist/assembler.js",
+		"generator": "node dist/generator.js",
+		"assembler:dev": "TS_NODE_PROJECT=tools/assemble/tsconfig.json node -r source-map-support/register -r ts-node/register/transpile-only -r tsconfig-paths/register tools/assemble/src/main.ts",
+		"generator:dev": "TS_NODE_PROJECT=tools/generate/tsconfig.json node -r source-map-support/register -r ts-node/register/transpile-only -r tsconfig-paths/register tools/generate/src/main.ts"
 	},
 	"dependencies": {
 		"@apidevtools/swagger-parser": "~10.1.1",
