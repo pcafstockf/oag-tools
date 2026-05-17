@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const {merge} = require('webpack-merge');
 
 const baseConfigFn = require(path.resolve('scripts', 'wp-common'));
@@ -18,6 +19,9 @@ const config = {
 		path: path.resolve('dist'),
 		libraryTarget: 'commonjs2',
 	},
+	plugins: [
+		new webpack.BannerPlugin({banner: '#!/usr/bin/env node', raw: true}),
+	],
 	resolve: {
 		alias: {
 			// Force CommonJS build of json5 to avoid mixed ESM/CJS interop issues

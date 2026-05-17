@@ -29,9 +29,9 @@ Note that you could allow arrays, but application/json might be better.
 
 #### multipart/form-data
 
-If all properties of schema are (! (object || array)) && (reqMediaTypeSupported):  
-Declare type of object | FormData, emit code to covert to FormData and send as multipart/form-data
-Note that if env is node, the generator will need to ensure a FormData library (e.g. config.libs['form-data']).
+If (reqMediaTypeSupported):
+Declare type as FormData and send as multipart/form-data.
+The caller is responsible for constructing the FormData instance with the appropriate fields and file entries.
 
 #### application/octet-stream || (config.recognizedBinaryTypes)
 

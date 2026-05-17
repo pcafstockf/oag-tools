@@ -123,10 +123,16 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 		}
 		methods.forEach((meth, idx) => {
 			signature.params.forEach(p => {
+				let typeText = p.param.model.getTypeNode().getText();
+				if (p.param.kind === 'body') {
+					const bp = p.param as unknown as BodyParameter;
+					if (bp.preferredMediaTypes?.[0] === 'multipart/form-data')
+						typeText = 'FormData';
+				}
 				const arg = meth.addParameter({
 					name: p.param.getIdentifier(alnType),
 					hasQuestionToken: idx === 1 || idx == 3 ? false : !p.required,
-					type: p.param.model.getTypeNode().getText()
+					type: typeText
 				});
 				bindAst(arg, p);
 			});
