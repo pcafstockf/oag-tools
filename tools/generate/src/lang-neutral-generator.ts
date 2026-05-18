@@ -2,8 +2,9 @@ import SwaggerParser from '@apidevtools/swagger-parser';
 import {Container} from 'async-injection';
 import * as JSON5 from 'json5';
 import {Api, Model, Parameter} from 'oag-shared/lang-neutral';
+import {isIdentifiedLangNeutral} from 'oag-shared/lang-neutral/lang-neutral';
 import {BaseApi, BaseArrayModel, BaseBodyParameter, BaseMethod, BaseNamedParameter, BaseOpenApiResponse, BaseRecordModel, BaseSchemaModel, BaseSettingsToken, BaseTypedModel, BaseUnionModel, CodeGenApiToken, CodeGenArrayModelToken, CodeGenAst, CodeGenBodyParameterToken, CodeGenCommonModelsToken, CodeGenMethodToken, CodeGenNamedParameterToken, CodeGenOpenApiResponseToken, CodeGenRecordModelToken, CodeGenUnionModelToken, CommonModelTypes, OpenApiSchemaWithModelRef} from 'oag-shared/lang-neutral/base';
-import {CodeGenTypedModelToken, isPrimitiveModel} from 'oag-shared/lang-neutral/model';
+import {CodeGenTypedModelToken, isPrimitiveModel, isRecordModel, isUnionModel} from 'oag-shared/lang-neutral/model';
 import {OpenAPIV3_1Visitor} from 'oag-shared/openapi/document-visitor';
 import * as nameUtils from 'oag-shared/utils/name-utils';
 import {SchemaJsdConstraints} from 'oag-shared/utils/openapi-utils';
@@ -211,8 +212,15 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 					if (!model) {
 						model = this.container.get<BaseUnionModel>(CodeGenUnionModelToken);
 						model.init(this.activeDoc, this.activeJsonPath, schema);
-						const unions = schemaType.filter(v => v !== 'null').map(v => this.container.get(CodeGenCommonModelsToken)(v as CommonModelTypes));
-						unions.forEach(u => (u as BaseUnionModel).addUnion(u));
+						const unions = schemaType.filter(v => v !== 'null').map(v => {
+							const u = this.container.get(CodeGenCommonModelsToken)(v as CommonModelTypes) as BaseSchemaModel;
+							u.init(this.activeDoc, this.activeJsonPath, {
+								...schema,
+								type: v
+							} as OpenAPIV3_1.SchemaObject);
+							return u;
+						});
+						unions.forEach(u => (model as BaseUnionModel).addUnion(u));
 					}
 				}
 				else {
@@ -318,7 +326,8 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 							model = u;
 						}
 					}
-					model.init(this.activeDoc, this.activeJsonPath, schema);
+					model.init(this.activeDoc, this.activeJsonPath,
+						(!schema.type && typeof schemaType === 'string') ? {...schema, type: schemaType} as OpenAPIV3_1.SchemaObject : schema);
 				}
 			}
 			if (!model)
@@ -376,12 +385,26 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		const model = (schema as any)[CodeGenAst] as (BaseUnionModel | BaseRecordModel);
 		if (Array.isArray(allOf)) {
 			const brm = model as BaseRecordModel;
+			const parentId = isIdentifiedLangNeutral(brm) ? brm.getIdentifier('intf') : undefined;
 			allOf.forEach(u => {
 				const um = (u as any)[CodeGenAst] as Model;
 				// 'any' which can happen when no type is present, really has no meaning with 'allOf' as it imposes no *additional* constraints.
 				if (isPrimitiveModel(um))
 					if (um.jsdType === 'any')
 						return;
+				// Same-named allOf member (e.g. $ref resolving to same title): absorb rather than extend.
+				if (parentId && isIdentifiedLangNeutral(um) && um.getIdentifier('intf') === parentId) {
+					if (isUnionModel(um))
+						for (const uu of um.unionOf)
+							brm.addUnion(uu);
+					if (isRecordModel(um))
+						for (const e of um.extendsFrom)
+							brm.addExtendsFrom(e);
+					const idx = this.models.indexOf(um);
+					if (idx >= 0)
+						this.models.splice(idx, 1);
+					return;
+				}
 				brm.addExtendsFrom(um);
 			});
 		}

@@ -12,7 +12,7 @@ Your application (client), or service (server) can stay focused on business logi
 An OpenApi specification is effectively a Domain-Specific-Language for machine to machine communication over a REST protocol.  
 oag-tools transforms that into a [language neutral model](oag-shared/src/lang-neutral/ReadMe.md) representing data types and class methods for exchanging that data.  
 Once this first transformation pass is complete, the generate tool transforms the language neutral model into a language specific model.
-Currently, TypeScript is fully supported (client and server, multiple frameworks). Java support is planned next.
+Currently, TypeScript is fully supported (client and server, multiple frameworks). Additional language support is planned.
 
 ## Implementation
 
@@ -36,6 +36,6 @@ The generator:
 * Supports client / server, and node / browser, for various frameworks.
 * Opinionated, but highly customizable.
 * Does not require, but strongly encourages, the use of Dependency Injection.
+* Produces `Intro.md` and `Setup.md` documentation alongside the generated code, tailored to your specific configuration (client vs server, framework, environment). These guides explain the generated architecture and provide a quick-start example for integrating with your application.
 
-NOTE:
-This is first draft documentation. Please feel free to make suggestions and look for more to come.
+See [docs/petstore.md](docs/petstore.md) to get started with a quick example.

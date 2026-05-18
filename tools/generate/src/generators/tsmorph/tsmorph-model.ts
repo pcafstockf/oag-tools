@@ -752,33 +752,13 @@ export class TsmorphRecordModel extends MixTsmorphModel<BaseRecordModel, ModelIn
 		}
 
 		if (!this.getLangNode('intf')) {
-			/*
-			  Person:
-				type: object
-				allOf:
-				  - $ref: #/components/schemas/NameAge
-				  - $ref: #/components/schemas/Origin
-				anyOf:
-				  - $ref: #/components/schemas/Contacts
-				  - $ref: #/components/schemas/Addresses
-				properties:
-				  race:
-					type: string
-			---
-				interface PersonBase extends NameAge, Origin {
-				  race: string;
-				}
-				type Person = PersonBase & (Contacts | Addresses);
-				// or at least
-				type Person = NameAge & Origin & {race: string;} & (Contacts | Addresses);
-			*/
 			sf = await this.getSrcFile('intf', sf.getProject(), sf);
 			if (sf) {
 				const {id, fake} = this.ensureIdentifier('intf');
 				let intf: ModelInterfaceDeclaration = fake ? undefined : sf.getInterface(id);
 				if (!intf)
 					this.bind('intf', await this.createIntf(sf, id, fake));
-				else if (!intf.$ast)
+				else
 					this.bind('intf', intf);
 			}
 		}

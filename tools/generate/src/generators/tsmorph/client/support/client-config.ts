@@ -9,13 +9,13 @@ export interface ApiClientConfig {
 	baseURL?: string;
 	/**
 	 * Invoked to serialize http request bodies.
-	 * See docs/Request-Serialization.md for more info.
+	 * See docs/req-rsp-processing.md for more info.
 	 */
 	bodySerializer?: BodySerializerFn;
 	/**
 	 * OpenAPI supports many parameter serialization mechanisms some of which are dependent on where the parameter is used (path, query, header, cookie).
 	 * ./client-utils has a working implementation, but you may swap in your own.
-	 * See docs/Request-Serialization.md for more info.
+	 * See docs/req-rsp-processing.md for more info.
 	 */
 	paramSerializers?: ParamSerializersType;
 	/**

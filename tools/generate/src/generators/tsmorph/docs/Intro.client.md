@@ -25,12 +25,12 @@ or worse requiring a centrally hosted, up-to-date server that everyone is steppi
 ## Opinionated Configuration
 
 There is no accounting developer taste (including my own) :-)  
-oag-tools has strong opinions about some things, but allows great flexibility regarding others.
+oag-tools has strong opinions about some things, but allows great flexibility regarding others.  
 Pre-built user customizable templates are used to configure naming conventions, formating, layout, etc.
-Pre-built templates also provide the ability to easily target various frameworks and environments (node, browser, axios, angular, sinon, jasmine, etc.)
-Underlying this configurability however are some strong opinions.
+Pre-built templates also provide the ability to target various frameworks and environments (node, browser, axios, angular, sinon, jasmine, etc.)
+Underlying this configurability however are some strong opinions.  
 Service Apis should abstract away (whenever feasible) the notion of http transport (paths, headers, encodings, etc.).
-Callers should access services via interfaces (as apposed to implementations), although in truth, this is more what you'd call 'guidelines' than actual rules.
+Callers should access services via interfaces (as apposed to implementations), although, these are more 'guidelines' than actual rules.  
 All remote service calls should support configuration that allows for pre/post hooks to handle things that a spec cannot easily define
 (such as providing tokens for authentication, adding additional transport headers not described in the spec, etc.).
 
@@ -47,7 +47,7 @@ Omit, move, rename as you wish, the generator is able to output the following di
 ## Correctness, Compatibility, and Efficiency
 
 The generator understands many of the nuances of OpenApi, including how to properly encode and most efficiently transport requests to a remote server.
-There is more to doing this right, than most folks realize.
+There is more to doing this right than you may realize.
 
 ## Dependency Injection is king
 

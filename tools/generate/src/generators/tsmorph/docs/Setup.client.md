@@ -1,6 +1,31 @@
-### Setup for oag-tools generated client.
+### Setup for oag-tools generated client
 
-A simple command line tool to query a Pet by id, is really just this simple.
+#### Getting started
+
+1. **Create a dependency injection container** using `async-injection`.
+2. **Call `setupApis()`** (in `services/setup.ts`) with an HTTP client instance and a configuration object specifying at minimum `baseURL`, `paramSerializers`, and `bodySerializer`.
+3. **Retrieve API instances** from the container using the generated API tokens (in `apis.ts`) and call methods directly.
+
+#### Key generated files
+
+- `apis.ts` — API interface tokens for dependency injection
+- `services/setup.ts` — Registers API service implementations in the DI container
+- `internal/http-client-svc.ts` — HTTP client factory (`makeFetchHttpClient()`)
+- `internal/param-serializers.ts` — Spec-compliant parameter serialization
+- `internal/body-serializer.ts` — Reference body serializer
+- `internal/client-config.ts` — Configuration interface
+
+For details on all the configurable callbacks (body serialization, parameter serialization, request/response transformers), see [docs/req-rsp-processing.md](../../docs/req-rsp-processing.md).
+
+#### Mocking
+
+The generator can optionally produce mock implementations of each API interface (in `mocks/`).
+Call `setupMocks()` instead of (or in addition to) `setupApis()` to register mock services.
+Mocks can be used for testing or embedded in your application runtime to eliminate dependence on a remote server during development.
+
+## Example
+
+A little command line tool to query a Pet by id, is really just this simple.
 
 ```typescript
 import "reflect-metadata";
@@ -15,7 +40,7 @@ import {setupApis} from './client/services/setup';
 // If you want runtime mocking...
 // import {mock as mockJson} from 'mock-json-schema';
 // import {DefaultMockDataGenerator} from './client/internal/data-mocking';
-// import {jasmine} from 'jamsine';  // (adjust for jasmine, sinon, or node as needed)
+// import {jasmine} from 'jasmine';  // (adjust for jasmine, sinon, or node as needed)
 
 (async () => {
 	// new jasmine();   // Runtime usage of jasmine (outside a spec runner) requires initialization.

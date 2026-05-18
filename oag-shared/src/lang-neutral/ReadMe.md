@@ -112,8 +112,8 @@ Values:
       - type: integer
 ```
 
-This is an array that can contain strings or integers.  
-Changing "anyOf" to "oneOf" would define an array with only strings or an array with only integers.
+This is an array where each element can be a string or an integer.
+Changing "anyOf" to "oneOf" tightens validation: each element must match **exactly one** of the schemas (validation fails if an element could match multiple). In practice, for simple disjoint types like string vs integer, the runtime behavior is the same — but `oneOf` enforces exclusivity.
 
 Lastly, `CodeGen` tries to honor **valid** OpenApi, even if it is not considered best practice.
 Given:
