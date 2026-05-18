@@ -1,7 +1,5 @@
 MockDataGenerator.genMockData produces a typescript error when given a schema containing oneOf.
 
-CC spec fails (something around unionOf)
-
 * generate a setup.ts file in the handlers that binds into a singularity (framework specific).
     * Also re-export the injection token from there.
     * rename services/setup exported function from 'setup' to setupServices.

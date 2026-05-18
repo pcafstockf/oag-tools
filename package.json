@@ -19,8 +19,8 @@
 		"url": "https://github.com/pcafstockf/oag-tools/issues"
 	},
 	"bin": {
-		"oag-assemble": "./dist/assembler.js",
-		"oag-generate": "./dist/generator.js"
+		"oag-assembler": "./dist/oag-assembler.js",
+		"oag-generator": "./dist/oag-generator.js"
 	},
 	"workspaces": [
 		"oag-shared",
@@ -30,7 +30,7 @@
 	],
 	"type": "commonjs",
 	"scripts": {
-		"clean": "rimraf ./.nyc_output && rimraf ./coverage",
+		"clean": "rimraf ./.nyc_output && rimraf ./coverage && rimraf ./dist",
 		"fullclean": "npm run clean && rimraf package-lock.json && rimraf ./node_modules",
 		"build:uplift-schema": "webpack --config=./tools/plugins/uplift-schema-webpack.js",
 		"build:uplift-tags": "webpack --config=./tools/plugins/uplift-tags-webpack.js",
@@ -41,7 +41,9 @@
 		"build:generator": "webpack --config=./tools/generate/generator-webpack.js",
 		"build:assembler": "webpack --config=./tools/assemble/assembler-webpack.js",
 		"assembler:dev": "TS_NODE_PROJECT=tools/assemble/tsconfig.json node -r source-map-support/register -r ts-node/register/transpile-only -r tsconfig-paths/register tools/assemble/src/main.ts",
-		"generator:dev": "TS_NODE_PROJECT=tools/generate/tsconfig.json node -r source-map-support/register -r ts-node/register/transpile-only -r tsconfig-paths/register tools/generate/src/main.ts"
+		"generator:dev": "TS_NODE_PROJECT=tools/generate/tsconfig.json node -r source-map-support/register -r ts-node/register/transpile-only -r tsconfig-paths/register tools/generate/src/main.ts",
+		"assembler:claude": "TS_NODE_PROJECT=tools/assemble/tsconfig.json \"/Users/franks/.nvm/versions/node/v20.20.2/bin/node\" -r source-map-support/register -r ts-node/register/transpile-only -r tsconfig-paths/register tools/assemble/src/main.ts",
+		"generator:claude": "TS_NODE_PROJECT=tools/generate/tsconfig.json \"/Users/franks/.nvm/versions/node/v20.20.2/bin/node\" -r source-map-support/register -r ts-node/register/transpile-only -r tsconfig-paths/register tools/generate/src/main.ts"
 	},
 	"dependencies": {
 		"@apidevtools/swagger-parser": "~10.1.1",
@@ -71,7 +73,7 @@
 		"@types/semver": "~7.7.1",
 		"@types/swagger2openapi": "~7.0.4",
 		"@types/yargs": "~17.0.35",
-		"axios": "~1.16.0",
+		"axios": "~1.16.1",
 		"cross-env": "~7.0.3",
 		"express": "~4.22.2",
 		"express-openapi-validator": "~5.6.2",

@@ -1,0 +1,19 @@
+// Assemble the naming spec into a v3.1 bundle.
+// Demonstrates patch merging, fix plugins, transform plugins, and v3.0 → v3.1 upgrade.
+// You can use the **built** assembler or debug the current assembler source [e.g. npm run assembler:dev -- -c fixtures/naming/oag-assemble.json5]
+//      node dist/oag-assembler.js --config fixtures/naming/oag-assemble.json5
+{
+	i: "./fixtures/naming/naming.yml",
+	m: [
+		"./fixtures/naming/patch.json5"
+	],
+	f: [
+		"tools/plugins/src/consolidate-query-params.ts"
+	],
+	b: true,
+	t: [
+		"tools/plugins/src/recase-path-params.ts"
+	],
+	u: true,
+	o: "./fixtures/naming/naming.bundle.json"
+}

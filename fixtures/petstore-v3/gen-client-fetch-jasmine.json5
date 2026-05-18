@@ -1,0 +1,17 @@
+// Generate code from the local (pre-assembled) bundle
+// You can use the **built** generator or debug the current generator source [e.g. npm run generator:dev -- -c fixtures/petstore-v3/gen-client-fetch-jasmine.json5]
+//      node dist/oag-generator.js --config fixtures/petstore-v3/gen-client-fetch-jasmine.json5
+{
+	i: 'fixtures/petstore-v3/petstore.bundle.json',
+	o: 'fixtures/petstore-v3/client-jasmine-src',
+	d: 'all',
+	r: 'client',
+	p: [
+		'base.target="browser"',
+		'tsmorph.client.httpsup="fetch"',
+		'tsmorph.client.mocklib="jasmine"',
+		'tsmorph.client.dependencyInjection=""',
+		'base.apiMockDir="mocks"',
+		'base.modelJsonDir="json"'
+	]
+}

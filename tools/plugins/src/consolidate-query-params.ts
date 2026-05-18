@@ -16,7 +16,7 @@ export default async function consolidateQueryParams(doc: OpenAPIV3.Document | O
 		let pathItem = doc.paths[upath] as OpenAPIV3.PathItemObject | OpenAPIV3.ReferenceObject;
 		if ('$ref' in pathItem && pathItem.$ref)
 			pathItem = refs.get(pathItem.$ref);
-		for (let method in Object.keys(doc.paths[upath]!).filter(k => HttpVerbs.includes(k.toUpperCase()))) {
+		for (let method of Object.keys(doc.paths[upath]!).filter(k => HttpVerbs.includes(k.toUpperCase()))) {
 			const operation = doc.paths[upath]![method] as OpenAPIV3.OperationObject;
 			if (operation.parameters) {
 				const queryRequired: Record<string, boolean> = {};

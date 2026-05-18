@@ -1,17 +1,31 @@
-// This is a little sample config to show how naming conventions can be altered.
+// Demonstrates naming convention customization.
+// You can use the **built** generator or debug the current generator source [e.g. npm run generator:dev -- -c fixtures/naming/gen-client.json5]
+//      node dist/oag-generator.js --config fixtures/naming/gen-client.json5
 {
-	i: './fixtures/naming/naming.yml',
-	o: '~/oag-tools-projects/naming/src/client',
+	i: './fixtures/naming/naming.bundle.json',
+	o: 'fixtures/naming/client-src',
 	d: 'all',
 	r: 'client',
 	p: [
+		'base.target="browser"',
+		'tsmorph.client.httpsup="fetch"',
+		// Directory naming
 		'base.modelIntfDir="types"',
 		'base.modelImplDir="dto"',
 		'base.modelJsonDir="schema"',
 		'base.apiIntfDir="api"',
 		'base.apiImplDir="impl"',
 		'base.apiMockDir="mock"',
-		// defaults to ' ', which kebab'd (the default) turns into '-'
+		// File/class suffix and separator customization
 		'base.fileSuffixSep="."',
+		'base.modelIntfFileSuffix="model"',
+		'base.apiIntfFileSuffix="api"',
+		'base.implSuffix="DTO"',
+		'base.implFileSuffix="dto"',
+		'base.jsonSuffix="Schema"',
+		'base.jsonFileSuffix="schema"',
+		// Template-based file naming
+		'base.implFileBasename_Tmpl="#{name}.#{implFileSuffix}"',
+		'base.jsonFileBasename_Tmpl="#{name}.#{jsonFileSuffix}"'
 	]
 }

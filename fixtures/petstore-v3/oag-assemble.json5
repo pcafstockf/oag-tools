@@ -1,0 +1,9 @@
+// Assemble theswagger v3 spec into the codegen required v3.1 local bundle.
+// You can use the **built** assembler or debug the current assembler source [e.g. npm run assembler:dev -- -c fixtures/petstore-v3/oag-assemble.json5]
+//      node dist/oag-assembler.js --config fixtures/petstore-v3/oag-assemble.json5
+{
+	i: 'fixtures/petstore-v3/petstore-v3.yaml',
+	o: 'fixtures/petstore-v3/petstore.bundle.json',
+	b: true,
+	u: true
+}

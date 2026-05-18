@@ -1,0 +1,16 @@
+// Patch file to fix missing operationIds in the naming spec.
+// Merged into the spec by the assembler before validation.
+{
+	paths: {
+		'/greetings': {
+			get: {
+				operationId: 'listGreetings'
+			}
+		},
+		'/greetings/{greeting-id}': {
+			get: {
+				operationId: 'getGreeting'
+			}
+		}
+	}
+}

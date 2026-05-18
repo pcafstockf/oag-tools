@@ -1,0 +1,13 @@
+// Generate code from the local (pre-assembled) bundle
+// You can use the **built** generator or debug the current generator source [e.g. npm run generator:dev -- -c fixtures/petstore-v2/gen-client-axios.json5]
+//      node dist/oag-generator.js --config fixtures/petstore-v2/gen-client-axios.json5
+{
+	i: 'fixtures/petstore-v2/petstore.bundle.json',
+	o: 'fixtures/petstore-v2/client-axios-src',
+	d: 'all',
+	r: 'client',
+	p: [
+		'base.target="browser"',
+		'tsmorph.client.httpsup="axios"'
+	]
+}

@@ -467,6 +467,7 @@ export class LangNeutralGenerator extends OpenAPIV3_1Visitor {
 		const opJsonPath = this.activeJsonPath;
 		this.activeOpResponse = [];
 		this.activeOpParams = [];
+		delete this.activeOpRequest;
 		try {
 			const retVal = super.visitOperation(operation);
 			if (typeof retVal === 'undefined') {

@@ -43,6 +43,6 @@ const config = {
 const tsconfigFilePath = process.env.TS_NODE_PROJECT || path.resolve(__dirname, 'tsconfig.json');
 module.exports = merge(
 	baseConfigFn(tsconfigFilePath, undefined, tsExclude),
-	modeConfigFn('development', 'generator.js'),
+	modeConfigFn('development', 'oag-generator.js'),
 	config
 );

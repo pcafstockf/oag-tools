@@ -1,18 +1,71 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
   title: Naming Sample
   version: "1.0"
+  description: >
+    A small API for testing naming conventions and assembler features.
+    This spec intentionally has legacy imperfections:
+    missing operationIds, bracket-style query params, and hyphenated path params.
 servers:
   - url: https://null
 tags:
   - name: Naming
-    description: Minimalist
+    description: Greetings management
 paths:
-  /hello:
+  /greetings:
     get:
       tags:
         - Naming
-      operationId: greet
+      summary: List greetings with optional filters
+      parameters:
+        - name: filter[lang]
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by language code
+        - name: filter[formal]
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter by formality
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GreetingList"
+    post:
+      tags:
+        - Naming
+      operationId: createGreeting
+      summary: Create a new greeting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Greeting"
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Greeting"
+  /greetings/{greeting-id}:
+    get:
+      tags:
+        - Naming
+      summary: Get a greeting by id
+      parameters:
+        - name: greeting-id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
           description: OK
@@ -25,5 +78,20 @@ components:
     Greeting:
       type: object
       properties:
+        id:
+          type: integer
         salutation:
           type: string
+        lang:
+          type: string
+        formal:
+          type: boolean
+    GreetingList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Greeting"
+        total:
+          type: integer

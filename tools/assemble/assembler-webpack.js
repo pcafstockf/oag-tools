@@ -26,6 +26,6 @@ const config = {
 const tsconfigFilePath = process.env.TS_NODE_PROJECT || path.resolve(__dirname, 'tsconfig.json');
 module.exports = merge(
 	baseConfigFn(tsconfigFilePath),
-	modeConfigFn('development', 'assembler.js'),
+	modeConfigFn('development', 'oag-assembler.js'),
 	config
 );

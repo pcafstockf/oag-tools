@@ -41,3 +41,22 @@ node_modules/
 
 # Output of 'npm pack'
 *.tgz
+/dist/
+
+# Ignore everything under fixtures/
+fixtures/*
+!fixtures/ReadMe.md
+
+# Keep these fixtures directories
+!fixtures/petstore-*/
+!fixtures/petstore-*/**
+fixtures/petstore-*/*.bundle.json
+fixtures/petstore-*/client-*/
+fixtures/petstore-*/server-*/
+
+!fixtures/edge-cases/
+!fixtures/edge-cases/**
+!fixtures/naming/
+!fixtures/naming/**
+fixtures/naming/*.bundle.json
+fixtures/naming/client-*/
