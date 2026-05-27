@@ -1,5 +1,5 @@
 import {OperationDesc} from './client-types';
-import {HttpResponse} from "./http-client";
+import {HttpOptions, HttpResponse} from "./http-client";
 
 /**
  * Pre-processing of an outgoing HTTP request. Called once per operation before the request is sent.
@@ -13,9 +13,9 @@ import {HttpResponse} from "./http-client";
  *                   Implementors should apply the first scheme they understand and skip auth entirely when the array is empty.
  * @returns The (possibly updated) cookies map.
  */
-export type ReqTransformerFn = (op: OperationDesc, urlPath: string, hdrs: Record<string, string>, cookies: Record<string, () => string>, security?: ReadonlyArray<Record<string, string[]>>) => Promise<Record<string, () => string>>;
+export type ReqTransformerFn = (op: OperationDesc, urlPath: string, hdrs: Record<string, string>, cookies: Record<string, () => string>, security?: ReadonlyArray<Record<string, string[]>>, opts?: HttpOptions) => Promise<Record<string, () => string>>;
 
 /**
  * Post-processing of an http response.
  */
-export type ResTransformerFn = (op: OperationDesc, rsp: HttpResponse) => Promise<HttpResponse>;
+export type ResTransformerFn<T> = (op: OperationDesc, rsp: HttpResponse<T>) => Promise<HttpResponse<T>>;

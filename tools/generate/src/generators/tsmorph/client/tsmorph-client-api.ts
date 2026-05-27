@@ -299,6 +299,8 @@ export class TsmorphClientApi extends BaseTsmorphApi<ApiInterfaceDeclaration> im
 			});
 		}
 		this.makeImplConstructor(retVal);
+		// Escape hatch index signature: allows _<operationId> overrides (see tsmorph-client-method.ts populateMethodBody).
+		retVal.addMember('[key: `_${string}`]: ((url: string, ...args: any[]) => Promise<HttpResponse<unknown>>) | undefined;');
 		return retVal;
 	}
 

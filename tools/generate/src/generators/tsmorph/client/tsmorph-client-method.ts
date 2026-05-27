@@ -189,12 +189,12 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 		});
 
 		if (alnType === 'impl' && Node.isClassDeclaration(owner) && Node.isMethodDeclaration(methods[methods.length - 1]))
-			this.populateMethodBody(methods[methods.length - 1] as MethodDeclaration);
+			this.populateMethodBody(methods[methods.length - 1] as MethodDeclaration, signature.returnText);
 
 		return bindAst(methods[0], this) as MethodMethodSignature | MethodMethodDeclaration;
 	}
 
-	protected populateMethodBody(impl: MethodDeclaration) {
+	protected populateMethodBody(impl: MethodDeclaration, returnText: string) {
 		const definedHdrsStatement = impl.getStatement(s => {
 			if (Node.isVariableStatement(s))
 				return !!s.getDeclarations().find(d => d.getName() === TsmorphClientMethod.DefinedHdrsName);
@@ -275,7 +275,8 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				writer.writeLine('if ($queries.length > 0)')
 					.writeLine(`$serviceUrl += '?' + $queries.join('&');`);
 			}
-			writer.writeLine(`const $opDesc = {id:'${this.getIdentifier('intf')}', pattern:'${this.pathPattern}', method:'${this.httpMethod}'};`);
+			const opDescId = this.getIdentifier('intf');
+				writer.writeLine(`const $opDesc = {id:'${opDescId}', pattern:'${this.pathPattern}', method:'${this.httpMethod}'};`);
 			if (body) {
 				writer.write(`const $body = this.config.bodySerializer ? this.config.bodySerializer($opDesc, $serviceUrl, `).quote(bodyMimeType).write(`, ${body.getIdentifier('intf')}, $localHdrs) : ${body.getIdentifier('intf')};`);
 				writer.newLine();
@@ -283,13 +284,13 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 			let sec = this.document.security ?? [];
 			if (Array.isArray(this.oae.security))
 				sec = this.oae.security;
+			writer.writeLine('const $opts = {} as HttpOptions;');
 			writer.write(`const $pre = this.config.reqTransformer ? this.config.reqTransformer($opDesc, $serviceUrl, $localHdrs`);
 			if (this.baseSettings.target === 'browser')
-				writer.write(`${sec ? ', undefined, ' + JSON5.stringify(sec) + ' as any' : ''}) : Promise.resolve(${cookieParams.length > 0 ? 'true' : ''});`);
+				writer.write(`${sec ? ', undefined, ' + JSON5.stringify(sec) + ' as any' : ''}, $opts) : Promise.resolve(${cookieParams.length > 0 ? 'true' : ''});`);
 			else
-				writer.write(`, $cookies${sec ? ', ' + JSON5.stringify(sec) + ' as any' : ''}) : Promise.resolve($cookies);`);
+				writer.write(`, $cookies${sec ? ', ' + JSON5.stringify(sec) + ' as any' : ''}, $opts) : Promise.resolve($cookies);`);
 			writer.writeLine('let $rsp = $pre.then((c) => {');
-			writer.writeLine('const $opts = {} as HttpOptions;');
 			if (this.baseSettings.target === 'browser') {
 				writer.writeLine('if (c)')
 					.writeLine('$opts.credentials = c;');
@@ -301,16 +302,27 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 					.newLine();
 			}
 			writer.writeLine('if (Object.keys($localHdrs).length > 0)')
-				.writeLine('$opts.headers = $localHdrs;');
-			writer.write('return this.http.')
-				.write(this.httpMethod.toLowerCase())
-				.write('(')
-				.write('$serviceUrl,');
-			if (body)
-				writer.write(`$body,`);
-			else if (['post', 'put', 'patch'].includes(this.httpMethod.toLowerCase()))
-				writer.write(`undefined,`);
-			writer.write('$opts);');
+				.writeLine('$opts.headers = Object.assign($opts.headers ?? {}, $localHdrs);');
+
+			const writeParams = (cast: boolean) => {
+				writer.write('($serviceUrl,');
+				if (body)
+					writer.write(`$body,`);
+				else if (['post', 'put', 'patch'].includes(this.httpMethod.toLowerCase()))
+					writer.write(`undefined,`);
+				writer.write(`$opts)`);
+				if (cast)
+					writer.write(` as Promise<HttpResponse<${returnText}>>`);
+				writer.write(`;`);
+			}
+			writer.writeLine(`if (typeof this['_${opDescId}'] === 'function')`)
+				.indent()
+				.write(`return this['_${opDescId}']`);
+				writeParams(true);
+			writer.writeLine(`else`)
+				.indent()
+				.write(`return this.http.${this.httpMethod.toLowerCase()}`);
+				writeParams(false);
 			writer.writeLine('});');
 
 			writer.write(`if (typeof this.config.resTransformer === 'function')`)

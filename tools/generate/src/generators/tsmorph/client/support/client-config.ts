@@ -25,5 +25,5 @@ export interface ApiClientConfig {
 	/**
 	 * This is where you can process and/or transform the response before it is returned to the caller.
 	 */
-	resTransformer?: ResTransformerFn;
+	resTransformer?: ResTransformerFn<unknown>;
 }

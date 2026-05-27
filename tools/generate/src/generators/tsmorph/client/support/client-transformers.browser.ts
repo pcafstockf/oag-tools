@@ -1,5 +1,5 @@
 import {OperationDesc} from './client-types';
-import {HttpResponse} from "./http-client";
+import {HttpOptions, HttpResponse} from "./http-client";
 
 type RequestFnReturnType = void | undefined | 'omit' | 'same-origin' | 'include';
 
@@ -14,6 +14,6 @@ type RequestFnReturnType = void | undefined | 'omit' | 'same-origin' | 'include'
  *                   Each entry is a map of scheme name → required scopes (e.g. `[{ bearerAuth: [] }]`).
  *                   Implementors should apply the first scheme they understand and skip auth entirely when the array is empty.
  */
-export type ReqTransformerFn = (op: OperationDesc, urlPath: string, hdrs: Record<string, string>, credentials: RequestFnReturnType, security?: ReadonlyArray<Record<string, string[]>>) => Promise<RequestFnReturnType>;
+export type ReqTransformerFn = (op: OperationDesc, urlPath: string, hdrs: Record<string, string>, credentials: RequestFnReturnType, security?: ReadonlyArray<Record<string, string[]>>, opts?: HttpOptions) => Promise<RequestFnReturnType>;
 
-export type ResTransformerFn = (op: OperationDesc, rsp: HttpResponse) => Promise<HttpResponse>;
+export type ResTransformerFn<T> = (op: OperationDesc, rsp: HttpResponse<T>) => Promise<HttpResponse<T>>;
