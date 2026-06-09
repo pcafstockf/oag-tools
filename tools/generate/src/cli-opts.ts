@@ -33,7 +33,10 @@ export interface CLIOptionsBase<CONFIG, IN, OUT, VERBOSE, PROP, ROLE, DELETE, SE
 	 */
 	r: ROLE,
 	/**
-	 * Should the entire output directory be deleted before generation, or just the various gen directories?
+	 * Which generated directories should be deleted before generation?
+	 * 'safe' deletes only purely auto-generated dirs (interfaces, schemas, handlers).
+	 * 'full' also deletes implementation dirs (modelImplDir, apiImplDir, apiMockDir).
+	 * The outputDirectory root itself is never deleted.
 	 */
 	d: DELETE
 	/**
@@ -50,7 +53,7 @@ type PartialCLIOptionsType = Partial<CLIOptionsBase<
 	boolean /*verbose*/,
 	string[] /*prop*/,
 	string /*role*/,
-	boolean | string /*delete*/,
+	string /*delete*/,
 	string[] /*settings*/
 >>;
 

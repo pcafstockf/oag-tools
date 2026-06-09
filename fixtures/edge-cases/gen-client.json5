@@ -1,7 +1,7 @@
 {
 	i: "./fixtures/edge-cases/edge-cases.bundle.json",
 	o: '~/oag-tools-projects/edge-cases/src/oag',
-	d: 'all',
+	d: 'full',
 	r: 'client',
 	p: [
 		'base.apiSuffix=""'

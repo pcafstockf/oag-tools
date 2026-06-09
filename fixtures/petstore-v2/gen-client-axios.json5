@@ -4,7 +4,7 @@
 {
 	i: 'fixtures/petstore-v2/petstore.bundle.json',
 	o: 'fixtures/petstore-v2/client-axios-src',
-	d: 'all',
+	d: 'full',
 	r: 'client',
 	p: [
 		'base.target="browser"',

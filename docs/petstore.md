@@ -52,7 +52,7 @@ All config files use json5 format. Key fields:
 
 - `i` — input spec (the assembled v3.1 bundle)
 - `o` — output directory
-- `d` — delete mode (`all` clears the output directory before generating)
+- `d` — delete mode: `safe` deletes only auto-generated dirs (models, apis, handlers); `full` also deletes impl dirs (services, mocks). The output directory root is never deleted.
 - `r` — role (`client` or `server`)
 - `p` — array of property overrides for customizing generation
 

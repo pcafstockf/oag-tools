@@ -4,7 +4,7 @@
 {
 	i: 'fixtures/petstore-v3/petstore.bundle.json',
 	o: 'fixtures/petstore-v3/client-angular-src',
-	d: 'all',
+	d: 'full',
 	r: 'client',
 	p: [
 		'base.target="browser"',

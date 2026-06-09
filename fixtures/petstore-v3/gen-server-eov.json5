@@ -4,7 +4,7 @@
 {
 	i: 'fixtures/petstore-v3/petstore.bundle.json',
 	o: 'fixtures/petstore-v3/server-eov-src',
-	d: 'all',
+	d: 'full',
 	r: 'server',
 	p: [
 		'tsmorph.server.framework="express-openapi-validator"'

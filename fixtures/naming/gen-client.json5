@@ -4,7 +4,7 @@
 {
 	i: './fixtures/naming/naming.bundle.json',
 	o: 'fixtures/naming/client-src',
-	d: 'all',
+	d: 'full',
 	r: 'client',
 	p: [
 		'base.target="browser"',
