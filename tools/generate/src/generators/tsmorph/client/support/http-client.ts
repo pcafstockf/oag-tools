@@ -34,5 +34,5 @@ export interface HttpClient {
 
 	patch<T = any>(url: string, body?: any, opts?: HttpOptions): Promise<HttpResponse<T>>;
 
-	delete<T = any>(url: string, opts?: HttpOptions): Promise<HttpResponse<T>>;
+	delete<T = any>(url: string, body?: any, opts?: HttpOptions): Promise<HttpResponse<T>>;
 }

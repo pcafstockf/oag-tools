@@ -223,17 +223,26 @@ export class NodeHttpClient implements HttpClient {
 		});
 	}
 
-	delete<T = any>(url: string, opts?: HttpOptions): Promise<HttpResponse<T>> {
+	delete<T = any>(url: string, body?: any, opts?: HttpOptions): Promise<HttpResponse<T>> {
 		return new Promise<HttpResponse<T>>((resolve, reject) => {
 			const ro = {
 				method: 'DELETE',
 				headers: opts?.headers ?? undefined,
 				agent: this.clientOpts.agent
 			};
+			if (typeof body?.getHeaders === 'function')
+				ro.headers = Object.assign(ro.headers ?? {}, body.getHeaders());
+			// Node.js http module does not auto-compute Content-Length for DELETE requests, so we must set it explicitly.
+			if (body && typeof body.pipe !== 'function') {
+				const serialized = Buffer.isBuffer(body) ? body : typeof body === 'string' ? Buffer.from(body) : Buffer.from(JSON.stringify(body));
+				ro.headers = Object.assign(ro.headers ?? {}, {'content-length': serialized.length});
+			}
 			const req = http.request(url, ro, res => this.handleAsyncResponse<T>(res, resolve, reject));
 			req.on('error', e => {
 				reject(e);
 			});
+			if (body)
+				this.writeRequestBody(req, body);
 			req.end();
 		});
 	}

@@ -58,9 +58,10 @@ function AxiosHttpClientSubclass(): HttpClient & { ensureError(err: unknown): Er
 				throw this.ensureError(e);
 			});
 		},
-		delete<T = any>(url: string, opts?: HttpOptions): Promise<HttpResponse<T>> {
+		delete<T = any>(url: string, body?: any, opts?: HttpOptions): Promise<HttpResponse<T>> {
 			const aopts: AxiosRequestConfig = {
 				...(opts ?? {}),
+				data: body,
 				withCredentials: opts?.credentials ? !!opts.credentials : undefined
 			};
 			delete (aopts as HttpOptions).credentials;

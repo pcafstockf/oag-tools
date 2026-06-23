@@ -56,12 +56,13 @@ class AngularHttpClient implements HttpClient {
 		}));
 	}
 
-	delete<T = any>(url: string, opts?: HttpOptions): Promise<HttpResponse<T>> {
+	delete<T = any>(url: string, body?: any, opts?: HttpOptions): Promise<HttpResponse<T>> {
 		return this.toHttpResponsePromise<T>(this.ahc.delete<T>(url, {
 			headers: opts?.headers,
 			observe: 'response',
 			responseType: this.computeResponseType(opts?.headers) as unknown as any,
-			withCredentials: opts?.credentials ? !!opts.credentials : undefined
+			withCredentials: opts?.credentials ? !!opts.credentials : undefined,
+			body: body
 		}));
 	}
 

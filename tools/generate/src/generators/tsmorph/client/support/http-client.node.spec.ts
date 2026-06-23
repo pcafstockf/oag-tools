@@ -127,6 +127,18 @@ describe('Http Client', () => {
 		const rsp = await client.delete(url);
 		assert.strictEqual(rsp.status, 200);
 	});
+	it('delete with body w/ 200', async () => {
+		const url = 'http://httpbin.org/delete';
+		const rsp = await client.delete(url, {'a': {'b': 42}}, {
+			headers: {
+				'accept': 'application/json'
+			}
+		});
+		assert.strictEqual(rsp.status, 200);
+		assert.strictEqual(rsp.headers!['content-type'], 'application/json');
+		assert(rsp.data);
+		assert.strictEqual(rsp.data.json.a.b, 42);
+	});
 	it('can follow redirects', {skip: true}, async () => {
 		const url = 'http://httpbin.org/redirect/2';
 		const rsp = await client.get(url, {

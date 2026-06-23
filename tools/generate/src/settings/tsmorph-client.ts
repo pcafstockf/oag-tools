@@ -228,7 +228,7 @@ export const TsMorphClientSettings = {
 						        return {
 						            ngModule: ApiModule,
 						            providers: [<% apis.forEach(function(api) { %>
-						                { provide: <%- api.getIdentifier('impl') %><%- confTokensExt %>, useFactory: apiConfFcty, deps: ["<%- api.getIdentifier() %>"]},<% }); %>
+						                { provide: <%- api.getIdentifier('impl') %><%- confTokensExt %>, useFactory: () => apiConfFcty("<%- api.getIdentifier() %>")},<% }); %>
 						                { provide: ApiHttpClientToken, useFactory: httpClientFcty, deps: [HttpClient] } 
 						            ]
 						        };

@@ -32,8 +32,8 @@ class FetchHttpClient implements HttpClient {
 		return this.sendRequest('PATCH', url, opts, body).then(r => this.processResponse<T>(r));
 	}
 
-	delete<T = any>(url: string, opts?: HttpOptions): Promise<HttpResponse<T>> {
-		return this.sendRequest('DELETE', url, opts).then(r => this.processResponse<T>(r));
+	delete<T = any>(url: string, body?: any, opts?: HttpOptions): Promise<HttpResponse<T>> {
+		return this.sendRequest('DELETE', url, opts, body).then(r => this.processResponse<T>(r));
 	}
 
 	protected sendRequest<T>(method: string, url: string, opts?: HttpOptions, body?: any) {

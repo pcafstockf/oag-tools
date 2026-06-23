@@ -308,7 +308,7 @@ export class TsmorphClientMethod extends BaseTsmorphMethod<ApiInterfaceDeclarati
 				writer.write('($serviceUrl,');
 				if (body)
 					writer.write(`$body,`);
-				else if (['post', 'put', 'patch'].includes(this.httpMethod.toLowerCase()))
+				else if (['post', 'put', 'patch', 'delete'].includes(this.httpMethod.toLowerCase()))
 					writer.write(`undefined,`);
 				writer.write(`$opts)`);
 				if (cast)
